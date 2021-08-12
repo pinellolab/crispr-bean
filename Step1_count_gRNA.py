@@ -1,10 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Feb 23 13:17:59 2017
-
-@author: Luca Pinello
-Edited by Jayoung Ryu on Tue Aug 10 11:01 2021
-"""
 
 import os
 import gzip

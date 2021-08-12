@@ -164,19 +164,19 @@ class NoReadsAfterQualityFiltering(Exception):
 
 def get_input_parser():
     """Get the input data"""
-    print '  \n~~~CRISPRessoCount~~~'
-    print '-Utility to perform sgRNA enumeration from deep sequencing data-'
-    print r'''
+    print('  \n~~~CRISPRessoCount~~~')
+    print('-Utility to perform sgRNA enumeration from deep sequencing data-')
+    print(r'''
           )                                             )
          (           ________________________          (
         __)__       | __   __            ___ |        __)__
      C\|     \      |/  ` /  \ |  | |\ |  |  |     C\|     \
        \     /      |\__, \__/ \__/ | \|  |  |       \     /
         \___/       |________________________|        \___/
-    '''
+    ''')
     
     
-    print'\n[Luca Pinello 2017, send bugs, suggestions or *green coffee* to lucapinello AT gmail DOT com]\n\n',
+    print('\n[Luca Pinello 2017, send bugs, suggestions or *green coffee* to lucapinello AT gmail DOT com]\n\n')
     
     
     parser = argparse.ArgumentParser(description='CRISPRessoCount parameters',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -540,14 +540,14 @@ def main():
 
  
         info('All Done!')
-        print r'''
+        print(r'''
               )                                             )
              (           ________________________          (
             __)__       | __   __            ___ |        __)__
          C\|     \      |/  ` /  \ |  | |\ |  |  |     C\|     \
            \     /      |\__, \__/ \__/ | \|  |  |       \     /
             \___/       |________________________|        \___/
-        '''
+        ''')
         sys.exit(0)
     
     except Exception as e:

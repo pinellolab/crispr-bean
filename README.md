@@ -1,2 +1,2 @@
-# ANBE
-Activity normalized base editing assay
+# crisprep
+Tool for analyzing CRISPR data with reporter edit counts.

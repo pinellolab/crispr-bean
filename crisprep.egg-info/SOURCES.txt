@@ -1,0 +1,6 @@
+README.md
+setup.py
+crisprep.egg-info/PKG-INFO
+crisprep.egg-info/SOURCES.txt
+crisprep.egg-info/dependency_links.txt
+crisprep.egg-info/top_level.txt

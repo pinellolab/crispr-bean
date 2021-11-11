@@ -1,0 +1,18 @@
+Metadata-Version: 2.1
+Name: crisprep
+Version: 0.0.1
+Summary: Tools for analyzing CRISPR data with REPorter edits
+Home-page: https://github.com/jykr/crisprep
+Author: Jayoung Ryu
+Author-email: jayoung_ryu@g.harvard.edu
+License: UNKNOWN
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Description-Content-Type: text/markdown
+
+# crisprep
+Tool for analyzing CRISPR data with reporter edit counts.
+
+

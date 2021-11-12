@@ -2,40 +2,47 @@ from perturb_tools import Screen
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import List
+from typing import List, Union
 from anndata import AnnData
+import anndata as ad
 
 class ReporterScreen(Screen):
+
     def __init__(self, 
-                 reps:List[str], 
-                 conditions:List[str], 
-                 guide_info_file_name:str,
-                 guide_count_filenames:str = None,
+                 reps: List[str] = None, 
+                 conditions: List[str] = None, 
+                 guide_info_file_name: str = None,
+                 guide_count_filenames: str = None,
                  guide_bcmatched_count_filenames: str = None,
-                 edit_count_filenames:str = None
+                 edit_count_filenames: str = None,
+                 adata: AnnData = None
                 ):
-        guide_info = pd.read_csv(guide_info_file_name).set_index('name')
-        guides = pd.DataFrame(index = pd.read_csv(guide_info_file_name)['name'])
-        
-        guides_lenient = self.get_counts(guide_count_filenames, guides, reps, conditions)
-        guides_bcmatch = self.get_counts(guide_bcmatched_count_filenames, guides, reps, conditions)
+        if not adata is None:
+            super().__init__(adata)
+        else:
+            guide_info = pd.read_csv(guide_info_file_name).set_index('name')
+            guides = pd.DataFrame(index = pd.read_csv(guide_info_file_name)['name'])
+            
+            guides_lenient = self.get_counts(guide_count_filenames, guides, reps, conditions)
+            guides_bcmatch = self.get_counts(guide_bcmatched_count_filenames, guides, reps, conditions)
 
-        edits_ag = self.get_edits(edit_count_filenames, guide_info, reps, conditions, count_exact = False)
-        edits_exact = self.get_edits(edit_count_filenames, guide_info, reps, conditions)
-        
-        super().__init__(guides_lenient, guide_info)
-        self.condit["replicate"] = np.repeat(reps, len(conditions))
-        self.condit["sort"] = np.tile(conditions, len(reps))
-        self.condit["mapped_reads"] = self.X.sum(axis = 0)
-        
-        self.layers["guide_RPM"] = np.divide(self.X, self.condit.mapped_reads[np.newaxis, :])*10**6
-        self.layers["X_bcmatch"] = guides_bcmatch
-        self.layers["edits_ag"] = edits_ag
-        self.layers["edits"] = edits_exact
-        self.layers["edit_rate"] = self.layers["edits"] / self.layers["X_bcmatch"]
+            edits_ag = self.get_edits(edit_count_filenames, guide_info, reps, conditions, count_exact = False)
+            edits_exact = self.get_edits(edit_count_filenames, guide_info, reps, conditions)
+            
+            super().__init__(guides_lenient, guide_info)
 
-        self.uns["replicates"] = reps
-        self.uns["conditions"] = conditions
+            self.condit["replicate"] = np.repeat(reps, len(conditions))
+            self.condit["sort"] = np.tile(conditions, len(reps))
+            self.condit["mapped_reads"] = self.X.sum(axis = 0)
+            
+            self.layers["guide_RPM"] = np.divide(self.X, self.condit.mapped_reads[np.newaxis, :])*10**6
+            self.layers["X_bcmatch"] = guides_bcmatch
+            self.layers["edits_ag"] = edits_ag
+            self.layers["edits"] = edits_exact
+            self.layers["edit_rate"] = self.layers["edits"] / self.layers["X_bcmatch"]
+
+            self.uns["replicates"] = reps
+            self.uns["conditions"] = conditions
 
 
     def get_counts(self, filename_pattern, guides, reps, conditions):
@@ -112,3 +119,10 @@ class ReporterScreen(Screen):
 
         if return_result:
             return((guide_fc_agg, edit_fc_agg))
+
+
+def concat(screens, *args, **kwargs):
+    adata = ad.concat(screens, *args, **kwargs)
+
+    return(ReporterScreen(adata = adata))
+

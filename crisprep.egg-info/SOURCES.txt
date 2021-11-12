@@ -1,5 +1,8 @@
 README.md
 setup.py
+crisprep/__init__.py
+crisprep/readwrite.py
+crisprep/utils.py
 crisprep.egg-info/PKG-INFO
 crisprep.egg-info/SOURCES.txt
 crisprep.egg-info/dependency_links.txt

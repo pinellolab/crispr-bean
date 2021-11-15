@@ -19,6 +19,7 @@ from typing import Dict, List, Union, Tuple
 from tqdm import tqdm 
 
 import logging
+
 logging.basicConfig(level=logging.INFO,
                      format='%(levelname)-5s @ %(asctime)s:\n\t %(message)s \n',
                      datefmt='%a, %d %b %Y %H:%M:%S',
@@ -60,12 +61,6 @@ def slugify(value): #adapted from the Django project
     return str(value)
 
 
-def get_fastq_handle(fastq_filename):
-    if fastq_filename.endswith('.gz'):
-            fastq_handle=gzip.open(fastq_filename)
-    else:
-            fastq_handle=open(fastq_filename)
-    return(fastq_handle)
 
 
 def read_is_good_quality(record: SeqIO.SeqRecord, 
@@ -76,83 +71,19 @@ def read_is_good_quality(record: SeqIO.SeqRecord,
     min_quality_pass = np.array(record.letter_annotations["phred_quality"])[:qend_R1].min()>=min_single_bp_quality
     return(mean_quality_pass and min_quality_pass)
 
-
-def check_read_names_and_filter_quality(R1_filename, 
-        R2_filename, 
-        output_R1_filename=None, 
-        output_R2_filename = None,
-        filter_by_qual = False,
-        min_bp_quality=20,
-        min_single_bp_quality=0, 
-        qend_R1 = -1, 
-        qend_R2 = -1):
         
-        if min_bp_quality > 0 or min_single_bp_quality > 0:
-            info('Filtering reads with average bp quality < {} \
-                and single bp quality < {} ... in up to position {} of R1 and {} of R2'.format(args.min_average_read_quality,
-                    args.min_single_bp_quality))
 
-        if qend_R1 > 0 or qend_R2 > 0:
-            info("In the filtering, bases up to position {} of R1 and {} of R2 are considered.".format(qend_R1, qend_R2))
-
-        R1_handle = get_fastq_handle(R1_filename)
-        R2_handle = get_fastq_handle(R2_filename)
-
-        if not output_R1_filename:
-                output_R1_filename = R1_filename.replace('.fastq', '').replace('.gz', '') + '_filtered.fastq.gz'
-                output_R2_filename = R2_filename.replace('.fastq', '').replace('.gz', '') + '_filtered.fastq.gz'
-
-        try:
-            if filter_by_qual:
-                R1_filtered = gzip.open(output_R1_filename, 'w+')
-                R2_filtered = gzip.open(output_R2_filename, 'w+')
-            R1 = list(SeqIO.parse(R1_handle, "fastq"))
-            R2 = list(SeqIO.parse(R2_handle, "fastq"))
-            R1_handle.close()
-            R2_handle.close()
-
-            if len(R1) != len(R2):
-                raise ValueError("The number of reads in R1 and R2 file does not match.")
-
-            for i in range(len(R1)):
-                R1_record = R1[i]
-                R2_record = R2[i]
-
-                if R1_record.name != R2_record.name : 
-                    raise InputFileError("R1 and R2 read discordance in read {} and {}".format(R1_record.name, R2_record.name))
-                if filter_by_qual:
-                    R1_quality_pass = read_is_good_quality(R1_record, min_bp_quality, min_single_bp_quality, qend_R1)
-                    R2_quality_pass = read_is_good_quality(R2_record, min_bp_quality, min_single_bp_quality, qend_R2)
-
-                    if R1_quality_pass and R2_quality_pass:
-                        R1_filtered.write(record.format('fastq'))
-                        R2_filtered.write(record.format('fastq'))
-        except:
-                raise Exception('Error handling the fastq_filtered_outfile')
-
-        if filter_by_qual: 
-            return((output_R1_filename, output_R2_filename))
-        else:
-            return((R1_filename, R2_filename))
 
 
 def find_wrong_nt(sequence):
     return(list(set(sequence.upper()).difference(set(['A','T','C','G','N']))))
 
 
-def get_n_reads_fastq(fastq_filename):
-     p = sb.Popen(('z' if fastq_filename.endswith('.gz') else '' ) +"cat < %s | wc -l" % fastq_filename , shell=True,stdout=sb.PIPE)
-     return(int(float(p.communicate()[0])/4.0))
-
-
 def mask_sequence_positions(seq: str, pos: np.array) -> str:
     return("".join([seq[i] if i in pos else "N" for i in range(len(seq))]))
 
 
-def revcomp(seq: Union[Seq, str]) -> str:
-    if isinstance(seq, str): 
-        seq = Seq(seq)
-    return(str(seq.reverse_complement()))
+
 
 
 ###EXCEPTIONS############################
@@ -190,7 +121,7 @@ def get_input_parser():
     parser.add_argument('-f','--sgRNA_file', type=str, required = True, help='''sgRNA description file. The format requires three columns: gRNA, Reporter, gRNA_barcode.''')
 
     #optional
-    parser.add_argument('--guide_start', type = str, help = "Guide starts after this sequence in R1", default = "GGAAAGGACGAAACACCG")
+    parser.add_argument('--guide_start_seq', type = str, help = "Guide starts after this sequence in R1", default = "GGAAAGGACGAAACACCG")
     parser.add_argument('-r', '--count_reporter', help = "Count reporter edits.", action = 'store_true')
     parser.add_argument('-q','--min_average_read_quality', type=int, help='Minimum average quality score (phred33) to keep a read', default=0)
     parser.add_argument('-s','--min_single_bp_quality', type=int, help='Minimum single bp score (phred33) to keep a read', default=0)
@@ -257,32 +188,8 @@ def check_arguments(args):
 
     return(args)
 
-    #count reads
-#def check_input_reads(args):
-#    N_READS_INPUT=get_n_reads_fastq(args.R1)
-#    N_READS_INPUT_R2 = get_n_reads_fastq(args.R2)
-#    if N_READS_INPUT != N_READS_INPUT_R2 : 
-#        raise InputFileError("Number of reads not matched in two input fastq file")
-#    return(N_READS_INPUT)
 
 
-
-def get_database_id(args):    
-    get_name_from_fasta = lambda  x: os.path.basename(x).replace('.fastq','').replace('.gz','').replace("_R1",'')
-    
-    if not args.name:
-        database_id='%s' % get_name_from_fasta(args.R1)    
-    else:
-        database_id=args.name
-    return(database_id)
-
-
-def read_count_match(R1_filename, R2_filename) -> int:
-    R1_count = get_n_reads_fastq(R1_filename)
-    R2_count = get_n_reads_fastq(R2_filename)
-    if R1_count != R2_count: 
-        raise InputFileError("Paired end read numbers are different in R1({}) and R2({})".format(R1_count, R2_count)) 
-    return(R1_count)
 
 
 def get_first_read_length(fastq_filename):
@@ -336,28 +243,10 @@ def get_sgRNA_dict(sgRNA_filename: str, edited_base: str) -> Dict[str, Dict[np.a
     return(masked_guides_dict)
 
 
-def get_sgRNA_dict_simple(sgRNA_filename):
-    seq_to_name = dict()
-    # TBD: change this into dataframe
-    with open(sgRNA_filename) as infile:
-        sgRNA_df = pd.read_csv(infile)
-        if not ('name' in sgRNA_df.columns and 'gRNA_barcode' in sgRNA_df.columns and 'gRNA' in sgRNA_df.columns):
-            raise InputFileError("Input gRNA file doesn't have the column 'gRNA' or 'gRNA_barcode or 'name'.")
-        for i in range(len(sgRNA_df)):
-            seq_to_name[sgRNA_df["gRNA"][i]] = (sgRNA_df["name"][i], sgRNA_df["gRNA_barcode"][i])
-    return(seq_to_name)
 
 
-def get_guide_info(sgRNA_filename: str) -> pd.DataFrame:
-    '''Returns a gRNA name to reporter sequence mapping.'''
-    guide_to_reporter = {}
 
-    with open(sgRNA_filename) as infile:
-        sgRNA_df = pd.read_csv(infile)
-        if not ('name' in sgRNA_df.columns and 'Reporter' in sgRNA_df.columns):
-            raise InputFileError("Input gRNA file doesn't have the column 'gRNA' or 'gRNA_barcode'.")
-        sgRNA_df.set_index('name', inplace = True)
-        return(sgRNA_df)    
+
     
 
 def match_masked_sgRNA(masked_guides_dict: dict, 
@@ -412,6 +301,8 @@ def match_sgRNA(guides_dict: Dict[str, str], query_seq: str, guide_bc : str,
                 semi_matches.append(name)
     return((matches, semi_matches))
 
+def get_gRNA_barcode(R1_seq, R2_seq):
+    return(revcomp(R2_seq[:guide_bc_len]))
 
 def count_masked_guides(R1_filename, R2_filename, 
     guides_dict: Dict[str, str], 
@@ -447,19 +338,16 @@ def count_masked_guides(R1_filename, R2_filename,
     iterator_R1 = FastqGeneralIterator(infile_R1)
     iterator_R2 = FastqGeneralIterator(infile_R2)
 
-    gname_to_count = dict()
-
     for i, (r1, r2) in tqdm(enumerate(zip(iterator_R1, iterator_R2)), total = N_READS_AFTER_PREPROCESSING):
-#    for i, (r1, r2) in enumerate(zip(iterator_R1, iterator_R2)):
         t1, R1_seq, q1 = r1
         t2, R2_seq, q2 = r2
+
         gRNA_names = []
         gRNA_match_wo_barcode = []
+
         for guide_length in GUIDE_LENGTHS:
-            gRNA_barcode = revcomp(R2_seq[:guide_bc_len])
-            guide_start_idx = R1_seq.find(guide_start)
-            if guide_start_idx == -1 : continue
-            guide_start_idx = guide_start_idx + len(guide_start)
+            gRNA_barcode = get_gRNA_barcode(R1_seq, R2_seq) # TBD
+            
             gRNA_seq = R1_seq[guide_start_idx:guide_start_idx + guide_length]
             matches, semi_matches = match_sgRNA(guides_dict, gRNA_seq, gRNA_barcode)
             gRNA_names.extend(matches)
@@ -548,80 +436,11 @@ if __name__ == '__main__':
         args = parser.parse_args()
 
         args = check_arguments(args)
-        N_READS_INPUT = read_count_match(args.R1, args.R2)
 
-        database_id = get_database_id(args)
-        OUTPUT_DIRECTORY='CRISPRessoCount_on_%s' % database_id
-        if args.output_folder:
-                OUTPUT_DIRECTORY=os.path.join(os.path.abspath(args.output_folder),OUTPUT_DIRECTORY)
+        counter = ScreenSeq(**args)
+        counter.check_filter_fastq()
         
-        _jp=lambda filename: os.path.join(OUTPUT_DIRECTORY,filename) #handy function to put a file in the output directory
-        log_filename=_jp('CRISPRessoCount_RUNNING_LOG.txt')
-        
-        
-        try:
-            os.makedirs(OUTPUT_DIRECTORY)
-            info('Creating Folder %s' % OUTPUT_DIRECTORY)
-        except:
-            warn('Folder %s already exists.' % OUTPUT_DIRECTORY)
-        
-        logging.getLogger().addHandler(logging.FileHandler(log_filename))
-        with open(log_filename,'w+') as outfile:
-            outfile.write('[Command used]:\nCRISPRessoCount %s\n\n[Execution log]:\n' % ' '.join(sys.argv))
-        info('Done!')
-
-
-        # Check read name is aligned to be the same in R1 and R2 files.
-        # Optionally filter the reads based on the base quality
-        
-        filtered_R1_filename = _jp(os.path.basename(args.R1).replace('.fastq','').replace('.gz','')+'_filtered.fastq.gz')
-        filtered_R2_filename = _jp(os.path.basename(args.R2).replace('.fastq','').replace('.gz','')+'_filtered.fastq.gz')
-        if path.exists(filtered_R1_filename) and path.exists(filtered_R2_filename):
-            warn("Using preexisting filtered file")
-        else:
-            filtered_R1_filename, filtered_R2_filename = check_read_names_and_filter_quality(args.R1,
-                args.R2, 
-                output_R1_filename= filtered_R1_filename,
-                output_R2_filename= filtered_R2_filename,
-                min_bp_quality=args.min_average_read_quality,
-                min_single_bp_quality=args.min_single_bp_quality, 
-                qend_R1 = args.qend_R1, 
-                qend_R2 = args.qend_R2)
-
-        info('Done!')
-        
-        N_READS_AFTER_PREPROCESSING = read_count_match(filtered_R1_filename, filtered_R2_filename)
-        
-        if N_READS_AFTER_PREPROCESSING == 0:             
-            raise NoReadsAfterQualityFiltering('No reads in input or no reads survived the average or single bp quality filtering.')
-        else:
-            info('Number of reads in input:%d\tNumber of reads after filtering:%d\n' % (N_READS_INPUT, N_READS_AFTER_PREPROCESSING))
- 
-        guides_dict = get_sgRNA_dict_simple(args.sgRNA_file)
-
-        if args.count_reporter: 
-            guide_to_reporter = get_guide_info(args.sgRNA_file)
-            gRNA_count = count_masked_guides(R1_filename = filtered_R1_filename, 
-                R2_filename = filtered_R2_filename, 
-                guides_dict = guides_dict, 
-                guide_start = args.guide_start, 
-                guide_bc_len = args.guide_bc_len, 
-                write_nomatch = True, 
-                count_reporter_edits = True, 
-                guide_info_df = guide_to_reporter)
-        else:
-            gRNA_count = count_masked_guides(R1_filename = filtered_R1_filename, 
-                R2_filename = filtered_R2_filename, 
-                guides_dict = guides_dict, 
-                guide_start = args.guide_start, 
-                guide_bc_len = args.guide_bc_len, 
-                write_nomatch = True, 
-                count_reporter_edits = False, 
-                )
-
-        info('Done!')    
-
-        info('Writing output table...')
+        counter.get_counts()
 
         if args.count_reporter:
             df_guide_counts = pd.DataFrame.from_records(

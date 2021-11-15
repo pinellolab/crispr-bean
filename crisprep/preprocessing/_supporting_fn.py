@@ -2,11 +2,14 @@ from typing import List
 import SeqIO
 
 def _base_edit_to_from(start_base: chr = "A"):
-    base_map = {"A":"G", "C":"T"}
+    try:
+        base_map = {"A":"G", "C":"T"}
+    except KeyError:
+        raise ValueError("Only A/C are supported for base to be edited.")
     return(base_map[start_base])
 
 
-def _read_count_match(R1_filename, R2_filename) -> int:
+def _read_count_match(R1_filename: str, R2_filename: str) -> int:
     R1_count = _get_n_reads_fastq(R1_filename)
     R2_count = _get_n_reads_fastq(R2_filename)
     if R1_count != R2_count: 
@@ -14,16 +17,16 @@ def _read_count_match(R1_filename, R2_filename) -> int:
     return(R1_count)
 
 
-def _get_n_reads_fastq(fastq_filename):
-     p = sb.Popen(('z' if fastq_filename.endswith('.gz') else '' ) +"cat < %s | wc -l" % fastq_filename , shell=True,stdout=sb.PIPE)
-     return(int(float(p.communicate()[0])/4.0))
+def _get_n_reads_fastq(fastq_filename: str):
+    p = sb.Popen(('z' if fastq_filename.endswith('.gz') else '' ) +"cat < %s | wc -l" % fastq_filename , shell=True,stdout=sb.PIPE)
+    return(int(float(p.communicate()[0])/4.0))
 
 
-def _get_fastq_handle(fastq_filename):
+def _get_fastq_handle(fastq_filename: str):
     if fastq_filename.endswith('.gz'):
-            fastq_handle=gzip.open(fastq_filename)
+        fastq_handle=gzip.open(fastq_filename)
     else:
-            fastq_handle=open(fastq_filename)
+        fastq_handle=open(fastq_filename)
     return(fastq_handle)
 
 

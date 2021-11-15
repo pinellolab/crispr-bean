@@ -3,9 +3,38 @@ import pandas as pd
 from ..core import ReporterScreen
 from _supporting_fn import *
 
-def _base_edit_to_from(start_base: chr = "A"):
-	base_map = {"A":"G", "C":"T"}
-	return(base_map[start_base])
+
+
+
+class Edit:
+    def __init__(self, rel_pos: int, ref_base: chr, alt_base: chr, offset: int = None):
+        self.rel_pos = rel_pos
+        self.ref_base = self.ref_base
+        self.alt_base = alt_base
+        if not offset is None:
+            self.pos = self.rel_pos + offset
+
+    def __eq__(self, other):
+        if self.pos == other.pos and self.ref_base == other.ref_base and self.alt_base == other.alt_base:
+            return True
+        return False
+
+
+class Allele:
+    # pos, ref, alt
+    def __init__(self, edits: set[edit]= None):
+        if edits is None:
+            self.edits = set()
+        else:
+            self.edits = edits
+
+    def __eq__(self, other):
+        if self.edits == other.edits : return True
+        return False
+
+    def add(self, edit: Edit):
+        self.edits.add(edit) # TBD: adding to set?
+
 
 class GuideEditCounter():
 	def __init__(self, **kwargs):

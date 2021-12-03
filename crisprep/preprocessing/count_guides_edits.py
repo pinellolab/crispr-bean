@@ -6,7 +6,6 @@ import gzip
 import argparse
 import sys
 import gzip
-import subprocess as sb
 from collections import defaultdict
 import unicodedata
 import re
@@ -16,8 +15,8 @@ from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.Seq import Seq
 from typing import Dict, List, Union, Tuple
-from tqdm import tqdm 
 from GuideEditCounter import GuideEditCounter, Allele, Edit
+from _supporting_fn import *
 
 import logging
 
@@ -87,16 +86,6 @@ def mask_sequence_positions(seq: str, pos: np.array) -> str:
 
 
 
-###EXCEPTIONS############################
-class NTException(Exception):
-    pass
-
-class InputFileError(Exception):
-    pass
-
-class NoReadsAfterQualityFiltering(Exception):
-    pass
-#########################################
 
 def get_input_parser():
     """Get the input data"""
@@ -119,7 +108,7 @@ def get_input_parser():
     parser.add_argument('--R1', type=str,  help='fastq file for read 1', required=True,default='Fastq filename' )
     parser.add_argument('--R2', type=str,  help='fastq file for read 2, sorted as the same name order as in --R1 file.', required=True, default='Fastq filename' )
     parser.add_argument('-b', '--edited_base', type = str, required = True, help = 'For base editors, the base that should be ignored when matching the gRNA sequence')
-    parser.add_argument('-f','--sgRNA_file', type=str, required = True, help='''sgRNA description file. The format requires three columns: gRNA, Reporter, gRNA_barcode.''')
+    parser.add_argument('-f','--sgRNA_filename', type=str, required = True, help='''sgRNA description file. The format requires three columns: gRNA, Reporter, gRNA_barcode.''')
 
     #optional
     parser.add_argument('--guide_start_seq', type = str, help = "Guide starts after this sequence in R1", default = "GGAAAGGACGAAACACCG")
@@ -134,9 +123,13 @@ def get_input_parser():
     parser.add_argument('--qend_R1', help = 'End position of the read when filtering for quality score of the read 1', type = int, default = 47)
     parser.add_argument('--qstart_R2', help = 'Same as qstart_R1, for read 2 fastq file', default = 0)
     parser.add_argument('--qend_R2', help = 'Same as qstart_R2, for read 2 fastq file', default = 36)
+    parser.add_argument('--gstart_reporter', help = "Start position of the guide sequence in the reporter", type = int, default = 6)
+
+    parser.add_argument('--guide_bc', help = 'Construct has guide barcode', default = True)
     parser.add_argument('--guide_bc_len', help = 'Guide barcode sequence length at the beginning of the R2', type = str, default = 4)
     parser.add_argument('--offset', help = 'Guide file has offest column that will be added to the relative position of reporters.', action = 'store_true')
     parser.add_argument('--align_fasta', help = 'gRNA is aligned to this sequence to infer the offset. Can be used when the exact offset is not provided.', type = str, default = '')
+    parser.add_argument('-a', '--count_allele', help = 'count gRNA alleles', default = False)
 
     return(parser)
 
@@ -146,8 +139,8 @@ def check_arguments(args):
     check_file(args.R1)
     check_file(args.R2)
 
-    if args.sgRNA_file:
-        check_file(args.sgRNA_file)
+    if args.sgRNA_filename:
+        check_file(args.sgRNA_filename)
 
     # Edited base should be one of A/C/T/G
     if args.edited_base.upper() not in ['A', 'C', "T", "G"]:
@@ -170,7 +163,7 @@ def check_arguments(args):
     if args.qend_R2 != args.guide_bc_len + args.reporter_length :
         warn("Quality of R2 checked up until {}bp, while the length of guide barcode and reporter combined is {}bp.".format(
             args.qend_R2, args.guide_bc_len + args.reporter_length))
-    info("Using guide barcode length {}, guide start {}, and guide length {}".format(args.guide_bc_len, args.guide_start, ','.join(list(map(lambda x: str(x), GUIDE_LENGTHS))))) 
+    info("Using guide barcode length {}, guide start '{}'".format(args.guide_bc_len, args.guide_start_seq)) 
     #normalize name and remove not allowed characters
     if args.name:   
         clean_name=slugify(args.name)
@@ -179,7 +172,7 @@ def check_arguments(args):
                args.name=clean_name
 
     if args.offset:
-        df = pd.read_csv(args.sgRNA_file)
+        df = pd.read_csv(args.sgRNA_filename)
         if not 'offset' in df.columns:
             raise InputFileError("Offset option is set but the input file doesn't contain the offset column.")
         if len(args.align_fasta) > 0:
@@ -202,12 +195,13 @@ if __name__ == '__main__':
 
     args = check_arguments(args)
 
-    counter = ScreenSeq(**args)
+    args_dict = vars(args)
+    counter = GuideEditCounter(**args_dict)
     counter.check_filter_fastq()
     
     counter.get_counts()
 
-    couter.screen.write("{}.h5ad".format(counter.output_dir))
+    counter.screen.write("{}.h5ad".format(counter.output_dir))
 
 
     info('All Done!')

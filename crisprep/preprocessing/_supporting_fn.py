@@ -1,5 +1,10 @@
-from typing import List
-import SeqIO
+from typing import List, Union
+import subprocess as sb
+import pandas as pd
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqIO.QualityIO import FastqGeneralIterator
+from .Edit import Allele, Edit
 
 def _base_edit_to_from(start_base: chr = "A"):
     try:
@@ -22,11 +27,11 @@ def _get_n_reads_fastq(fastq_filename: str):
     return(int(float(p.communicate()[0])/4.0))
 
 
-def _get_fastq_handle(fastq_filename: str):
+def _get_fastq_handle(fastq_filename: str, mode = "r"):
     if fastq_filename.endswith('.gz'):
-        fastq_handle=gzip.open(fastq_filename)
+        fastq_handle=gzip.open(fastq_filename, mode)
     else:
-        fastq_handle=open(fastq_filename)
+        fastq_handle=open(fastq_filename, mode)
     return(fastq_handle)
 
 
@@ -80,9 +85,10 @@ def _write_paired_end_reads(R1_record, R2_record, R1_out_handle, R2_out_handle):
         R2_out_handle.write(_fastq_iter_to_text(R2_record))
 
 
-def _get_edited_allele(ref_seq, query_seq, offset):
+def _get_edited_allele(ref_seq: str, query_seq: str, offset: int, start_pos: int = 0, end_pos: int = 100):
     allele = Allele()
     for i, (ref_nt, sample_nt) in enumerate(zip(ref_seq, query_seq)):
+        if i < start_pos or i >= end_pos: continue
         if ref_nt == sample_nt: continue
         else: 
             edit = Edit(i, ref_nt, sample_nt, offset)

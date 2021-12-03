@@ -10,9 +10,10 @@ setuptools.setup(
      author_email="jayoung_ryu@g.harvard.edu",
      description="Tools for analyzing CRISPR data with REPorter edits",
      long_description=long_description,
-   long_description_content_type="text/markdown",
+     long_description_content_type="text/markdown",
      url="https://github.com/jykr/crisprep",
      packages=setuptools.find_packages(),
+     scripts=["bin/crisprep-count"],
      classifiers=[
          "Programming Language :: Python :: 3",
          "License :: OSI Approved :: MIT License",

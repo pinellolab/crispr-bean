@@ -1,5 +1,6 @@
 README.md
 setup.py
+bin/crisprep-count
 crisprep/ReporterScreen.py
 crisprep/__init__.py
 crisprep/__init__tmp.py
@@ -12,5 +13,4 @@ crisprep/preprocessing/GuideEditCounter.py
 crisprep/preprocessing/Step1_count_gRNA.py
 crisprep/preprocessing/__init__.py
 crisprep/preprocessing/_supporting_fn.py
-crisprep/preprocessing/count_guides_edits.py
 crisprep/preprocessing/utils.py

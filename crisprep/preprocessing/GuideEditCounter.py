@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
-from crisprep import ReporterScreen
+from crisprep.ReporterScreen import ReporterScreen
 from .Edit import Allele, Edit
 
 from ._supporting_fn import (
@@ -23,6 +23,16 @@ from ._supporting_fn import (
     revcomp
 )
 
+logging.basicConfig(level=logging.INFO,
+                     format='%(levelname)-5s @ %(asctime)s:\n\t %(message)s \n',
+                     datefmt='%a, %d %b %Y %H:%M:%S',
+                     stream=sys.stderr,
+                     filemode="w"
+                     )
+error   = logging.critical
+warn    = logging.warning
+debug   = logging.debug
+info    = logging.info
 
 class NTException(Exception):
     pass
@@ -46,6 +56,7 @@ class GuideEditCounter:
         self.min_single_bp_quality = kwargs["min_single_bp_quality"]
         self.name = kwargs["name"]
 
+
         self.qstart_R1 = kwargs["qstart_R1"]
         self.qend_R1 = kwargs["qend_R1"]
         self.qstart_R2 = kwargs["qstart_R2"]
@@ -55,6 +66,13 @@ class GuideEditCounter:
         self.sgRNA_filename = kwargs["sgRNA_filename"]
         self.count_only_bcmatched = False
         self._set_sgRNA_df()
+
+        self.database_id = self._get_database_name()
+        self.output_dir = os.path.join(
+            os.path.abspath(kwargs["output_folder"]),
+            "CRISPRessoCount_on_%s" % self.database_id,
+        )
+        self._write_start_log()
 
         self.screen = ReporterScreen(
             X=np.zeros((len(self.guides_info_df), 1)),
@@ -85,14 +103,11 @@ class GuideEditCounter:
             self.reporter_length = kwargs["reporter_length"]
 
         self.n_total_reads = _read_count_match(self.R1_filename, self.R2_filename)
-        self.database_id = self._get_database_name()
+        
 
         self.keep_intermediate = kwargs["keep_intermediate"]
-        self.output_dir = os.path.join(
-            os.path.abspath(kwargs["output_folder"]),
-            "CRISPRessoCount_on_%s" % self.database_id,
-        )
-        self._write_start_log()
+
+        
 
     def _set_sgRNA_df(self):
         with open(self.sgRNA_filename) as infile:
@@ -397,9 +412,9 @@ class GuideEditCounter:
     def _write_start_log(self):
         try:
             os.makedirs(self.output_dir)
-            info("Creating Folder %s" % self.output_dir)
+            print("Creating Folder %s" % self.output_dir)
         except:
-            warn("Folder %s already exists." % self.output_dir)
+            print("Folder %s already exists." % self.output_dir)
         self.log_filename = self._jp("CRISPRessoCount_RUNNING_LOG.txt")
         logging.getLogger().addHandler(logging.FileHandler(self.log_filename))
         with open(self.log_filename, "w+") as outfile:

@@ -56,7 +56,6 @@ class GuideEditCounter:
         self.base_edited_to = _base_edit_to_from(self.base_edited_from)
         self.min_average_read_quality = kwargs["min_average_read_quality"]
         self.min_single_bp_quality = kwargs["min_single_bp_quality"]
-        self.name = kwargs["name"]
 
         self.guides_info_df = pd.read_csv(kwargs["sgRNA_filename"])
         self.guides_has_strands = ("Strand" in self.guides_info_df.columns) or \
@@ -72,7 +71,7 @@ class GuideEditCounter:
         self.qend_R1 = kwargs["qend_R1"]
         self.qstart_R2 = kwargs["qstart_R2"]
         self.qend_R2 = kwargs["qend_R2"]
-
+        self.name = kwargs["name"]
 
         self.sgRNA_filename = kwargs["sgRNA_filename"]
         self.count_only_bcmatched = False
@@ -90,7 +89,7 @@ class GuideEditCounter:
             X_edit=np.zeros((len(self.guides_info_df), 1)),
             X_bcmatch=np.zeros((len(self.guides_info_df), 1)),
             guides=self.guides_info_df,
-            condit=pd.DataFrame(index=[self.name]),
+            condit=pd.DataFrame(index=[self.database_id]),
         )
 
         self.count_reporter_edits = kwargs["count_reporter"]
@@ -179,6 +178,25 @@ class GuideEditCounter:
         else:  # count both bc matched & unmatched guide counts
             self._get_guide_counts_bcmatch_semimatch()
 
+        if self.count_reporter_edits:
+            mi = pd.MultiIndex.from_tuples(self.screen.uns["edit_counts"].keys())
+            self.screen.uns["edit_counts"] = pd.DataFrame.from_dict(self.screen.uns["edit_counts"], orient = "index", columns = [self.database_id])
+            self.screen.uns["edit_counts"].index = mi
+            self.screen.uns["edit_counts"].reset_index(inplace = True)
+            self.screen.uns["edit_counts"].rename(columns = {"level_0":"guide", "level_1":"edit"}, inplace= True)
+            self.screen.uns["edit_counts"].guide = self.screen.guides.index[self.screen.uns["edit_counts"].guide.to_numpy(dtype = int)]
+
+        if self.count_edited_alleles:
+            mi = pd.MultiIndex.from_tuples(self.screen.uns["allele_counts"].keys())
+            self.screen.uns["allele_counts"] = pd.DataFrame.from_dict(self.screen.uns["allele_counts"], orient = "index", columns = [self.database_id])
+            self.screen.uns["allele_counts"].index = mi
+            self.screen.uns["allele_counts"].reset_index(inplace = True)
+            self.screen.uns["allele_counts"].rename(columns = {"level_0":"guide", "level_1":"allele"}, inplace = True)
+            self.screen.uns["allele_counts"].guide = self.screen.guides.index[self.screen.uns["allele_counts"].guide.to_numpy(dtype = int)]
+
+        info("Read count with \nno match:\t{}\nduplicate match:\t{}\nduplicate match wo barcode:\t{}\n".format(
+            self.nomatch, self.duplicate_match, self.duplicate_match_wo_barcode))
+
     def _gRNA_eq(self, guide:str, observed:str):
         if len(observed) != len(guide):
             return False
@@ -249,9 +267,13 @@ class GuideEditCounter:
                     read_reporter_seq = self.get_reporter_seq(R1_seq, R2_seq)
 
                     if self.guides_has_strands:
-                        guide_strand = strand_str_to_int[self.screen.guides.Strand[matched_guide_idx]]
-                        if guide_strand == -1: offset = self.screen.guides.offset[matched_guide_idx] + 5
-                        if guide_strand == 1: offset = self.screen.guides.offset[matched_guide_idx] - 5
+                        try:
+                            guide_strand = strand_str_to_int[self.screen.guides.Strand[matched_guide_idx]]
+                            if guide_strand == -1: offset = self.screen.guides.offset[matched_guide_idx] + 5
+                            if guide_strand == 1: offset = self.screen.guides.offset[matched_guide_idx] - 5
+                        except KeyError: #control guides
+                            guide_strand = 1
+                            offset = 0
                     else:
                         guide_strand = 1
                         offset = self.screen.guides.offset[matched_guide_idx]

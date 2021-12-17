@@ -13,7 +13,8 @@ setuptools.setup(
      long_description_content_type="text/markdown",
      url="https://github.com/jykr/crisprep",
      packages=setuptools.find_packages(),
-     scripts=["bin/crisprep-count"],
+     scripts=["bin/crisprep-count",
+     "bin/crisprep-count-samples"],
      classifiers=[
          "Programming Language :: Python :: 3",
          "License :: OSI Approved :: MIT License",

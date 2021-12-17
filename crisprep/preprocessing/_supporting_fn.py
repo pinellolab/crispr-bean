@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Literal
 import subprocess as sb
 import pandas as pd
 from Bio import SeqIO
@@ -85,13 +85,20 @@ def _write_paired_end_reads(R1_record, R2_record, R1_out_handle, R2_out_handle):
         R2_out_handle.write(_fastq_iter_to_text(R2_record))
 
 
-def _get_edited_allele(ref_seq: str, query_seq: str, offset: int, start_pos: int = 0, end_pos: int = 100):
+def _get_edited_allele(
+    ref_seq: str, 
+    query_seq: str, 
+    offset: int, 
+    strand: Literal[1, -1] = 1,
+    start_pos: int = 0, 
+    end_pos: int = 100):
+
     allele = Allele()
     for i, (ref_nt, sample_nt) in enumerate(zip(ref_seq, query_seq)):
         if i < start_pos or i >= end_pos: continue
         if ref_nt == sample_nt: continue
         else: 
-            edit = Edit(i, ref_nt, sample_nt, offset)
+            edit = Edit(i - start_pos, ref_nt, sample_nt, offset, strand = strand)
             allele.add(edit)
     return(allele)
 

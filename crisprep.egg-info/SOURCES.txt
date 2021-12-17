@@ -1,6 +1,7 @@
 README.md
 setup.py
 bin/crisprep-count
+bin/crisprep-count-samples
 crisprep/ReporterScreen.py
 crisprep/__init__.py
 crisprep/__init__tmp.py

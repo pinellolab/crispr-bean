@@ -6,6 +6,7 @@ import logging
 import argparse
 from multiprocessing import Pool
 import pandas as pd
+import anndata as ad
 from crisprep.preprocessing.GuideEditCounter import GuideEditCounter, Allele, Edit
 from crisprep.preprocessing._supporting_fn import *
 from crisprep.ReporterScreen import ReporterScreen, concat
@@ -65,6 +66,7 @@ def get_input_parser():
     parser.add_argument('--offset', help = 'Guide file has offest column that will be added to the relative position of reporters.', action = 'store_true')
     parser.add_argument('--align_fasta', help = 'gRNA is aligned to this sequence to infer the offset. Can be used when the exact offset is not provided.', type = str, default = '')
     parser.add_argument('-a', '--count_allele', help = 'count gRNA alleles', action='store_true')
+    parser.add_argument('--rerun', help = 'Recount each sample', action='store_true')
 
     return(parser)
 
@@ -75,13 +77,20 @@ def count_sample(R1, R2, sample_id, args):
     args_dict["name"] = sample_id
     args_dict["output_folder"] = os.path.join(args.output_folder, sample_id)
     counter = GuideEditCounter(**args_dict)
-    counter.check_filter_fastq()
+    if os.path.exists("{}.h5ad".format(counter.output_dir)) and not args_dict["rerun"]:
+        screen_ad = ad.read_h5ad("{}.h5ad".format(counter.output_dir))
+        screen = ReporterScreen.from_adata(screen_ad)
+        info("Reading already existing data for {} from \n\
+            {}.h5ad".format(sample_id, counter.output_dir))
+    else:
+        counter.check_filter_fastq()
+        counter.get_counts()
+        counter.screen.write("{}.h5ad".format(counter.output_dir))
+        screen = counter.screen
+        info("Done for {}. \n\
+            Output written at {}.h5ad".format(sample_id, counter.output_dir))
 
-    counter.get_counts()
-    info("Done for {}. \n\
-        Output written at {}.h5ad".format(sample_id, counter.output_dir))
-
-    return(counter.screen)
+    return(screen)
 
 
 
@@ -99,21 +108,17 @@ if __name__ == '__main__':
     result = p.starmap(count_sample, [list(tup) + [args] for tup in list(sample_tbl.to_records(index = False))])
     #result = p.starmap(count_sample, sample_tbl[0], sample_tbl[1], sample_tbl[2])
     p.close()
-    '''
-    for idx, row in sample_tbl.iterrows():
-
-        p = mp.Process(target = count_sample, 
-            args = (row[0], row[1], row[2]))
-        jobs.append(p)
-        p.start()
-    '''
 
     screen = concat(result, axis = 1)
-    database_id = args.input.split('.')[0]
+    if args.name: database_id = args.name
+    else: database_id = args.input.split('.')[0]
     output_path = os.path.join(os.path.abspath(args.output_folder),
-            "CRISPRessoCount_on_%s" % database_id)
+            "crisprep_count_%s" % database_id)
 
+    screen.guides = result[0].guides.loc[screen.guides.index,:].reset_index()
+    screen.condit = screen.condit.reset_index()
     screen.write("{}.h5ad".format(output_path))
+    screen.to_Excel("{}.xlsx".format(output_path))
 
 
     info('All Done!')

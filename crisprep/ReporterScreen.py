@@ -1,8 +1,9 @@
+from functools import reduce
 from perturb_tools import Screen
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import List, Union
+from typing import List, Union, Collection
 from anndata import AnnData
 import anndata as ad
 
@@ -41,10 +42,14 @@ class ReporterScreen(Screen):
 
         self.layers["edits"] = X_edit
         self.layers["X_bcmatch"] = X_bcmatch
+        self.get_edit_rate()
 
     def get_edit_rate(self):
-        if (not X_bcmatch is None) and (not X_edit is None):
-            self.layers["edit_rate"] = self.layers["edits"] / self.layers["X_bcmatch"]
+        if (not self.layers["X_bcmatch"] is None) and (not self.layers["edits"] is None):
+            bulk_idx = np.where(self.var.index.map(lambda s: "bulk" in s))[0]
+            self.layers["_edit_rate"] = (self.layers["edits"] + 0.5) / (self.layers["X_bcmatch"] + 0.5) 
+            self.obs["edit_rate"] = self.layers["_edit_rate"][:, bulk_idx].mean(axis = 1)
+        
         else:
             raise ValueError("edits or barcode matched guide counts not available.")
 
@@ -155,13 +160,49 @@ class ReporterScreen(Screen):
             return((guide_fc_agg, edit_fc_agg))
 
 
-def concat(screens, *args, **kwargs):
+
+
+def concat(screens: Collection[ReporterScreen], *args, **kwargs):
     adata = ad.concat(screens, *args, **kwargs)
     keys = set()
-    for i in range(len(screens)):
-        keys.add(adata.uns.keys())
+    for screen in screens:
+        keys.update(screen.uns.keys())
+
     for k in keys:
-        adata.uns[k] = pd.concat([screen.uns[k] for screen in screens], axis = 1)
+        if k == "edit_counts": merge_on = ["guide", "edit"]
+        elif k == "allele_counts": merge_on = ["guide", "allele"] 
+        else: continue
+
+        for i, screen in enumerate(screens):
+            if i == 0:
+                adata.uns[k] = screen.uns[k]
+            else:
+                adata.uns[k] = pd.merge(adata.uns[k], screen.uns[k], 
+                    on = merge_on, 
+                    how = 'outer')
+        adata.uns[k].fillna(0)
+
+        # TODO: allow more uns merge?
+
+
+        # def merge_uns_df(left: ReporterScreen, right:ReporterScreen):
+        #     return(pd.merge(left.uns[k], right.uns[k], on = merge_on, 
+        #         how='outer', 
+        #         suffixes = ("_{}".format(left.id), "_{}".format(right.id))
+        #         )
+        #     )
+
+        
+        #adata.uns[k] = reduce(merge_uns_df, screens)
+            # reduce(lambda left,right: pd.merge(
+            #     left.uns[k], right.uns[k], 
+            #     on = merge_on, 
+            #     how='outer', 
+            #     suffixes = ("_{}".format(left.id), "_{}".format(right.id))
+            #     ), 
+            # screens)
+
+        
 
     return(ReporterScreen.from_adata(adata))
 

@@ -5,12 +5,13 @@ import sys
 import logging
 from tqdm import tqdm
 import pdb
+import gzip
 import numpy as np
 import pandas as pd
 from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from crisprep.ReporterScreen import ReporterScreen
-from .Edit import Allele, Edit
+from crisprep.framework.Edit import Allele, Edit
 
 from ._supporting_fn import (
     _base_edit_to_from,
@@ -185,6 +186,7 @@ class GuideEditCounter:
             self.screen.uns["edit_counts"].reset_index(inplace = True)
             self.screen.uns["edit_counts"].rename(columns = {"level_0":"guide", "level_1":"edit"}, inplace= True)
             self.screen.uns["edit_counts"].guide = self.screen.guides.index[self.screen.uns["edit_counts"].guide.to_numpy(dtype = int)]
+            #self.screen.uns["edit_counts"].set_index(["guide", "edit"], drop = True, inplace = True)
 
         if self.count_edited_alleles:
             mi = pd.MultiIndex.from_tuples(self.screen.uns["allele_counts"].keys())
@@ -193,6 +195,7 @@ class GuideEditCounter:
             self.screen.uns["allele_counts"].reset_index(inplace = True)
             self.screen.uns["allele_counts"].rename(columns = {"level_0":"guide", "level_1":"allele"}, inplace = True)
             self.screen.uns["allele_counts"].guide = self.screen.guides.index[self.screen.uns["allele_counts"].guide.to_numpy(dtype = int)]
+            #self.screen.uns["allele_counts"].set_index(["guide", "allele"], drop = True, inplace = True)
 
         info("Read count with \nno match:\t{}\nduplicate match:\t{}\nduplicate match wo barcode:\t{}\n".format(
             self.nomatch, self.duplicate_match, self.duplicate_match_wo_barcode))
@@ -282,8 +285,9 @@ class GuideEditCounter:
                         query_seq = read_reporter_seq,
                         offset = offset,
                         strand = guide_strand,
-                        start_pos = self.gstart_reporter,
-                        end_pos = self.gstart_reporter + len(self.screen.guides.sequence[matched_guide_idx])
+                        start_pos = len(read_reporter_seq) - self.gstart_reporter - len(self.screen.guides.sequence[matched_guide_idx]),
+                        # start_pos == 7 if gRNA_len==19 and 6 if gRNA_len == 20
+                        end_pos = len(read_reporter_seq) - self.gstart_reporter
                     )
 
                     if self.count_edited_alleles:
@@ -347,7 +351,9 @@ class GuideEditCounter:
             if seq is None: continue
 
             _seq_match = np.array(list(map(lambda x: self._gRNA_eq(x, seq), self.guides_info_df.sequence)))
+            assert len(_seq_match) == len(self.guides_info_df.sequence)
             _bc_match = np.array(list(map(lambda x: x == guide_barcode, self.guides_info_df.barcode)))
+            assert len(_bc_match) == len(self.guides_info_df.barcode)
             bc_match_idx = np.append(bc_match_idx, np.where(_seq_match & _bc_match)[0])
             semimatch_idx = np.append(semimatch_idx, np.where(_seq_match & np.invert(_bc_match))[0])
 
@@ -371,7 +377,7 @@ class GuideEditCounter:
 
     def get_gRNA_barcode(self, R1_seq, R2_seq):
         # This can be adjusted for different construct design.
-        return revcomp(R2_seq[:guide_bc_len])
+        return revcomp(R2_seq[:self.guide_bc_len])
 
     def _get_fastq_handle(
         self,
@@ -432,7 +438,7 @@ class GuideEditCounter:
             else:
                 info(
                     "Number of reads in input:%d\tNumber of reads after filtering:%d\n"
-                    % (N_READS_INPUT, N_READS_AFTER_PREPROCESSING)
+                    % (self.n_total_reads, self.n_reads_after_filtering)
                 )
         else:
             self.n_reads_after_filtering = self.n_total_reads
@@ -442,14 +448,14 @@ class GuideEditCounter:
         R2_filtered = gzip.open(self.filtered_R2_filename, "w+")
 
         if R1 is None or R2 is None:
-            R1, R2 = _get_seq_records()
+            R1, R2 = self._get_seq_records()
 
         n_reads_after_filtering = 0
         for i in range(len(R1)):
             R1_record = R1[i]
             R2_record = R2[i]
 
-            if filter_by_qual:
+            if self.filter_by_qual:
                 R1_quality_pass = _read_is_good_quality(
                     R1_record,
                     self.min_average_read_quality,
@@ -465,8 +471,8 @@ class GuideEditCounter:
 
                 if R1_quality_pass and R2_quality_pass:
                     n_reads_after_filtering += 1
-                    R1_filtered.write(record.format("fastq"))
-                    R2_filtered.write(record.format("fastq"))
+                    R1_filtered.write(R1.format("fastq"))
+                    R2_filtered.write(R2.format("fastq"))
         return n_reads_after_filtering
 
     def _write_start_log(self):

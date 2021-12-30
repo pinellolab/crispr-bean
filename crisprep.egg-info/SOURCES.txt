@@ -9,9 +9,15 @@ crisprep.egg-info/PKG-INFO
 crisprep.egg-info/SOURCES.txt
 crisprep.egg-info/dependency_links.txt
 crisprep.egg-info/top_level.txt
-crisprep/preprocessing/Edit.py
+crisprep/__pycache__/__init__.cpython-38.pyc
+crisprep/__pycache__/readwrite.cpython-38.pyc
+crisprep/annotate/__init__.py
+crisprep/annotate/translate_allele.py
+crisprep/framework/Edit.py
+crisprep/framework/__init__.py
 crisprep/preprocessing/GuideEditCounter.py
 crisprep/preprocessing/Step1_count_gRNA.py
 crisprep/preprocessing/__init__.py
 crisprep/preprocessing/_supporting_fn.py
 crisprep/preprocessing/utils.py
+dist/crisprep-0.0.1-py3-none-any.whl

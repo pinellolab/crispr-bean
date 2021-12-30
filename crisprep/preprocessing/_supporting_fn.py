@@ -1,10 +1,15 @@
 from typing import List, Union, Literal
 import subprocess as sb
 import pandas as pd
+import gzip
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from .Edit import Allele, Edit
+
+class InputFileError(Exception):
+    pass
+
 
 def _base_edit_to_from(start_base: chr = "A"):
     try:
@@ -29,6 +34,8 @@ def _get_n_reads_fastq(fastq_filename: str):
 
 def _get_fastq_handle(fastq_filename: str, mode = "r"):
     if fastq_filename.endswith('.gz'):
+        if mode == 'r': mode = "rt"
+        elif mode == "w": mode = "wb"
         fastq_handle=gzip.open(fastq_filename, mode)
     else:
         fastq_handle=open(fastq_filename, mode)
@@ -39,8 +46,8 @@ def _read_is_good_quality(record: SeqIO.SeqRecord,
         min_bp_quality = 0, 
         min_single_bp_quality = 0, 
         qend = -1):
-    mean_quality_pass = np.array(record.letter_annotations["phred_quality"])[:qend_R1].mean() >= min_bp_quality
-    min_quality_pass = np.array(record.letter_annotations["phred_quality"])[:qend_R1].min()>=min_single_bp_quality
+    mean_quality_pass = np.array(record.letter_annotations["phred_quality"])[:qend].mean() >= min_bp_quality
+    min_quality_pass = np.array(record.letter_annotations["phred_quality"])[:qend].min()>=min_single_bp_quality
     return(mean_quality_pass and min_quality_pass)
 
 
@@ -81,8 +88,12 @@ def _fastq_iter_to_text(record):
 
 
 def _write_paired_end_reads(R1_record, R2_record, R1_out_handle, R2_out_handle):
+    try:
         R1_out_handle.write(_fastq_iter_to_text(R1_record))
         R2_out_handle.write(_fastq_iter_to_text(R2_record))
+    except TypeError:
+        R1_out_handle.write(_fastq_iter_to_text(R1_record).encode())
+        R2_out_handle.write(_fastq_iter_to_text(R2_record).encode())
 
 
 def _get_edited_allele(

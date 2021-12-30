@@ -11,7 +11,7 @@ import pandas as pd
 from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from crisprep.ReporterScreen import ReporterScreen
-from crisprep.framework.Edit import Allele, Edit
+from crisprep.framework.Edit import Allele
 
 from ._supporting_fn import (
     _base_edit_to_from,
@@ -180,8 +180,9 @@ class GuideEditCounter:
             self._get_guide_counts_bcmatch_semimatch()
 
         if self.count_reporter_edits:
-            mi = pd.MultiIndex.from_tuples(self.screen.uns["edit_counts"].keys())
-            self.screen.uns["edit_counts"] = pd.DataFrame.from_dict(self.screen.uns["edit_counts"], orient = "index", columns = [self.database_id])
+            mi = pd.MultiIndex.from_tuples(self.screen.uns["edit_counts"].keys(), names = ["guide", "edit"])
+            self.screen.uns["edit_counts"] = pd.DataFrame.from_dict(
+                self.screen.uns["edit_counts"], orient = "index", columns = [self.database_id])
             self.screen.uns["edit_counts"].index = mi
             self.screen.uns["edit_counts"].reset_index(inplace = True)
             self.screen.uns["edit_counts"].rename(columns = {"level_0":"guide", "level_1":"edit"}, inplace= True)
@@ -189,7 +190,7 @@ class GuideEditCounter:
             #self.screen.uns["edit_counts"].set_index(["guide", "edit"], drop = True, inplace = True)
 
         if self.count_edited_alleles:
-            mi = pd.MultiIndex.from_tuples(self.screen.uns["allele_counts"].keys())
+            mi = pd.MultiIndex.from_tuples(self.screen.uns["allele_counts"].keys(), names = ["guide", "allele"])
             self.screen.uns["allele_counts"] = pd.DataFrame.from_dict(self.screen.uns["allele_counts"], orient = "index", columns = [self.database_id])
             self.screen.uns["allele_counts"].index = mi
             self.screen.uns["allele_counts"].reset_index(inplace = True)
@@ -280,14 +281,17 @@ class GuideEditCounter:
                     else:
                         guide_strand = 1
                         offset = self.screen.guides.offset[matched_guide_idx]
+                    start_pos = len(read_reporter_seq) - self.gstart_reporter - len(self.screen.guides.sequence[matched_guide_idx])
+                    end_pos = len(read_reporter_seq) - self.gstart_reporter
+                    assert (start_pos == 7 and len(self.screen.guides.sequence[matched_guide_idx])==19) or \
+                        (start_pos == 6 and len(self.screen.guides.sequence[matched_guide_idx])==20)
                     allele = _get_edited_allele(
                         ref_seq = ref_reporter_seq,
                         query_seq = read_reporter_seq,
                         offset = offset,
                         strand = guide_strand,
-                        start_pos = len(read_reporter_seq) - self.gstart_reporter - len(self.screen.guides.sequence[matched_guide_idx]),
-                        # start_pos == 7 if gRNA_len==19 and 6 if gRNA_len == 20
-                        end_pos = len(read_reporter_seq) - self.gstart_reporter
+                        start_pos = start_pos,
+                        end_pos = end_pos
                     )
 
                     if self.count_edited_alleles:

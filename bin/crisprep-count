@@ -16,7 +16,7 @@ from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.Seq import Seq
 from typing import Dict, List, Union, Tuple
-from crisprep.preprocessing.GuideEditCounter import GuideEditCounter, Allele, Edit
+from crisprep.preprocessing.GuideEditCounter import GuideEditCounter
 from crisprep.preprocessing._supporting_fn import *
 
 import logging
@@ -187,7 +187,12 @@ def check_arguments(args):
 
 
 def get_first_read_length(fastq_filename):
-    for record in SeqIO.parse(fastq_filename, "fastq"):
+    if fastq_filename.split(".")[-1] == "gz":
+        handle = gzip.open(fastq_filename, "rt")
+    else:
+        handle = fastq_filename
+    
+    for record in SeqIO.parse(handle, "fastq"):
         return(len(record))
     raise InputFileError("Provided R1 file doesn't have any read to parse")
 

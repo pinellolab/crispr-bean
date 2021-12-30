@@ -5,7 +5,7 @@ import gzip
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
-from .Edit import Allele, Edit
+from crisprep.framework.Edit import Allele, Edit
 
 class InputFileError(Exception):
     pass
@@ -105,6 +105,9 @@ def _get_edited_allele(
     end_pos: int = 100):
 
     allele = Allele()
+
+    assert len(ref_seq) == len(query_seq)
+
     for i, (ref_nt, sample_nt) in enumerate(zip(ref_seq, query_seq)):
         if i < start_pos or i >= end_pos: continue
         if ref_nt == sample_nt: continue

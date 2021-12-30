@@ -6,11 +6,13 @@ Home-page: https://github.com/jykr/crisprep
 Author: Jayoung Ryu
 Author-email: jayoung_ryu@g.harvard.edu
 License: UNKNOWN
-Description: # crisprep
-        Tool for analyzing CRISPR data with reporter edit counts.
-        
 Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
 Description-Content-Type: text/markdown
+
+# crisprep
+Tool for analyzing CRISPR data with reporter edit counts.
+
+

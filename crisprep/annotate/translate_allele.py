@@ -3,6 +3,7 @@ import numpy as np
 from Bio import SeqIO
 from crisprep.framework.Edit import Edit
 import logging
+import sys
 
 logging.basicConfig(level=logging.INFO,
                      format='%(levelname)-5s @ %(asctime)s:\n\t %(message)s \n',
@@ -14,6 +15,8 @@ error   = logging.critical
 warn    = logging.warning
 debug   = logging.debug
 info    = logging.info
+
+reverse_map = {"A":"T", "C":"G", "G":"C", "T":"A"}
 
 codon_map = {'TTT':'F', 'TTC':'F', 'TTA':'L', 'TTG':'L', 'CTT':'L', 'CTC':'L', 'CTA':'L', 'CTG':'L', 'ATT':'I', 'ATC':'I',
          'ATA':'I', 'ATG':'M', 'GTT':'V', 'GTC':'V', 'GTA':'V', 'GTG':'V', 'TCT':'S', 'TCC':'S', 'TCA':'S', 'TCG':'S',
@@ -122,9 +125,15 @@ class CDS():
         edit = Edit.from_str(edit_str)
         rel_pos= self._edit_pos_to_aa_pos(edit.pos)
         if rel_pos == -1 : return # do nothing
-        if type(self).nt[rel_pos] != edit.ref_base:
+        if edit.strand == '-': 
+            ref_base = reverse_map[edit.ref_base]
+            alt_base = reverse_map[edit.alt_base]
+        else:
+            ref_base = edit.ref_base
+            alt_base = edit.alt_base
+        if type(self).nt[rel_pos] != ref_base:
             warn("Ref base mismatch: {},{},{}".format(type(self).nt[rel_pos], edit, rel_pos))
-        self.edited_nt[rel_pos] = edit.alt_base
+        self.edited_nt[rel_pos] = alt_base
         
     def edit_allele(self, allele_str):
         edit_strs = allele_str.split(",")

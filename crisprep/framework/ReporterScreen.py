@@ -165,3 +165,7 @@ def concat(screens: Collection[ReporterScreen], *args, **kwargs):
                 else:
                     return ReporterScreen.from_adata(adata)
 # okay decompiling ReporterScreen.cpython-38.pyc
+
+def read_h5ad(filename):
+    adata = ad.read_h5ad(filename)
+    return(ReporterScreen.from_adata(adata))

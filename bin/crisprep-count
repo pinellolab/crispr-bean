@@ -16,8 +16,7 @@ from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.Seq import Seq
 from typing import Dict, List, Union, Tuple
-from crisprep.preprocessing.GuideEditCounter import GuideEditCounter
-from crisprep.preprocessing._supporting_fn import *
+import crisprep
 
 import logging
 
@@ -204,7 +203,7 @@ if __name__ == '__main__':
     args = check_arguments(args)
 
     args_dict = vars(args)
-    counter = GuideEditCounter(**args_dict)
+    counter = crisprep.pp.GuideEditCounter(**args_dict)
     counter.check_filter_fastq()
     
     counter.get_counts()

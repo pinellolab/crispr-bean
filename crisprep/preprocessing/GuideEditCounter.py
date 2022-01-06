@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
-from crisprep.ReporterScreen import ReporterScreen
-from crisprep.framework.Edit import Allele
+from crisprep import ReporterScreen, Edit, Allele
+#from crisprep.framework.Edit import Allele
 
 from ._supporting_fn import (
     _base_edit_to_from,
@@ -281,6 +281,7 @@ class GuideEditCounter:
                     else:
                         guide_strand = 1
                         offset = self.screen.guides.offset[matched_guide_idx]
+                        
                     start_pos = len(read_reporter_seq) - self.gstart_reporter - len(self.screen.guides.sequence[matched_guide_idx])
                     end_pos = len(read_reporter_seq) - self.gstart_reporter
                     assert (start_pos == 7 and len(self.screen.guides.sequence[matched_guide_idx])==19) or \
@@ -316,13 +317,6 @@ class GuideEditCounter:
             else: 
                 self.screen.uns["edit_counts"][(guide_idx, str(edit))] = 1
 
-            # if (
-            #     "target_pos" in self.screen.guides.columns
-            #     and edit.rel_pos == self.screen.guides.target_pos
-            #     and edit.ref_base == self.base_edited_from
-            #     and edit.alt_base == self.base_edited_to
-            # ):
-            #     self.screen.guides.edits[guide_idx, 0] += 1
 
     def get_guide_seq(self, R1_seq, R2_seq, guide_length):
         """This can be edited by user based on the read construct."""

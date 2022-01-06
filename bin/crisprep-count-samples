@@ -7,9 +7,7 @@ import argparse
 from multiprocessing import Pool
 import pandas as pd
 import anndata as ad
-from crisprep.preprocessing.GuideEditCounter import GuideEditCounter
-from crisprep.preprocessing._supporting_fn import *
-from crisprep.ReporterScreen import ReporterScreen, concat
+import crisprep
 
 logging.basicConfig(level=logging.INFO,
                      format='%(levelname)-5s @ %(asctime)s:\n\t %(message)s \n',
@@ -76,12 +74,15 @@ def count_sample(R1, R2, sample_id, args):
     args_dict["R2"] = R2
     args_dict["name"] = sample_id
     args_dict["output_folder"] = os.path.join(args.output_folder, sample_id)
-    counter = GuideEditCounter(**args_dict)
+    counter = crisprep.pp.GuideEditCounter(**args_dict)
     if os.path.exists("{}.h5ad".format(counter.output_dir)) and not args_dict["rerun"]:
-        screen_ad = ad.read_h5ad("{}.h5ad".format(counter.output_dir))
-        screen = ReporterScreen.from_adata(screen_ad)
+        screen = crisprep.read_h5ad("{}.h5ad".format(counter.output_dir))
+        if not "Target base position in gRNA" in screen.guides.columns:
+            screen.guides["Target base position in gRNA"] = 5 #TODO: move this to guide counting part
+        screen.get_edit_mat_from_uns("A", "G")
         info("Reading already existing data for {} from \n\
             {}.h5ad".format(sample_id, counter.output_dir))
+
     else:
         info("Counting {}".format(sample_id))
         counter.check_filter_fastq()
@@ -111,12 +112,13 @@ if __name__ == '__main__':
     #result = p.starmap(count_sample, sample_tbl[0], sample_tbl[1], sample_tbl[2])
     p.close()
 
-    screen = concat(result, axis = 1)
+    screen = crisprep.concat(result, axis = 1)
     if args.name: database_id = args.name
     else: database_id = args.input.split('.')[0]
     output_path = os.path.join(os.path.abspath(args.output_folder),
             "crisprep_count_%s" % database_id)
 
+    guide_info_df = pd.read_csv(args.sgRNA_filename)
     screen.guides = result[0].guides.loc[screen.guides.index,:].reset_index()
     screen.condit = screen.condit.reset_index()
     screen.write("{}.h5ad".format(output_path))

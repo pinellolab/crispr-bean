@@ -2,7 +2,6 @@ README.md
 setup.py
 bin/crisprep-count
 bin/crisprep-count-samples
-crisprep/ReporterScreen.py
 crisprep/__init__.py
 crisprep/__init__tmp.py
 crisprep.egg-info/PKG-INFO
@@ -14,6 +13,7 @@ crisprep/__pycache__/readwrite.cpython-38.pyc
 crisprep/annotate/__init__.py
 crisprep/annotate/translate_allele.py
 crisprep/framework/Edit.py
+crisprep/framework/ReporterScreen.py
 crisprep/framework/__init__.py
 crisprep/preprocessing/GuideEditCounter.py
 crisprep/preprocessing/Step1_count_gRNA.py

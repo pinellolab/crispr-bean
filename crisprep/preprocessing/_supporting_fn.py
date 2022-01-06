@@ -106,7 +106,7 @@ def _get_edited_allele(
 
     allele = Allele()
 
-    assert len(ref_seq) == len(query_seq)
+    assert len(ref_seq) == len(query_seq), "reference and query seq length mismatch"
 
     for i, (ref_nt, sample_nt) in enumerate(zip(ref_seq, query_seq)):
         if i < start_pos or i >= end_pos: continue
@@ -114,6 +114,7 @@ def _get_edited_allele(
         else: 
             edit = Edit(i - start_pos, ref_nt, sample_nt, offset, strand = strand)
             allele.add(edit)
+            
     return(allele)
 
 

@@ -19,14 +19,16 @@ class Edit:
 
     @classmethod
     def from_str(cls, edit_str): #pos:strand:start>end
-        pos, strand, base_change = edit_str.split(":")
+        pos, rel_pos, strand, base_change = edit_str.split(":")
         pos = int(pos)
-        start, end = base_change.split(">")
+        rel_pos = int(rel_pos)
+        offset = pos - rel_pos*strand
+        ref_base, alt_base = base_change.split(">")
         assert strand in ["+", "-"]
         # if strand == "-":
         #     start = cls.reverse_map[start]
         #     end = cls.reverse_map[end]
-        return(cls(pos, start, end, strand = strand))
+        return(cls(rel_pos, ref_base, alt_base, offset = offset, strand = strand))
 
     def __eq__(self, other):
         if (
@@ -38,11 +40,14 @@ class Edit:
         return False
 
     def __hash__(self):
+        # Note that this doesn't include relative bases. 
+        # This wouldn't matter if we assign edit to each guide.
         return(hash((self.pos, self.ref_base, self.alt_base)))
 
     def __repr__(self):
-        return(("{}:{}:{}>{}".format(
+        return(("{}:{}:{}:{}>{}".format(
             int(self.pos), 
+            int(self.rel_pos),
             self.strand, 
             self.ref_base, 
             self.alt_base)))

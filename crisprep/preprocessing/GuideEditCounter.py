@@ -273,15 +273,19 @@ class GuideEditCounter:
                     if self.guides_has_strands:
                         try:
                             guide_strand = strand_str_to_int[self.screen.guides.Strand[matched_guide_idx]]
-                            if guide_strand == -1: offset = self.screen.guides.offset[matched_guide_idx] + 5
-                            if guide_strand == 1: offset = self.screen.guides.offset[matched_guide_idx] - 5
+                            if guide_strand == -1: 
+                                offset = self.screen.guides.start_pos[matched_guide_idx] + \
+                                    self.screen.guides.guide_len[matched_guide_idx] - 1
+                            if guide_strand == 1: 
+                                offset = self.screen.guides.start_pos[matched_guide_idx]
                         except KeyError: #control guides
                             guide_strand = 1
                             offset = 0
                     else:
                         guide_strand = 1
                         offset = self.screen.guides.offset[matched_guide_idx]
-                        
+                    
+                    # Set relative start/end position in reporter to count edits
                     start_pos = len(read_reporter_seq) - self.gstart_reporter - len(self.screen.guides.sequence[matched_guide_idx])
                     end_pos = len(read_reporter_seq) - self.gstart_reporter
                     assert (start_pos == 7 and len(self.screen.guides.sequence[matched_guide_idx])==19) or \

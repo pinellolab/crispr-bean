@@ -2,6 +2,7 @@ from typing import Iterable, Literal
 
 class Edit:
     reverse_map = {"A":"T", "C":"G", "T":"A", "G":"C"}
+    strand_map = {"+":1, "-":-1}
     def __init__(self, rel_pos: int, ref_base: chr, alt_base: chr, offset: int = None, strand: Literal[1, -1] = 1):
         strand_to_symbol = {1:'+', -1:'-'}
         self.rel_pos = rel_pos
@@ -22,9 +23,11 @@ class Edit:
         pos, rel_pos, strand, base_change = edit_str.split(":")
         pos = int(pos)
         rel_pos = int(rel_pos)
+        assert strand in ["+", "-"]
+        strand = cls.strand_map[strand]
         offset = pos - rel_pos*strand
         ref_base, alt_base = base_change.split(">")
-        assert strand in ["+", "-"]
+        
         # if strand == "-":
         #     start = cls.reverse_map[start]
         #     end = cls.reverse_map[end]

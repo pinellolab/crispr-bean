@@ -132,7 +132,7 @@ class CDS():
             ref_base = edit.ref_base
             alt_base = edit.alt_base
         if type(self).nt[rel_pos] != ref_base:
-            warn("Ref base mismatch: {},{},{}".format(type(self).nt[rel_pos], edit, rel_pos))
+            raise ValueError("Ref base mismatch: {},{},{}".format(type(self).nt[rel_pos], edit, rel_pos))
         self.edited_nt[rel_pos] = alt_base
         
     def edit_allele(self, allele_str):

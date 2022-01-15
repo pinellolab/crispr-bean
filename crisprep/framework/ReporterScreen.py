@@ -101,6 +101,22 @@ class ReporterScreen(Screen):
                 return added
         raise ValueError('Guides/sample description mismatch')
 
+    def get_mat_from_uns(self, start_base, end_base):
+        edits = self.uns["edit_counts"]
+        if self.layers["edits"]: 
+            old_edits = self.layers["edits"].copy()
+            self.layers["edits"] = np.zeros_like(self.X)
+        else:
+            old_edits = None
+        for i in edits.index:
+            edit = Edit.from_str(edits.edit[i])
+            guide_idx = np.where(edits.guide[i] == self.guides.name)[0]
+            if edit.rel_pos == self.guides.loc[guide_idx, "target_pos"]:
+                self.layers["edits"][guide_idx,:] += edits.iloc[i, 2:] 
+        return old_edits
+
+
+
     def log_norm(self):
         super().log_norm()
         super().log_norm(read_count_layer='edits')

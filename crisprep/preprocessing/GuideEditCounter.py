@@ -63,8 +63,8 @@ class GuideEditCounter:
         ("strand" in self.guides_info_df.columns)
         if self.guides_has_strands:
             info("Considering strand information of guides")
-            assert "gRNA_start" in self.guides_info_df.columns
-            assert "gRNA_end" in self.guides_info_df.columns
+            assert "start_pos" in self.guides_info_df.columns
+            #assert "gRNA_end" in self.guides_info_df.columns
         else:
             info("Ignoring guide strands, all guides are considered positive")
 

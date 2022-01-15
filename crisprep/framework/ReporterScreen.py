@@ -13,6 +13,7 @@ import numpy as np
 from typing import List, Union, Collection
 from anndata import AnnData
 import anndata as ad
+from .Edit import Edit
 
 def _get_counts(filename_pattern, guides, reps, conditions):
     for rep in reps:
@@ -101,18 +102,20 @@ class ReporterScreen(Screen):
                 return added
         raise ValueError('Guides/sample description mismatch')
 
-    def get_mat_from_uns(self, start_base, end_base):
+    def get_edit_mat_from_uns(self, ref_base, alt_base):
         edits = self.uns["edit_counts"]
-        if self.layers["edits"]: 
+        if not self.layers["edits"] is None: 
             old_edits = self.layers["edits"].copy()
-            self.layers["edits"] = np.zeros_like(self.X)
+            self.layers["edits"] = np.zeros_like(self.X, )
         else:
             old_edits = None
         for i in edits.index:
             edit = Edit.from_str(edits.edit[i])
-            guide_idx = np.where(edits.guide[i] == self.guides.name)[0]
-            if edit.rel_pos == self.guides.loc[guide_idx, "target_pos"]:
-                self.layers["edits"][guide_idx,:] += edits.iloc[i, 2:] 
+            guide_idx = np.where(edits.guide[i] == self.guides.reset_index().name)[0].item()
+            if (edit.rel_pos == self.guides.reset_index().loc[guide_idx, "target_pos"]
+                    and edit.ref_base == ref_base
+                    and edit.alt_base == alt_base):
+                self.layers["edits"][guide_idx,:] += edits.iloc[i, 2:].astype(int)
         return old_edits
 
 

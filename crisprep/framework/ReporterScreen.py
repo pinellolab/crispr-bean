@@ -14,6 +14,13 @@ from typing import List, Union, Collection
 from anndata import AnnData
 import anndata as ad
 from .Edit import Edit
+from ..annotate.translate_allele import CDS
+
+def edit_alleles(allele_str):
+    ldlr_cds = CDS()
+    ldlr_cds.edit_allele(allele_str)
+    
+    return(ldlr_cds.get_aa_change(True))
 
 def _get_counts(filename_pattern, guides, reps, conditions):
     for rep in reps:
@@ -55,9 +62,9 @@ class ReporterScreen(Screen):
 
     def get_edit_rate(self):
         if self.layers['X_bcmatch'] is not None and self.layers['edits'] is not None:
-            bulk_idx = np.where(self.var.index.map(lambda s: 'bulk' in s))[0]
+            bulk_idx = np.where(self.condit["index"].map(lambda s: 'bulk' in s))[0]
             self.layers['_edit_rate'] = (self.layers['edits'] + 0.5) / (self.layers['X_bcmatch'] + 0.5)
-            self.obs['edit_rate'] = self.layers['_edit_rate'][:, bulk_idx].mean(axis=1)
+            self.guides['edit_rate'] = self.layers['_edit_rate'][:, bulk_idx].mean(axis=1)
         else:
             raise ValueError('edits or barcode matched guide counts not available.')
 
@@ -118,7 +125,12 @@ class ReporterScreen(Screen):
                 self.layers["edits"][guide_idx,:] += edits.iloc[i, 2:].astype(int)
         return old_edits
 
-
+    def translate_allele(self):
+        if self.uns["allele_counts"] is None:
+            print("No allele information. Run crisrpep-count with -a option.")
+            return
+        self.uns["allele_counts"]["aa_allele"] = self.uns["allele_counts"].allele.map(
+            lambda s: edit_alleles(s))
 
     def log_norm(self):
         super().log_norm()

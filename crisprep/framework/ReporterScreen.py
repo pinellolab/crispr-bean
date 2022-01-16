@@ -156,33 +156,36 @@ class ReporterScreen(Screen):
 
 
 def concat(screens: Collection[ReporterScreen], *args, **kwargs):
-    adata = (ad.concat)(screens, *args, **kwargs)
+    adata = ad.concat(screens, *args, **kwargs)
     keys = set()
+
+    # Merging uns
     for screen in screens:
         keys.update(screen.uns.keys())
-    else:
-        for k in keys:
-            if k == 'edit_counts':
-                merge_on = [
-                 'guide', 'edit']
+
+    for k in keys:
+        if k == 'edit_counts':
+            merge_on = ['guide', 'edit']
+        elif k == 'allele_counts':
+            merge_on = ['guide', 'allele']
+        else:
+            continue
+        for i, screen in enumerate(screens):
+            if i == 0:
+                adata.uns[k] = screen.uns[k]
             else:
-                if k == 'allele_counts':
-                    merge_on = [
-                     'guide', 'allele']
-                    break
-            for i, screen in enumerate(screens):
-                if i == 0:
-                    adata.uns[k] = screen.uns[k]
-                else:
-                    adata.uns[k] = pd.merge((adata.uns[k]), (screen.uns[k]), on=merge_on,
-                      how='outer')
-            else:
-                adata.uns[k] = adata.uns[k].fillna(0)
-                float_col = adata.uns[k].select_dtypes(include=['float64'])
-                for col in float_col.columns.values:
-                    adata.uns[k][col] = adata.uns[k][col].astype('int64')
-                else:
-                    return ReporterScreen.from_adata(adata)
+                try:
+                    adata.uns[k] = pd.merge(adata.uns[k], screen.uns[k], on=merge_on,
+                        how='outer')
+                except:
+                    print(k)
+                    print(screen.uns[k])
+        adata.uns[k] = adata.uns[k].fillna(0)
+        float_col = adata.uns[k].select_dtypes(include=['float64'])
+        for col in float_col.columns.values:
+            adata.uns[k][col] = adata.uns[k][col].astype('int64')
+
+    return ReporterScreen.from_adata(adata)
 # okay decompiling ReporterScreen.cpython-38.pyc
 
 def read_h5ad(filename):

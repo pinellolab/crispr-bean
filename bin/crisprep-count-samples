@@ -74,12 +74,14 @@ def count_sample(R1, R2, sample_id, args):
     args_dict["R2"] = R2
     args_dict["name"] = sample_id
     args_dict["output_folder"] = os.path.join(args.output_folder, sample_id)
+    base_editing_map = {"A":"G", "C":"T"}
+    edited_from = args_dict["edited_base"]
+    edited_to = base_editing_map[edited_from]
+
     counter = crisprep.pp.GuideEditCounter(**args_dict)
     if os.path.exists("{}.h5ad".format(counter.output_dir)) and not args_dict["rerun"]:
         screen = crisprep.read_h5ad("{}.h5ad".format(counter.output_dir))
-        if not "Target base position in gRNA" in screen.guides.columns:
-            screen.guides["Target base position in gRNA"] = 5 #TODO: move this to guide counting part
-        screen.get_edit_mat_from_uns("A", "G")
+        screen.get_edit_mat_from_uns(edited_from, edited_to)
         info("Reading already existing data for {} from \n\
             {}.h5ad".format(sample_id, counter.output_dir))
 
@@ -89,6 +91,7 @@ def count_sample(R1, R2, sample_id, args):
         counter.get_counts()
         counter.screen.write("{}.h5ad".format(counter.output_dir))
         screen = counter.screen
+        screen.get_edit_mat_from_uns(edited_from, edited_to)
         info("Done for {}. \n\
             Output written at {}.h5ad".format(sample_id, counter.output_dir))
 
@@ -119,7 +122,10 @@ if __name__ == '__main__':
             "crisprep_count_%s" % database_id)
 
     guide_info_df = pd.read_csv(args.sgRNA_filename)
-    screen.guides = result[0].guides.loc[screen.guides.index,:].reset_index()
+    try:
+        screen.guides = result[0].guides.loc[screen.guides.index,:].reset_index()
+    except:
+        print(result[0])
     screen.condit = screen.condit.reset_index()
     screen.write("{}.h5ad".format(output_path))
     screen.to_Excel("{}.xlsx".format(output_path))

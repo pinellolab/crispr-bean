@@ -62,7 +62,7 @@ class ReporterScreen(Screen):
 
     def get_edit_rate(self):
         if self.layers['X_bcmatch'] is not None and self.layers['edits'] is not None:
-            bulk_idx = np.where(self.condit["index"].map(lambda s: 'bulk' in s))[0]
+            bulk_idx = np.where(self.condit.reset_index()["index"].map(lambda s: 'bulk' in s))[0]
             self.layers['_edit_rate'] = (self.layers['edits'] + 0.5) / (self.layers['X_bcmatch'] + 0.5)
             self.guides['edit_rate'] = self.layers['_edit_rate'][:, bulk_idx].mean(axis=1)
         else:

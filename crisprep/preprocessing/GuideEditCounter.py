@@ -23,6 +23,7 @@ from ._supporting_fn import (
     _check_readname_match,
     _read_is_good_quality,
     revcomp,
+    _multiindex_dict_to_df,
 )
 
 logging.basicConfig(
@@ -94,7 +95,9 @@ class GuideEditCounter:
             guides=self.guides_info_df,
             condit=pd.DataFrame(index=[self.database_id]),
         )
-
+        self.count_guide_edits = kwargs["count_guide_edits"]
+        if self.count_guide_edits:
+            self.screen.uns["guide_edit_counts"] = dict()
         self.count_reporter_edits = kwargs["count_reporter"]
         if self.count_reporter_edits:
             self.screen.uns["edit_counts"] = dict()
@@ -179,43 +182,20 @@ class GuideEditCounter:
         else:  # count both bc matched & unmatched guide counts
             self._get_guide_counts_bcmatch_semimatch()
 
+        if self.count_guide_edits:
+            self.screen.uns["guide_edit_counts"] = _multiindex_dict_to_df(
+                self.screen.uns["guide_edit_counts"], self.database_id
+            )
+
         if self.count_reporter_edits:
-            mi = pd.MultiIndex.from_tuples(
-                self.screen.uns["edit_counts"].keys(), names=["guide", "edit"]
+            self.screen.uns["edit_counts"] = _multiindex_dict_to_df(
+                self.screen.uns["edit_counts"], self.database_id
             )
-            self.screen.uns["edit_counts"] = pd.DataFrame.from_dict(
-                self.screen.uns["edit_counts"],
-                orient="index",
-                columns=[self.database_id],
-            )
-            self.screen.uns["edit_counts"].index = mi
-            self.screen.uns["edit_counts"].reset_index(inplace=True)
-            self.screen.uns["edit_counts"].rename(
-                columns={"level_0": "guide", "level_1": "edit"}, inplace=True
-            )
-            self.screen.uns["edit_counts"].guide = self.screen.guides.index[
-                self.screen.uns["edit_counts"].guide.to_numpy(dtype=int)
-            ]
-            # self.screen.uns["edit_counts"].set_index(["guide", "edit"], drop = True, inplace = True)
 
         if self.count_edited_alleles:
-            mi = pd.MultiIndex.from_tuples(
-                self.screen.uns["allele_counts"].keys(), names=["guide", "allele"]
+            self.screen.uns["allele_counts"] = _multiindex_dict_to_df(
+                self.screen.uns["allele_counts"], self.database_id
             )
-            self.screen.uns["allele_counts"] = pd.DataFrame.from_dict(
-                self.screen.uns["allele_counts"],
-                orient="index",
-                columns=[self.database_id],
-            )
-            self.screen.uns["allele_counts"].index = mi
-            self.screen.uns["allele_counts"].reset_index(inplace=True)
-            self.screen.uns["allele_counts"].rename(
-                columns={"level_0": "guide", "level_1": "allele"}, inplace=True
-            )
-            self.screen.uns["allele_counts"].guide = self.screen.guides.index[
-                self.screen.uns["allele_counts"].guide.to_numpy(dtype=int)
-            ]
-            # self.screen.uns["allele_counts"].set_index(["guide", "allele"], drop = True, inplace = True)
 
         count_stat_path = self._jp("mapping_stats.txt")
         count_stat_file = open(count_stat_path, "w")
@@ -241,6 +221,7 @@ class GuideEditCounter:
         NotImplemented
 
     def _count_guide_edits(self, matched_guide_idx, R1_seq, R2_seq):
+        strand_str_to_int = {"neg": -1, "pos": 1}
         if self.guides_has_strands:
             try:
                 guide_strand = strand_str_to_int[
@@ -263,15 +244,16 @@ class GuideEditCounter:
             self._write_allele(
                 matched_guide_idx,
                 guide_edit_allele,
-                "guide_edited_allele",
+                "guide_edit_counts",
             )
         self._write_edits(
             matched_guide_idx,
             guide_edit_allele,
-            "guide_edited_allele",
+            "guide_edit_counts",
         )
 
     def _count_reporter_edits(self, matched_guide_idx, R1_seq, R2_seq):
+        strand_str_to_int = {"neg": -1, "pos": 1}
         ref_reporter_seq = self.screen.guides.Reporter[matched_guide_idx]
         read_reporter_seq = self.get_reporter_seq(R1_seq, R2_seq)
 
@@ -323,7 +305,6 @@ class GuideEditCounter:
     def _get_guide_counts_bcmatch_semimatch(
         self, bcmatch_layer="X_bcmatch", semimatch_layer="X"
     ):
-        strand_str_to_int = {"neg": -1, "pos": 1}
 
         self.screen.layers[semimatch_layer] = np.zeros_like((self.screen.X))
         R1_iter, R2_iter = self._get_fastq_iterators()
@@ -389,14 +370,14 @@ class GuideEditCounter:
     def _write_allele(self, guide_idx: int, allele: Allele, uns_key="allele_counts"):
         if len(allele.edits) == 0:
             return
-        if (guide_idx, str(allele)) in self.screen.uns["allele_counts"].keys():
+        if (guide_idx, str(allele)) in self.screen.uns[uns_key].keys():
             self.screen.uns[uns_key][(guide_idx, str(allele))] += 1
         else:
             self.screen.uns[uns_key][(guide_idx, str(allele))] = 1
 
     def _write_edits(self, guide_idx: int, allele: Allele, uns_key="edit_counts"):
         for edit in allele.edits:
-            if (guide_idx, str(edit)) in self.screen.uns["edit_counts"].keys():
+            if (guide_idx, str(edit)) in self.screen.uns[uns_key].keys():
                 self.screen.uns[uns_key][(guide_idx, str(edit))] += 1
             else:
                 self.screen.uns[uns_key][(guide_idx, str(edit))] = 1

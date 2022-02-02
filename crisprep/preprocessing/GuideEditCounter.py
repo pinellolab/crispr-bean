@@ -81,7 +81,7 @@ class GuideEditCounter:
         self.database_id = self._get_database_name()
         self.output_dir = os.path.join(
             os.path.abspath(kwargs["output_folder"]),
-            "CRISPRessoCount_on_%s" % self.database_id,
+            "CRISPRepCount_on_%s" % self.database_id,
         )
         self._write_start_log()
 
@@ -483,7 +483,7 @@ class GuideEditCounter:
             print("Creating Folder %s" % self.output_dir)
         except:
             print("Folder %s already exists." % self.output_dir)
-        self.log_filename = self._jp("CRISPRessoCount_RUNNING_LOG.txt")
+        self.log_filename = self._jp("CRISPRepCount_RUNNING_LOG.txt")
         logging.getLogger().addHandler(logging.FileHandler(self.log_filename))
         with open(self.log_filename, "w+") as outfile:
             outfile.write(

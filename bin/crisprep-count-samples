@@ -77,7 +77,7 @@ def count_sample(R1, R2, sample_id, args):
     base_editing_map = {"A":"G", "C":"T"}
     edited_from = args_dict["edited_base"]
     edited_to = base_editing_map[edited_from]
-    match_target_pos = 
+    match_target_pos = args_dict["match_target_pos"]
 
     counter = crisprep.pp.GuideEditCounter(**args_dict)
     if os.path.exists("{}.h5ad".format(counter.output_dir)) and not args_dict["rerun"]:

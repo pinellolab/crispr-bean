@@ -217,7 +217,9 @@ class GuideEditCounter:
             ]
             # self.screen.uns["allele_counts"].set_index(["guide", "allele"], drop = True, inplace = True)
 
-        info(
+        count_stat_path = self._jp("mapping_stats.txt")
+        count_stat_file = open(count_stat_path, "w")
+        count_stat_file.write(
             "Read count with \nno match:\t{}\nduplicate match:\t{}\nduplicate match wo barcode:\t{}\n".format(
                 self.nomatch, self.duplicate_match, self.duplicate_match_wo_barcode
             )

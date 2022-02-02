@@ -215,10 +215,11 @@ if __name__ == '__main__':
     counter.check_filter_fastq()
     
     counter.get_counts()
-    counter.screen.get_edit_mat_from_uns(edited_from, edited_to, match_target_pos)
+    if counter.count_reporter_edits:
+        counter.screen.get_edit_mat_from_uns(edited_from, edited_to, match_target_pos)
     counter.screen.write("{}.h5ad".format(counter.output_dir))
-    counter.screen.to_Excel("{}.xlsx".format(counter.output_path))
-    info("Output written at:\n {}.h5ad,\n {}.xlsx".format(counter.output_dir))
+    counter.screen.to_Excel("{}.xlsx".format(counter.output_dir))
+    info("Output written at:\n {}.h5ad,\n {}.xlsx".format(counter.output_dir, counter.output_dir))
     info('All Done!')
     print(r'''
           )                                             )

@@ -83,7 +83,8 @@ def count_sample(R1, R2, sample_id, args):
     counter = crisprep.pp.GuideEditCounter(**args_dict)
     if os.path.exists("{}.h5ad".format(counter.output_dir)) and not args_dict["rerun"]:
         screen = crisprep.read_h5ad("{}.h5ad".format(counter.output_dir))
-        screen.get_edit_mat_from_uns(edited_from, edited_to, match_target_pos)
+        if counter.count_reporter_edits:
+            screen.get_edit_mat_from_uns(edited_from, edited_to, match_target_pos)
         info("Reading already existing data for {} from \n\
             {}.h5ad".format(sample_id, counter.output_dir))
 
@@ -93,7 +94,8 @@ def count_sample(R1, R2, sample_id, args):
         counter.get_counts()
         counter.screen.write("{}.h5ad".format(counter.output_dir))
         screen = counter.screen
-        screen.get_edit_mat_from_uns(edited_from, edited_to, match_target_pos)
+        if counter.count_reporter_edits:
+            screen.get_edit_mat_from_uns(edited_from, edited_to, match_target_pos)
         info("Done for {}. \n\
             Output written at {}.h5ad".format(sample_id, counter.output_dir))
 

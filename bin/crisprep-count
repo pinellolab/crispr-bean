@@ -91,7 +91,7 @@ def mask_sequence_positions(seq: str, pos: np.array) -> str:
 
 def get_input_parser():
     """Get the input data"""
-    print('  \n~~~CRISPRessoCount~~~')
+    print('  \n~~~CRISPRepCount~~~')
     print('-Utility to perform sgRNA and reporter count from CRISPR base editors-')
     print(r'''
           )                                             )
@@ -209,8 +209,8 @@ if __name__ == '__main__':
     counter.get_counts()
 
     counter.screen.write("{}.h5ad".format(counter.output_dir))
-
-    info("Output written at {}.h5ad".format(counter.output_dir))
+    counter.screen.to_Excel("{}.xlsx".format(counter.output_path))
+    info("Output written at:\n {}.h5ad,\n {}.xlsx".format(counter.output_dir))
     info('All Done!')
     print(r'''
           )                                             )

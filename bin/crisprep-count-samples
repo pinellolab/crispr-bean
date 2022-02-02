@@ -23,7 +23,7 @@ info    = logging.info
 
 def get_input_parser():
     """Get the input data"""
-    print('  \n~~~CRISPRessoCount~~~')
+    print('  \n~~~CRISPRepCount~~~')
     print('-Utility to perform sgRNA and reporter count from CRISPR base editors-')
     print(r'''
           )                                             )

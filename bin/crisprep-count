@@ -126,13 +126,15 @@ def get_input_parser():
     parser.add_argument('--qstart_R2', help = 'Same as qstart_R1, for read 2 fastq file', default = 0)
     parser.add_argument('--qend_R2', help = 'Same as qstart_R2, for read 2 fastq file', default = 36)
     parser.add_argument('--gstart_reporter', help = "Start position of the guide sequence in the reporter", type = int, default = 6)
-    parser.add_argument('--match_target_pos', help = "Only count the edit in the exact target position.", default = False)
+    parser.add_argument('--match_target_pos', help = "Only count the edit in the exact target position.", action = 'store_true')
     
     parser.add_argument('--guide_bc', help = 'Construct has guide barcode', default = True)
     parser.add_argument('--guide_bc_len', help = 'Guide barcode sequence length at the beginning of the R2', type = str, default = 4)
     parser.add_argument('--offset', help = 'Guide file has offest column that will be added to the relative position of reporters.', action = 'store_true')
     parser.add_argument('--align_fasta', help = 'gRNA is aligned to this sequence to infer the offset. Can be used when the exact offset is not provided.', type = str, default = '')
+    
     parser.add_argument('-a', '--count_allele', help = 'count gRNA alleles', action = "store_true")
+    parser.add_argument('-g', "--count_guide_edits", help = "count the self editing of guides", action = 'store_true')
 
     return(parser)
 
@@ -208,7 +210,7 @@ if __name__ == '__main__':
     edited_from = args_dict["edited_base"]
     edited_to = base_editing_map[edited_from]
     match_target_pos = args_dict["match_target_pos"]
-    
+
     counter = crisprep.pp.GuideEditCounter(**args_dict)
     counter.check_filter_fastq()
     

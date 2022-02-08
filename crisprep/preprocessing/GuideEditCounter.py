@@ -84,7 +84,7 @@ class GuideEditCounter:
         self.database_id = self._get_database_name()
         self.output_dir = os.path.join(
             os.path.abspath(kwargs["output_folder"]),
-            "CRISPRepCount_on_%s" % self.database_id,
+            "crisprep_count_%s" % self.database_id,
         )
         self._write_start_log()
 
@@ -116,6 +116,11 @@ class GuideEditCounter:
             self.screen.uns["alleles"] = pd.DataFrame(columns=["allele_id", "edit_id"])
             # Dict[guide_name -> List[edit_ID]]
 
+        self.count_guide_reporter_alleles = kwargs["count_guide_reporter_alleles"]
+        if self.count_guide_reporter_alleles:
+            self.screen.uns["guide_reporter_allele_counts"] = dict()
+
+
         self.guide_start_seq = kwargs["guide_start_seq"]
         self.guide_bc = kwargs["guide_bc"]
         if self.guide_bc:
@@ -128,6 +133,8 @@ class GuideEditCounter:
         self.n_total_reads = _read_count_match(self.R1_filename, self.R2_filename)
 
         self.keep_intermediate = kwargs["keep_intermediate"]
+        self.semimatch = 0
+        self.bcmatch = 0
         self.nomatch = 0
         self.duplicate_match = 0
         self.duplicate_match_wo_barcode = 0
@@ -184,26 +191,45 @@ class GuideEditCounter:
 
         if self.count_guide_edits:
             self.screen.uns["guide_edit_counts"] = _multiindex_dict_to_df(
-                self.screen.uns["guide_edit_counts"], self.database_id
+                self.screen.uns["guide_edit_counts"], "edit", self.database_id
             )
+            self.screen.uns["guide_edit_counts"].guide = self.screen.guides.index[
+                self.screen.uns["guide_edit_counts"].guide.to_numpy(dtype=int)
+            ]
 
         if self.count_reporter_edits:
             self.screen.uns["edit_counts"] = _multiindex_dict_to_df(
-                self.screen.uns["edit_counts"], self.database_id
+                self.screen.uns["edit_counts"], "edit", self.database_id
             )
+            self.screen.uns["edit_counts"].guide = self.screen.guides.index[
+                self.screen.uns["edit_counts"].guide.to_numpy(dtype=int)
+            ]
 
         if self.count_edited_alleles:
             self.screen.uns["allele_counts"] = _multiindex_dict_to_df(
-                self.screen.uns["allele_counts"], self.database_id
+                self.screen.uns["allele_counts"], "allele", self.database_id
             )
+            self.screen.uns["allele_counts"].guide = self.screen.guides.index[
+                self.screen.uns["allele_counts"].guide.to_numpy(dtype=int)
+            ]
+
+        if self.count_guide_reporter_alleles:
+            self.screen.uns["guide_reporter_allele_counts"] = _multiindex_dict_to_df(
+                self.screen.uns["guide_reporter_allele_counts"], ["reporter_allele", "guide_allele"], self.database_id
+            )
+            self.screen.uns["guide_reporter_allele_counts"].guide = self.screen.guides.index[
+                self.screen.uns["guide_reporter_allele_counts"].guide.to_numpy(dtype=int)
+            ]
 
         count_stat_path = self._jp("mapping_stats.txt")
         count_stat_file = open(count_stat_path, "w")
-        count_stat_file.write(
-            "Read count with \nno match:\t{}\nduplicate match:\t{}\nduplicate match wo barcode:\t{}\n".format(
-                self.nomatch, self.duplicate_match, self.duplicate_match_wo_barcode
-            )
-        )
+        count_stat_file.write("Read count with \n")
+        count_stat_file.write("Unique guide match without barcode:\t{}\n".format(self.semimatch))
+        count_stat_file.write("Unique guide match with barcode:\t{}\n".format(self.bcmatch))
+        count_stat_file.write("No match:\t{}\n".format(self.nomatch))
+        count_stat_file.write("Duplicate match with barcode:\t{}\n".format(self.duplicate_match))
+        count_stat_file.write("No match with barcode & Duplicate match w/o barcode:\t{}\n".format(self.duplicate_match_wo_barcode))
+        
 
     def _gRNA_eq(self, guide: str, observed: str):
         if len(observed) != len(guide):
@@ -240,19 +266,15 @@ class GuideEditCounter:
             start_pos=0,
             end_pos=21,
         )
-        if self.count_edited_alleles:
-            self._write_allele(
-                matched_guide_idx,
-                guide_edit_allele,
-                "guide_edit_counts",
-            )
-        self._write_edits(
+        self._write_allele(
             matched_guide_idx,
             guide_edit_allele,
             "guide_edit_counts",
         )
+        return(guide_edit_allele)
+        
 
-    def _count_reporter_edits(self, matched_guide_idx, R1_seq, R2_seq):
+    def _count_reporter_edits(self, matched_guide_idx, R1_seq, R2_seq, guide_allele = None):
         strand_str_to_int = {"neg": -1, "pos": 1}
         ref_reporter_seq = self.screen.guides.Reporter[matched_guide_idx]
         read_reporter_seq = self.get_reporter_seq(R1_seq, R2_seq)
@@ -300,6 +322,8 @@ class GuideEditCounter:
 
         if self.count_edited_alleles:
             self._write_allele(matched_guide_idx, allele)
+            if self.count_guide_reporter_alleles and (not guide_allele is None):
+                self._write_guide_reporter_allele(matched_guide_idx, allele, guide_allele)
         self._write_edits(matched_guide_idx, allele)
 
     def _get_guide_counts_bcmatch_semimatch(
@@ -348,6 +372,7 @@ class GuideEditCounter:
 
                     if self.count_guide_edits:
                         self._count_guide_edits(matched_guide_idx, R1_seq, R2_seq)
+                    self.semimatch += 1
 
             elif len(bc_match) >= 2:  # duplicate mapping
                 if self.keep_intermediate:
@@ -357,11 +382,15 @@ class GuideEditCounter:
             else:  # unique barcode match
                 matched_guide_idx = bc_match[0]
                 self.screen.layers[bcmatch_layer][matched_guide_idx, 0] += 1
+                self.bcmatch += 1
                 if self.count_guide_edits:
-                    self._count_guide_edits(matched_guide_idx, R1_seq, R2_seq)
+                    guide_allele = self._count_guide_edits(matched_guide_idx, R1_seq, R2_seq)
                 if self.count_reporter_edits:
                     # TBD: what if reporter seq doesn't match barcode & guide?
-                    self._count_reporter_edits(matched_guide_idx, R1_seq, R2_seq)
+                    if self.count_guide_reporter_alleles:
+                        self._count_reporter_edits(matched_guide_idx, R1_seq, R2_seq, guide_allele)
+                    else: 
+                        self._count_reporter_edits(matched_guide_idx, R1_seq, R2_seq)
 
         self.screen.X = (
             self.screen.layers[semimatch_layer] + self.screen.layers[bcmatch_layer]
@@ -382,13 +411,25 @@ class GuideEditCounter:
             else:
                 self.screen.uns[uns_key][(guide_idx, str(edit))] = 1
 
+    def _write_guide_reporter_allele(self, guide_idx: int, allele: Allele, guide_allele: Allele, uns_key="guide_reporter_allele_counts"):
+        if len(allele.edits) == 0 and len(guide_allele.edits) == 0:
+            return
+        if (guide_idx, str(allele), str(guide_allele)) in self.screen.uns[uns_key].keys():
+            self.screen.uns[uns_key][(guide_idx, str(allele), str(guide_allele))] += 1
+        else:
+            self.screen.uns[uns_key][(guide_idx, str(allele), str(guide_allele))] = 1
+
     def get_guide_seq(self, R1_seq, R2_seq, guide_length):
         """This can be edited by user based on the read construct."""
         guide_start_idx = R1_seq.find(self.guide_start_seq)
         if guide_start_idx == -1:
             return None
+        if guide_start_idx + guide_length >= len(R1_seq): 
+            return None
         guide_start_idx = guide_start_idx + len(self.guide_start_seq)
-        gRNA_seq = R1_seq[guide_start_idx : guide_start_idx + guide_length]
+        gRNA_seq = R1_seq[guide_start_idx : (guide_start_idx + guide_length)]
+        if len(gRNA_seq) != guide_length:
+            return None
         return gRNA_seq
 
     def get_reporter_seq(self, R1_seq, R2_seq):

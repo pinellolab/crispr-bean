@@ -65,6 +65,7 @@ def get_input_parser():
     parser.add_argument('--align_fasta', help = 'gRNA is aligned to this sequence to infer the offset. Can be used when the exact offset is not provided.', type = str, default = '')
     parser.add_argument('-a', '--count_allele', help = 'count gRNA alleles', action='store_true')
     parser.add_argument('-g', "--count_guide_edits", help = "count the self editing of guides", action = 'store_true')
+    parser.add_argument('-m', "--count_guide_reporter_alleles", help = "count the matched allele of guide and reporter edit", action = 'store_true')
     parser.add_argument('--rerun', help = 'Recount each sample', action='store_true')
 
     return(parser)

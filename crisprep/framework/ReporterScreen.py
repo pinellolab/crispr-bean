@@ -71,20 +71,34 @@ class ReporterScreen(Screen):
         self.layers["X_bcmatch"] = X_bcmatch
         self.get_edit_rate()
 
-    def get_edit_rate(self):
+    def get_edit_rate(
+        self, 
+        normalize_by_editable_base = False, 
+        edited_base = None,
+        editable_base_start = 3,
+        editable_base_end = 8
+        ):
         if self.layers["X_bcmatch"] is not None and self.layers["edits"] is not None:
+            num_targetable_sites = 1.0
+            if normalize_by_editable_base:
+                if not edited_base in ["A", "C", "T", "G"]: raise ValueError("Specify the correct edited_base")
+                num_targetable_sites = self.guides.sequence.map(
+                    lambda s: s[editable_base_start:editable_base_end].count(edited_base))
             bulk_idx = np.where(
                 self.condit.reset_index()["index"].map(lambda s: "bulk" in s)
             )[0]
             self.layers["_edit_rate"] = (self.layers["edits"] + 0.5) / (
                 self.layers["X_bcmatch"] + 0.5
             )
+            self.layers["_edit_rate"][self.layers["X_bcmatch"] == 0] = np.nan
             self.guides["edit_rate"] = self.layers["_edit_rate"][:, bulk_idx].mean(
                 axis=1
-            )
+            ) / num_targetable_sites
+            
         else:
             raise ValueError("edits or barcode matched guide counts not available.")
 
+        
     @classmethod
     def from_file_paths(
         cls,
@@ -137,13 +151,31 @@ class ReporterScreen(Screen):
     def __add__(self, other):
         if all(self.guides.index == other.guides.index):
             if all(self.condit.index == other.condit.index):
+                added_uns = dict()
+                for k in self.uns.keys():
+                    if k not in other.uns.keys(): continue
+                    if k == "guide_edit_counts":
+                        index_pair = ["guide", "edit"]
+                    elif k == "edit_counts":
+                        index_pair = ["guide", "edit"]
+                    elif k == "allele_counts":
+                        index_pair = ["guide", "allele"]
+                    else:
+                        continue
+                    self_df = self.uns[k].set_index(index_pair, drop = True)
+                    add_df = other.uns[k].set_index(index_pair, drop = True)
+                    add_df = add_df.loc[:,self_df.columns]
+                    added_uns[k] = self_df.add(add_df, fill_value = 0).astype(int).reset_index()
+
                 if "X_bcmatch" in self.layers and "X_bcmatch" in other.layers:
+                
                     added = ReporterScreen(
                         (self.X + other.X),
-                        (self.layers["edits"] + self.layers["edits"]),
+                        (self.layers["edits"] + other.layers["edits"]),
                         (self.layers["X_bcmatch"] + other.layers["X_bcmatch"]),
                         guides=(self.guides),
                         condit=(self.condit),
+                        uns = added_uns
                     )
                 else:
                     added = ReporterScreen(
@@ -151,11 +183,19 @@ class ReporterScreen(Screen):
                         (self.layers["edits"] + self.layers["edits"]),
                         guides=(self.guides),
                         condit=(self.condit),
+                        uns = added_uns
                     )
                 return added
         raise ValueError("Guides/sample description mismatch")
 
-    def get_edit_mat_from_uns(self, ref_base, alt_base, match_target_position=True):
+    def get_edit_mat_from_uns(
+        self, 
+        ref_base, 
+        alt_base, 
+        match_target_position=True,
+        rel_pos_start = 0,
+        rel_pos_end = np.Inf
+        ):
         edits = self.uns["edit_counts"]
         if not self.layers["edits"] is None:
             old_edits = self.layers["edits"].copy()
@@ -166,6 +206,7 @@ class ReporterScreen(Screen):
             old_edits = None
         for i in edits.index:
             edit = Edit.from_str(edits.edit[i])
+            if edit.rel_pos < rel_pos_start or edit.rel_pos >= rel_pos_end: continue
             guide_idx = np.where(edits.guide[i] == self.guides.reset_index().name)[
                 0
             ].item()
@@ -247,10 +288,14 @@ def concat(screens: Collection[ReporterScreen], *args, **kwargs):
         keys.update(screen.uns.keys())
 
     for k in keys:
-        if k == "edit_counts":
+        if k == "guide_edit_counts":
+            merge_on = ["guide", "edit"]
+        elif k == "edit_counts":
             merge_on = ["guide", "edit"]
         elif k == "allele_counts":
             merge_on = ["guide", "allele"]
+        elif k == "guide_reporter_allele_counts":
+            merge_on = ["guide", "reporter_allele", "guide_allele"]
         else:
             continue
         for i, screen in enumerate(screens):

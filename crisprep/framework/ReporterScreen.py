@@ -69,7 +69,6 @@ class ReporterScreen(Screen):
         (super().__init__)(X, *args, **kwargs)
         self.layers["edits"] = X_edit
         self.layers["X_bcmatch"] = X_bcmatch
-        self.get_edit_rate()
 
     def get_edit_rate(
         self, 

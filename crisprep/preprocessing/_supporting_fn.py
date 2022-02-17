@@ -143,15 +143,19 @@ def _get_edited_allele(
     return allele
 
 
-def _multiindex_dict_to_df(input_dict, value_column_name):
-    mi = pd.MultiIndex.from_tuples(input_dict.keys(), names=["guide", "allele"])
+def _multiindex_dict_to_df(input_dict, key_column_names, value_column_name):
+    if not isinstance(key_column_names, list):
+        key_column_names = [key_column_names]
+    mi = pd.MultiIndex.from_tuples(input_dict.keys(), names=["guide"] + key_column_names)
     df = pd.DataFrame.from_dict(
         input_dict,
         orient="index",
-        columns=value_column_name,
+        columns=[value_column_name],
     )
     df.index = mi
     df.reset_index(inplace=True)
-    df.rename(columns={"level_0": "guide", "level_1": "allele"}, inplace=True)
-    df.guide = self.screen.guides.index[df.guide.to_numpy(dtype=int)]
+    if len(key_column_names) == 1:
+        df.rename(columns={"level_0": "guide", "level_1": key_column_names[0]}, inplace=True)
+    elif len(key_column_names) == 2:
+        df.rename(columns={"level_0": "guide", "level_1": key_column_names[0], "level_2": key_column_names[1]}, inplace=True)
     return df

@@ -68,16 +68,9 @@ class Allele:
     def from_str(cls, allele_str): #pos:strand:start>end
         edits = set()
         for edit_str in allele_str.split(","):
-            pos, strand, base_change = edit_str.split(":")
-            pos = int(pos)
-            start, end = base_change.split(">")
-            assert strand in ["+", "-"]
-            if strand == "-":
-                start = cls.reverse_map[start]
-                end = cls.reverse_map[end]
-            edits.update(cls(pos, start, end))
+            edit = Edit.from_str(edit_str)
+            edits.update(edit)
         return(cls(edits))
-
 
     def __eq__(self, other):
         if self.edits == other.edits:
@@ -94,4 +87,3 @@ class Allele:
         list_edits = list(map(lambda s: str(s), self.edits))
         list_edits.sort()
         return(",".join(list_edits))
-

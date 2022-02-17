@@ -2,6 +2,7 @@ from typing import List
 import numpy as np
 from Bio import SeqIO
 from crisprep.framework.Edit import Edit
+from crisprep.annotate.AminoAcidEdit import AminoAcidEdit, AminoAcidAllele
 import logging
 import sys
 
@@ -16,7 +17,8 @@ warn    = logging.warning
 debug   = logging.debug
 info    = logging.info
 
-reverse_map = {"A":"T", "C":"G", "G":"C", "T":"A"}
+BASE_SET = {"A", "C", "T", "G"}
+reverse_map = {"A":"T", "C":"G", "G":"C", "T":"A", "N":"N"}
 
 codon_map = {'TTT':'F', 'TTC':'F', 'TTA':'L', 'TTG':'L', 'CTT':'L', 'CTC':'L', 'CTA':'L', 'CTG':'L', 'ATT':'I', 'ATC':'I',
          'ATA':'I', 'ATG':'M', 'GTT':'V', 'GTC':'V', 'GTA':'V', 'GTG':'V', 'TCT':'S', 'TCC':'S', 'TCA':'S', 'TCG':'S',
@@ -87,7 +89,22 @@ def _get_seq_pos_from_fasta(fasta_file_name: str):
 
 def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
     codon = ''.join(nt_seq_string[aa_pos*3:(aa_pos*3+3)])
-    return(codon_map[codon])
+    try:
+        aa = codon_map[codon]
+        return(aa)
+    except KeyError:
+        if codon[-1] == "N" and codon[0] in BASE_SET and codon[1] in BASE_SET:
+            aa_set = set()
+            for N in BASE_SET:
+                aa_set.add(codon_map[codon[:2] + N])
+            if len(aa_set) == 1:
+                return(next(iter(aa_set)))
+            else:
+                print("warning: no matching aa with codon {}".format(codon))
+                return("_")
+        else:
+            raise ValueError("Cannot translate codon due to ambiguity: {}".format(codon))
+    
 
 class CDS():  
     fasta_file_name = "/data/pinello/PROJECTS/2021_08_ANBE/data/LDLR/exons.fa"
@@ -103,8 +120,8 @@ class CDS():
     def set_exon_fasta_name(cls, fasta_file_name: str):
         cls.fasta_file_name = fasta_file_name
         cls.translated_seq, cls.genomic_pos = _get_seq_pos_from_fasta(fasta_file_name)
-        cls.nt = translated_seq
-        cls.pos = np.array(genomic_pos)
+        cls.nt = cls.translated_seq
+        cls.pos = np.array(cls.genomic_pos)
     
     def translate(self):
         self.aa = _translate(self.edited_nt, codon_map)
@@ -141,16 +158,18 @@ class CDS():
             self.edit_single(edit_str)
     
     def get_aa_change(self, include_synonymous = True) -> List[str]:
-        aa_mutations = []
+        aa_mutations = AminoAcidAllele()
+
         for edited_aa_pos in self.edited_aa_pos:
             ref_aa = _translate_single_codon(type(self).nt, edited_aa_pos)
             mt_aa = _translate_single_codon(self.edited_nt, edited_aa_pos)
+            if mt_aa == "_": continue
             if not include_synonymous and ref_aa == mt_aa:
                 continue
-            aa_mutations.append("{}:{}>{}".format(
+            aa_mutations.add(AminoAcidEdit(
                 edited_aa_pos + 1, ref_aa, mt_aa))
         return(aa_mutations)
-    
+
     
 
     

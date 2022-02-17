@@ -75,12 +75,15 @@ class ReporterScreen(Screen):
         normalize_by_editable_base = False, 
         edited_base = None,
         editable_base_start = 3,
-        editable_base_end = 8
+        editable_base_end = 8,
+        bcmatch_thres = 1,
+        return_result = False
         ):
         if self.layers["X_bcmatch"] is not None and self.layers["edits"] is not None:
             num_targetable_sites = 1.0
             if normalize_by_editable_base:
-                if not edited_base in ["A", "C", "T", "G"]: raise ValueError("Specify the correct edited_base")
+                if not edited_base in ["A", "C", "T", "G"]: 
+                    raise ValueError("Specify the correct edited_base")
                 num_targetable_sites = self.guides.sequence.map(
                     lambda s: s[editable_base_start:editable_base_end].count(edited_base))
             bulk_idx = np.where(
@@ -89,7 +92,7 @@ class ReporterScreen(Screen):
             self.layers["_edit_rate"] = (self.layers["edits"] + 0.5) / (
                 self.layers["X_bcmatch"] + 0.5
             )
-            self.layers["_edit_rate"][self.layers["X_bcmatch"] == 0] = np.nan
+            self.layers["_edit_rate"][self.layers["X_bcmatch"] < bcmatch_thres] = np.nan
             self.guides["edit_rate"] = self.layers["_edit_rate"][:, bulk_idx].mean(
                 axis=1
             ) / num_targetable_sites
@@ -159,6 +162,8 @@ class ReporterScreen(Screen):
                         index_pair = ["guide", "edit"]
                     elif k == "allele_counts":
                         index_pair = ["guide", "allele"]
+                    elif k == "guide_reporter_allele_counts":
+                        index_pair = ["guide", "reporter_allele", "guide_allele"]
                     else:
                         continue
                     self_df = self.uns[k].set_index(index_pair, drop = True)
@@ -218,6 +223,9 @@ class ReporterScreen(Screen):
                     self.layers["edits"][guide_idx, :] += edits.iloc[i, 2:].astype(int)
         return old_edits
 
+    def allele_df_to_edits(self):
+        pass
+
     def translate_allele(self):
         if self.uns["allele_counts"] is None:
             print("No allele information. Run crisrpep-count with -a option.")
@@ -228,7 +236,7 @@ class ReporterScreen(Screen):
 
     def log_norm(self):
         super().log_norm()
-        super().log_norm(read_count_layer="edits")
+        super().log_norm(output_layer = "lognorm_edits", read_count_layer="edits")
 
     def log_fold_changes(self, cond1, cond2, return_result=False):
         guide_fc = super().log_fold_change(cond1, cond2, return_result=return_result)
@@ -242,7 +250,7 @@ class ReporterScreen(Screen):
         if return_result:
             return (guide_fc, edit_fc)
 
-    def log_fold_change_aggregates(
+    def log_fold_change_aggregate(
         self,
         cond1,
         cond2,

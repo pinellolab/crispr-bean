@@ -67,39 +67,12 @@ def _get_edits(filename_pattern, guide_info, reps, conditions, count_exact=True)
 class ReporterScreen(Screen):
     def __init__(self, X=None, X_edit=None, X_bcmatch=None, *args, **kwargs):
         (super().__init__)(X, *args, **kwargs)
-        self.layers["edits"] = X_edit
-        self.layers["X_bcmatch"] = X_bcmatch
-
-    def get_edit_rate(
-        self, 
-        normalize_by_editable_base = False, 
-        edited_base = None,
-        editable_base_start = 3,
-        editable_base_end = 8,
-        bcmatch_thres = 1,
-        return_result = False
-        ):
-        if self.layers["X_bcmatch"] is not None and self.layers["edits"] is not None:
-            num_targetable_sites = 1.0
-            if normalize_by_editable_base:
-                if not edited_base in ["A", "C", "T", "G"]: 
-                    raise ValueError("Specify the correct edited_base")
-                num_targetable_sites = self.guides.sequence.map(
-                    lambda s: s[editable_base_start:editable_base_end].count(edited_base))
-            bulk_idx = np.where(
-                self.condit.reset_index()["index"].map(lambda s: "bulk" in s)
-            )[0]
-            self.layers["_edit_rate"] = (self.layers["edits"] + 0.5) / (
-                self.layers["X_bcmatch"] + 0.5
-            )
-            self.layers["_edit_rate"][self.layers["X_bcmatch"] < bcmatch_thres] = np.nan
-            self.guides["edit_rate"] = self.layers["_edit_rate"][:, bulk_idx].mean(
-                axis=1
-            ) / num_targetable_sites
-            
-        else:
-            raise ValueError("edits or barcode matched guide counts not available.")
-
+        if (X_edit is None) != (X_bcmatch is None):
+            raise ValueError("Only one of number of edits or barcode matched guide counts is specified.")
+        if not X_edit is None:
+            self.layers["edits"] = X_edit
+        if not X_bcmatch is None:
+            self.layers["X_bcmatch"] = X_bcmatch
         
     @classmethod
     def from_file_paths(
@@ -147,6 +120,7 @@ class ReporterScreen(Screen):
             guides=(adata.obs),
             condit=(adata.var),
             uns=(adata.uns),
+            layers=(adata.layers)
         )
         return repscreen
 
@@ -223,6 +197,47 @@ class ReporterScreen(Screen):
                     self.layers["edits"][guide_idx, :] += edits.iloc[i, 2:].astype(int)
         return old_edits
 
+    def get_edit_rate(
+        self, 
+        normalize_by_editable_base = False, 
+        edited_base = None,
+        editable_base_start = 3,
+        editable_base_end = 8,
+        bcmatch_thres = 1,
+        prior_weight: float = None,
+        return_result = False,
+        count_layer = "X_bcmatch",
+        edit_layer = "edits"
+        ):
+        """
+        prior_weight: 
+        Considering the edit rate to have prior of beta distribution with mean 0.5,
+        prior weight to use when calculating posterior edit rate.
+        """
+        if self.layers[count_layer] is not None and self.layers[edit_layer] is not None:
+            num_targetable_sites = 1.0
+            if normalize_by_editable_base:
+                if not edited_base in ["A", "C", "T", "G"]: 
+                    raise ValueError("Specify the correct edited_base")
+                num_targetable_sites = self.guides.sequence.map(
+                    lambda s: s[editable_base_start:editable_base_end].count(edited_base))
+            bulk_idx = np.where(
+                self.condit.reset_index()["index"].map(lambda s: "bulk" in s)
+            )[0]
+
+            if prior_weight is None:
+                prior_weight = 1
+            self.layers["_edit_rate"] = (self.layers[edit_layer] + prior_weight) / (
+                self.layers[count_layer] + prior_weight*2
+            )
+            self.layers["_edit_rate"][self.layers[count_layer] < bcmatch_thres] = np.nan
+            self.guides["edit_rate"] = self.layers["_edit_rate"][:, bulk_idx].mean(
+                axis=1
+            ) / num_targetable_sites
+            
+        else:
+            raise ValueError("edits or barcode matched guide counts not available.")
+
     def allele_df_to_edits(self):
         pass
 
@@ -286,8 +301,15 @@ class ReporterScreen(Screen):
             return (guide_fc_agg, edit_fc_agg)
 
 
-def concat(screens: Collection[ReporterScreen], *args, **kwargs):
-    adata = ad.concat(screens, *args, **kwargs)
+
+
+def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
+    if axis == 1:
+        if not all(screen.guides.index.equals(screens[0].guides.index) for screen in screens):
+            raise ValueError("Guide index doesn't match.")
+
+    adata = ad.concat(screens, *args, axis = axis, **kwargs)
+    adata.obs = screens[0].guides
     keys = set()
 
     # Merging uns
@@ -322,10 +344,6 @@ def concat(screens: Collection[ReporterScreen], *args, **kwargs):
             adata.uns[k][col] = adata.uns[k][col].astype("int64")
 
     return ReporterScreen.from_adata(adata)
-
-
-# okay decompiling ReporterScreen.cpython-38.pyc
-
 
 def read_h5ad(filename):
     adata = ad.read_h5ad(filename)

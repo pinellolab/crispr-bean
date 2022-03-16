@@ -67,15 +67,22 @@ class Allele:
     @classmethod
     def from_str(cls, allele_str): #pos:strand:start>end
         edits = set()
-        for edit_str in allele_str.split(","):
-            edit = Edit.from_str(edit_str)
-            edits.update(edit)
+        try:
+            for edit_str in allele_str.split(","):
+                edit = Edit.from_str(edit_str)
+                edits.add(edit)
+        except ValueError:
+            if allele_str.strip() == '':
+                return(cls(None))
         return(cls(edits))
 
     def __eq__(self, other):
         if self.edits == other.edits:
             return True
         return False
+
+    def __lt__(self, other): # Implemented for pandas compatibility
+        return self.edits < other.edits
 
     def __hash__(self):
         return(hash(frozenset(self.edits)))

@@ -172,7 +172,7 @@ def _get_edited_allele_lv(
         if op == "delete":
             edit = Edit(spos, source_seq[spos], "-", offset, strand = strand)
         elif op == "insert":
-            edit = Edit(spos, "-", dest_seq[dpos], offset, strand = strand)
+            edit = Edit(spos, "-", dest_seq[dpos], offset, strand = strand) # TODO: consecutive insertion are ignored.
         elif op == "replace":
             edit = Edit(spos, source_seq[spos], dest_seq[dpos], offset, strand = strand)
         elif op == "equal":

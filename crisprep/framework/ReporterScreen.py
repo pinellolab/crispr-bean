@@ -13,15 +13,8 @@ import numpy as np
 from typing import List, Union, Collection
 from anndata import AnnData
 import anndata as ad
-from .Edit import Edit
-from ..annotate.translate_allele import CDS
-
-
-def edit_alleles(allele_str):
-    ldlr_cds = CDS()
-    ldlr_cds.edit_allele(allele_str)
-
-    return ldlr_cds.get_aa_change(True)
+from .Edit import Edit, Allele
+from ..framework._supporting_fn import get_aa_alleles, filter_allele_by_pos
 
 
 def _get_counts(filename_pattern, guides, reps, conditions):
@@ -73,6 +66,15 @@ class ReporterScreen(Screen):
             self.layers["edits"] = X_edit
         if not X_bcmatch is None:
             self.layers["X_bcmatch"] = X_bcmatch
+        if "edit_counts" in self.uns.keys():
+            self.uns["edit_counts"].edit = self.uns["edit_counts"].edit.map(lambda s: Edit.from_str(s))
+        if "allele_counts" in self.uns.keys():
+            self.uns["allele_counts"].allele = self.uns["allele_counts"].allele.map(lambda s: Allele.from_str(s))
+        if "guide_reporter_allele_counts" in self.uns.keys():
+            self.uns["guide_reporter_allele_counts"].reporter_allele = \
+                self.uns["guide_reporter_allele_counts"].reporter_allele.map(lambda s: Allele.from_str(s))            
+            self.uns["guide_reporter_allele_counts"].guide_allele = \
+                self.uns["guide_reporter_allele_counts"].guide_allele.map(lambda s: Allele.from_str(s))
         
     @classmethod
     def from_file_paths(
@@ -240,11 +242,26 @@ class ReporterScreen(Screen):
     def get_edit_from_allele(self):
         pass
     
-    def filter_and_aggregate_allele(self):
-        
+    def _get_allele_norm(self):
+        '''
+        Get bcmatched count to normalize allele counts
+        '''
         pass
 
-    def translate_allele(self):
+    def filter_allele_counts_by_pos(self, 
+        rel_pos_start = 0, rel_pos_end = 32,
+        allele_uns_key = "allele_counts", filter_rel_pos = True):
+        '''
+        Filter alleles based on barcode matched counts, allele counts, 
+        or proportion
+        '''
+        self.uns[allele_uns_key].allele, filtered_edits = \
+            zip(*self.uns[allele_uns_key].allele.map(lambda a:
+                filter_allele_by_pos(a, rel_pos_start, rel_pos_end, filter_rel_pos)))
+        self.uns[allele_uns_key] = self.uns[allele_uns_key].groupby(["guide", "allele"]).sum()
+        return(filtered_edits)
+
+    def translate_alleles(allele: Allele):
         if self.uns["allele_counts"] is None:
             print("No allele information. Run crisrpep-count with -a option.")
             return

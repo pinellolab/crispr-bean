@@ -10,6 +10,7 @@ crisprep.egg-info/dependency_links.txt
 crisprep.egg-info/top_level.txt
 crisprep/__pycache__/__init__.cpython-38.pyc
 crisprep/__pycache__/readwrite.cpython-38.pyc
+crisprep/annotate/AminoAcidEdit.py
 crisprep/annotate/__init__.py
 crisprep/annotate/translate_allele.py
 crisprep/framework/Edit.py

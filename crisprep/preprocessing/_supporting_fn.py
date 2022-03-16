@@ -1,10 +1,12 @@
 from typing import List, Union, Literal
 import subprocess as sb
+import numpy as np
 import pandas as pd
 import gzip
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
+import Levenshtein as lv
 from crisprep.framework.Edit import Allele, Edit
 
 
@@ -140,6 +142,44 @@ def _get_edited_allele(
             edit = Edit(i - start_pos, ref_nt, sample_nt, offset, strand=strand)
             allele.add(edit)
 
+    return allele
+
+
+def _get_edited_allele_lv(
+    ref_seq: str,
+    query_seq: str,
+    offset: int,
+    strand: Literal[1, -1] = 1,
+    start_pos: int = 0,
+    end_pos: int = 100,
+    positionwise_quality: np.ndarray = None
+):
+    assert len(ref_seq) == len(query_seq), "reference and query seq length mismatch"
+    assert len(positionwise_quality) == len(query_seq), "query seq and qual length mismatch"
+
+    allele = Allele()
+    dest_seq = query_seq[start_pos:end_pos]
+    source_seq = ref_seq[start_pos:end_pos]
+    if positionwise_quality is None: use_pos_qual = False
+    else: 
+        use_pos_qual = True
+        pos_qual = positionwise_quality[start_pos:end_pos]
+    edit_ops = lv.editops(source_seq, dest_seq)
+    for op, spos, dpos in edit_ops:
+        if use_pos_qual:
+            if dpos >= len(pos_qual) : assert op == "delete"
+            elif not pos_qual[dpos]: continue
+        if op == "delete":
+            edit = Edit(spos, source_seq[spos], "-", offset, strand = strand)
+        elif op == "insert":
+            edit = Edit(spos, "-", dest_seq[dpos], offset, strand = strand)
+        elif op == "replace":
+            edit = Edit(spos, source_seq[spos], dest_seq[dpos], offset, strand = strand)
+        elif op == "equal":
+            continue
+        else:
+            raise ValueError("Lv.editops returned unexpected result: ({}, {}, {})".format(op, spos, dpos))
+        allele.add(edit)
     return allele
 
 

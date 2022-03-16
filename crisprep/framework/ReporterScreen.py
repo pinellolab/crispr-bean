@@ -227,18 +227,21 @@ class ReporterScreen(Screen):
 
             if prior_weight is None:
                 prior_weight = 1
-            self.layers["_edit_rate"] = (self.layers[edit_layer] + prior_weight) / (
-                self.layers[count_layer] + prior_weight*2
-            )
-            self.layers["_edit_rate"][self.layers[count_layer] < bcmatch_thres] = np.nan
-            self.guides["edit_rate"] = self.layers["_edit_rate"][:, bulk_idx].mean(
-                axis=1
-            ) / num_targetable_sites
+            n_edits = self.layers[edit_layer][:, bulk_idx].sum(axis=1)
+            n_counts = self.layers[count_layer][:, bulk_idx].sum(axis=1)
+            self.guides["edit_rate"] = (n_edits + prior_weight / 2) / ((n_counts*num_targetable_sites) + prior_weight)
+            self.guides["edit_rate"][n_counts < bcmatch_thres] = np.nan
+            if return_result:
+                return(n_edits, n_counts)
             
         else:
             raise ValueError("edits or barcode matched guide counts not available.")
 
-    def allele_df_to_edits(self):
+    def get_edit_from_allele(self):
+        pass
+    
+    def filter_and_aggregate_allele(self):
+        
         pass
 
     def translate_allele(self):
@@ -265,7 +268,7 @@ class ReporterScreen(Screen):
         if return_result:
             return (guide_fc, edit_fc)
 
-    def log_fold_change_aggregate(
+    def log_fold_change_aggregates(
         self,
         cond1,
         cond2,

@@ -9,7 +9,8 @@ import gzip
 import numpy as np
 import pandas as pd
 from Bio import SeqIO
-from Bio.SeqIO.QualityIO import FastqGeneralIterator
+from Bio.SeqIO.QualityIO import FastqPhredIterator
+import Levenshtein as lv
 from crisprep import ReporterScreen, Edit, Allele
 
 # from crisprep.framework.Edit import Allele
@@ -19,7 +20,7 @@ from ._supporting_fn import (
     _read_count_match,
     _get_fastq_handle,
     _write_paired_end_reads,
-    _get_edited_allele,
+    _get_edited_allele_lv,
     _check_readname_match,
     _read_is_good_quality,
     revcomp,
@@ -101,10 +102,6 @@ class GuideEditCounter:
         self.count_reporter_edits = kwargs["count_reporter"]
         if self.count_reporter_edits:
             self.screen.uns["edit_counts"] = dict()
-            # pd.DataFrame(
-            #     columns = ["guide_name", "edit_id", "count"]).set_index(
-            #     ["guide_name", "edit_id"], drop = True)
-            # #self.screen.layers["edits"] = np.zeros_like(self.screen.X)
             self.gstart_reporter = kwargs["gstart_reporter"]
 
         self.count_edited_alleles = kwargs["count_allele"]
@@ -138,6 +135,10 @@ class GuideEditCounter:
         self.nomatch = 0
         self.duplicate_match = 0
         self.duplicate_match_wo_barcode = 0
+
+    def masked_equal(self, seq1, seq2):
+        return(seq1.replace(self.base_edited_from, self.base_edited_to) == \
+            seq2.replace(self.base_edited_from, self.base_edited_to))
 
     def _set_sgRNA_df(self):
         with open(self.sgRNA_filename) as infile:
@@ -229,24 +230,11 @@ class GuideEditCounter:
         count_stat_file.write("No match:\t{}\n".format(self.nomatch))
         count_stat_file.write("Duplicate match with barcode:\t{}\n".format(self.duplicate_match))
         count_stat_file.write("No match with barcode & Duplicate match w/o barcode:\t{}\n".format(self.duplicate_match_wo_barcode))
-        
-
-    def _gRNA_eq(self, guide: str, observed: str):
-        if len(observed) != len(guide):
-            return False
-        for observed_nt, guide_nt in zip(observed, guide):
-            if (observed_nt == guide_nt) or (
-                (guide_nt, observed_nt) == (self.base_edited_from, self.base_edited_to)
-            ):
-                continue
-            else:
-                return False
-        return True
 
     def _get_guide_counts_bcmatch(self):
         NotImplemented
 
-    def _count_guide_edits(self, matched_guide_idx, R1_seq, R2_seq):
+    def _count_guide_edits(self, matched_guide_idx, R1_record: SeqIO.SeqRecord):
         strand_str_to_int = {"neg": -1, "pos": 1}
         if self.guides_has_strands:
             try:
@@ -258,13 +246,15 @@ class GuideEditCounter:
         else:
             guide_strand = 1
         ref_guide_seq = self.screen.guides.sequence[matched_guide_idx]
-        guide_edit_allele = _get_edited_allele(
+        read_guide_seq, read_guide_qual = self.get_guide_seq_qual(R1_record, len(ref_guide_seq))
+        guide_edit_allele = _get_edited_allele_lv(
             ref_seq=ref_guide_seq,
-            query_seq=self.get_guide_seq(R1_seq, R2_seq, len(ref_guide_seq)),
+            query_seq=read_guide_seq,
             offset=0,
             strand=guide_strand,
             start_pos=0,
-            end_pos=21,
+            end_pos=len(ref_guide_seq),
+            positionwise_quality = read_guide_qual
         )
         self._write_allele(
             matched_guide_idx,
@@ -274,11 +264,15 @@ class GuideEditCounter:
         return(guide_edit_allele)
         
 
-    def _count_reporter_edits(self, matched_guide_idx, R1_seq, R2_seq, guide_allele = None):
+    def _count_reporter_edits(self, matched_guide_idx, R1_seq, R2_record: SeqIO.SeqRecord, 
+    single_base_qual_cutoff=30, guide_allele = None,):
+        '''
+        Count edits in single read to save as allele.
+        '''
         strand_str_to_int = {"neg": -1, "pos": 1}
         ref_reporter_seq = self.screen.guides.Reporter[matched_guide_idx]
-        read_reporter_seq = self.get_reporter_seq(R1_seq, R2_seq)
-
+        read_reporter_seq, read_reporter_qual = self.get_reporter_seq_qual(R2_record)
+        pos_good_quality = np.array(read_reporter_qual) >= single_base_qual_cutoff
         if self.guides_has_strands:
             try:
                 guide_strand = strand_str_to_int[
@@ -297,27 +291,15 @@ class GuideEditCounter:
                 offset = 0
         else:
             guide_strand = 1
-            offset = self.screen.guides.offset[matched_guide_idx]
+            offset = -self.screen.guides["Target base position in reporter"][matched_guide_idx] 
+            # TODO: clean this up
 
-        # Set relative start/end position in reporter to count edits
-        start_pos = (
-            len(read_reporter_seq)
-            - self.gstart_reporter
-            - len(self.screen.guides.sequence[matched_guide_idx])
-        )
-        end_pos = len(read_reporter_seq) - self.gstart_reporter
-        assert (
-            start_pos == 7 and len(self.screen.guides.sequence[matched_guide_idx]) == 19
-        ) or (
-            start_pos == 6 and len(self.screen.guides.sequence[matched_guide_idx]) == 20
-        )
-        allele = _get_edited_allele(
+        allele = _get_edited_allele_lv(
             ref_seq=ref_reporter_seq,
             query_seq=read_reporter_seq,
             offset=offset,
             strand=guide_strand,
-            start_pos=start_pos,
-            end_pos=end_pos,
+            positionwise_quality = pos_good_quality
         )
 
         if self.count_edited_alleles:
@@ -343,8 +325,8 @@ class GuideEditCounter:
         for i, (r1, r2) in tqdm(
             enumerate(zip(R1_iter, R2_iter)), total=self.n_reads_after_filtering
         ):
-            _, R1_seq, _ = r1
-            _, R2_seq, _ = r2
+            R1_seq = r1.seq
+            R2_seq = r2.seq
 
             bc_match, semimatch = self._match_read_to_sgRNA_bcmatch_semimatch(
                 R1_seq, R2_seq
@@ -371,7 +353,7 @@ class GuideEditCounter:
                         print(semimatch)
 
                     if self.count_guide_edits:
-                        self._count_guide_edits(matched_guide_idx, R1_seq, R2_seq)
+                        self._count_guide_edits(matched_guide_idx, r1)
                     self.semimatch += 1
 
             elif len(bc_match) >= 2:  # duplicate mapping
@@ -384,13 +366,13 @@ class GuideEditCounter:
                 self.screen.layers[bcmatch_layer][matched_guide_idx, 0] += 1
                 self.bcmatch += 1
                 if self.count_guide_edits:
-                    guide_allele = self._count_guide_edits(matched_guide_idx, R1_seq, R2_seq)
+                    guide_allele = self._count_guide_edits(matched_guide_idx, r1)
                 if self.count_reporter_edits:
                     # TBD: what if reporter seq doesn't match barcode & guide?
                     if self.count_guide_reporter_alleles:
-                        self._count_reporter_edits(matched_guide_idx, R1_seq, R2_seq, guide_allele)
+                        self._count_reporter_edits(matched_guide_idx, R1_seq, r2, guide_allele = guide_allele)
                     else: 
-                        self._count_reporter_edits(matched_guide_idx, R1_seq, R2_seq)
+                        self._count_reporter_edits(matched_guide_idx, R1_seq, r2)
 
         self.screen.X = (
             self.screen.layers[semimatch_layer] + self.screen.layers[bcmatch_layer]
@@ -432,12 +414,27 @@ class GuideEditCounter:
             return None
         return gRNA_seq
 
+    def get_guide_seq_qual(self, R1_record: SeqIO.SeqRecord, guide_length):
+        R1_seq = R1_record.seq
+        guide_start_idx = R1_seq.find(self.guide_start_seq)
+        if guide_start_idx == -1:
+            return None, None
+        if guide_start_idx + guide_length >= len(R1_seq): 
+            return None, None
+        guide_start_idx = guide_start_idx + len(self.guide_start_seq)
+        seq = R1_record[guide_start_idx : (guide_start_idx + guide_length)]
+        return(str(seq.seq), seq.letter_annotations["phred_quality"])
+
     def get_reporter_seq(self, R1_seq, R2_seq):
         """This can be edited by user based on the read construct."""
         reporter_seq = revcomp(
             R2_seq[self.guide_bc_len : (self.guide_bc_len + self.reporter_length)]
         )
-        return reporter_seq
+        return(reporter_seq)
+
+    def get_reporter_seq_qual(self, R2_record: SeqIO.SeqRecord):
+        seq = R2_record[self.guide_bc_len : (self.guide_bc_len + self.reporter_length)].reverse_complement()
+        return(str(seq.seq), seq.letter_annotations["phred_quality"])
 
     def get_barcode(self, R1_seq, R2_seq):
         """This can be edited by user based on the read construct."""
@@ -454,11 +451,11 @@ class GuideEditCounter:
                 continue
 
             _seq_match = np.array(
-                list(map(lambda x: self._gRNA_eq(x, seq), self.guides_info_df.sequence))
+                list(map(lambda x: self.masked_equal(x, seq), self.guides_info_df.sequence))
             )
             assert len(_seq_match) == len(self.guides_info_df.sequence)
             _bc_match = np.array(
-                list(map(lambda x: x == guide_barcode, self.guides_info_df.barcode))
+                list(map(lambda x: self.masked_equal(x, guide_barcode), self.guides_info_df.barcode))
             )
             assert len(_bc_match) == len(self.guides_info_df.barcode)
             bc_match_idx = np.append(bc_match_idx, np.where(_seq_match & _bc_match)[0])
@@ -505,8 +502,8 @@ class GuideEditCounter:
         R1_handle = _get_fastq_handle(self.R1_filename)
         R2_handle = _get_fastq_handle(self.R2_filename)
 
-        R1_iterator = FastqGeneralIterator(R1_handle)
-        R2_iterator = FastqGeneralIterator(R2_handle)
+        R1_iterator = FastqPhredIterator(R1_handle)
+        R2_iterator = FastqPhredIterator(R2_handle)
 
         return (R1_iterator, R2_iterator)
 
@@ -522,8 +519,7 @@ class GuideEditCounter:
     def _check_names_filter_fastq(self, filter_by_qual=False):
         if self.min_average_read_quality > 0 or self.min_single_bp_quality > 0:
             info(
-                "Filtering reads with average bp quality < {} \
-                and single bp quality < {} ... in up to position {} of R1 and {} of R2".format(
+                "Filtering reads with average bp quality < {} and single bp quality < {} ...".format(
                     self.min_average_read_quality, self.min_single_bp_quality
                 )
             )

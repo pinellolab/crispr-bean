@@ -1,7 +1,7 @@
 from typing import Iterable, Literal
 
 class Edit:
-    reverse_map = {"A":"T", "C":"G", "T":"A", "G":"C"}
+    reverse_map = {"A":"T", "C":"G", "T":"A", "G":"C", "-":"-"}
     strand_map = {"+":1, "-":-1}
     def __init__(self, rel_pos: int, ref_base: chr, alt_base: chr, offset: int = None, strand: Literal[1, -1] = 1):
         strand_to_symbol = {1:'+', -1:'-'}

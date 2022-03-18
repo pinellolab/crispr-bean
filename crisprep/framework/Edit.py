@@ -20,6 +20,7 @@ class Edit:
 
     @classmethod
     def from_str(cls, edit_str): #pos:strand:start>end
+        if type(edit_str) is Edit: return(edit_str)
         pos, rel_pos, strand, base_change = edit_str.split(":")
         pos = int(pos)
         rel_pos = int(rel_pos)
@@ -66,6 +67,7 @@ class Allele:
 
     @classmethod
     def from_str(cls, allele_str): #pos:strand:start>end
+        if type(allele_str) is Allele: return(allele_str)
         edits = set()
         try:
             for edit_str in allele_str.split(","):

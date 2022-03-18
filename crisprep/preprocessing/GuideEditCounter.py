@@ -110,7 +110,7 @@ class GuideEditCounter:
             # pd.DataFrame(
             #     columns = ["guide_name", "allele_id", "count"]).set_index(
             #     ["guide_name", "allele_id"], drop = True)
-            self.screen.uns["alleles"] = pd.DataFrame(columns=["allele_id", "edit_id"])
+            #self.screen.uns["alleles"] = pd.DataFrame(columns=["allele_id", "edit_id"])
             # Dict[guide_name -> List[edit_ID]]
 
         self.count_guide_reporter_alleles = kwargs["count_guide_reporter_alleles"]
@@ -124,9 +124,9 @@ class GuideEditCounter:
             self.guide_bc_len = kwargs["guide_bc_len"]
 
         self.offset = kwargs["offset"]
-        if self.count_reporter_edits:
+        if self.count_reporter_edits or self.count_edited_alleles:
             self.reporter_length = kwargs["reporter_length"]
-
+        self.guide_to_allele = {}
         self.n_total_reads = _read_count_match(self.R1_filename, self.R2_filename)
 
         self.keep_intermediate = kwargs["keep_intermediate"]
@@ -199,20 +199,28 @@ class GuideEditCounter:
             ]
 
         if self.count_reporter_edits:
-            self.screen.uns["edit_counts"] = _multiindex_dict_to_df(
-                self.screen.uns["edit_counts"], "edit", self.database_id
-            )
-            self.screen.uns["edit_counts"].guide = self.screen.guides.index[
-                self.screen.uns["edit_counts"].guide.to_numpy(dtype=int)
-            ]
-
+            self.screen.uns["edit_counts"] = pd.DataFrame.from_dict(self.screen.uns["edit_counts"])
+            # self.screen.uns["edit_counts"] = _multiindex_dict_to_df(
+            #     self.screen.uns["edit_counts"], "edit", self.database_id
+            # )
+            # self.screen.uns["edit_counts"].guide = self.screen.guides.index[
+            #     self.screen.uns["edit_counts"].guide.to_numpy(dtype=int)
+            # ]
         if self.count_edited_alleles:
-            self.screen.uns["allele_counts"] = _multiindex_dict_to_df(
-                self.screen.uns["allele_counts"], "allele", self.database_id
-            )
-            self.screen.uns["allele_counts"].guide = self.screen.guides.index[
-                self.screen.uns["allele_counts"].guide.to_numpy(dtype=int)
-            ]
+            df = pd.DataFrame.from_dict(self.guide_to_allele, orient="index").stack().to_frame()
+            assert type(df) is pd.DataFrame, df
+            self.screen.uns["allele_counts"] = pd.DataFrame(df[0].values.tolist(), index = df.index).reset_index()
+            self.screen.uns["allele_counts"] = self.screen.uns["allele_counts"].rename(columns={"level_0": "guide", "level_1": "allele", 0:self.database_id})
+            
+            if 'guide' in self.screen.uns["allele_counts"].columns:
+                self.screen.uns["allele_counts"].guide = self.screen.guides.index[self.screen.uns["allele_counts"].guide]
+        
+            # self.screen.uns["allele_counts"] = _multiindex_dict_to_df(
+            #     self.screen.uns["allele_counts"], "allele", self.database_id
+            # )
+            # self.screen.uns["allele_counts"].guide = self.screen.guides.index[
+            #     self.screen.uns["allele_counts"].guide.to_numpy(dtype=int)
+            # ]
 
         if self.count_guide_reporter_alleles:
             self.screen.uns["guide_reporter_allele_counts"] = _multiindex_dict_to_df(
@@ -264,7 +272,7 @@ class GuideEditCounter:
         return(guide_edit_allele)
         
 
-    def _count_reporter_edits(self, matched_guide_idx, R1_seq, R2_record: SeqIO.SeqRecord, 
+    def _count_reporter_edits(self, matched_guide_idx: int, R1_seq, R2_record: SeqIO.SeqRecord, 
     single_base_qual_cutoff=30, guide_allele = None,):
         '''
         Count edits in single read to save as allele.
@@ -272,7 +280,7 @@ class GuideEditCounter:
         strand_str_to_int = {"neg": -1, "pos": 1}
         ref_reporter_seq = self.screen.guides.Reporter[matched_guide_idx]
         read_reporter_seq, read_reporter_qual = self.get_reporter_seq_qual(R2_record)
-        pos_good_quality = np.array(read_reporter_qual) >= single_base_qual_cutoff
+        bad_quality_pos = np.where(np.array(read_reporter_qual) < single_base_qual_cutoff)[0]
         if self.guides_has_strands:
             try:
                 guide_strand = strand_str_to_int[
@@ -291,22 +299,35 @@ class GuideEditCounter:
                 offset = 0
         else:
             guide_strand = 1
-            offset = -self.screen.guides["Target base position in reporter"][matched_guide_idx] 
+            offset = -(self.screen.guides["Target base position in reporter"][matched_guide_idx] -1)
             # TODO: clean this up
 
-        allele = _get_edited_allele_lv(
-            ref_seq=ref_reporter_seq,
-            query_seq=read_reporter_seq,
-            offset=offset,
-            strand=guide_strand,
-            positionwise_quality = pos_good_quality
-        )
-
-        if self.count_edited_alleles:
-            self._write_allele(matched_guide_idx, allele)
-            if self.count_guide_reporter_alleles and (not guide_allele is None):
-                self._write_guide_reporter_allele(matched_guide_idx, allele, guide_allele)
-        self._write_edits(matched_guide_idx, allele)
+        allele = read_reporter_seq
+        if len(bad_quality_pos) > 0:
+            allele_bases = np.array(list(allele))
+            allele_bases[bad_quality_pos] = np.array(list(ref_reporter_seq))[bad_quality_pos]
+            allele = "".join(allele_bases.astype(list))
+        
+        # allele = _get_edited_allele_lv(
+        #     ref_seq=ref_reporter_seq,
+        #     query_seq=read_reporter_seq,
+        #     offset=offset,
+        #     strand=guide_strand,
+        #     positionwise_quality = pos_good_quality
+        # )
+        if allele != ref_reporter_seq:
+            if self.count_edited_alleles:
+                if matched_guide_idx in self.guide_to_allele.keys():
+                    if allele in self.guide_to_allele[matched_guide_idx].keys():
+                        self.guide_to_allele[matched_guide_idx][allele] += 1
+                    else:
+                        self.guide_to_allele[matched_guide_idx][allele] = 1
+                else:
+                    self.guide_to_allele[matched_guide_idx] = {allele: 1}
+                #self._write_allele(matched_guide_idx, allele)
+                # if self.count_guide_reporter_alleles and (not guide_allele is None):
+                #     self._write_guide_reporter_allele(matched_guide_idx, allele, guide_allele)
+        #self._write_edits(matched_guide_idx, allele)
 
     def _get_guide_counts_bcmatch_semimatch(
         self, bcmatch_layer="X_bcmatch", semimatch_layer="X"
@@ -367,7 +388,7 @@ class GuideEditCounter:
                 self.bcmatch += 1
                 if self.count_guide_edits:
                     guide_allele = self._count_guide_edits(matched_guide_idx, r1)
-                if self.count_reporter_edits:
+                if self.count_reporter_edits or self.count_edited_alleles:
                     # TBD: what if reporter seq doesn't match barcode & guide?
                     if self.count_guide_reporter_alleles:
                         self._count_reporter_edits(matched_guide_idx, R1_seq, r2, guide_allele = guide_allele)
@@ -379,8 +400,9 @@ class GuideEditCounter:
         )
 
     def _write_allele(self, guide_idx: int, allele: Allele, uns_key="allele_counts"):
-        if len(allele.edits) == 0:
-            return
+        # if len(allele.edits) == 0:
+        #     return
+
         if (guide_idx, str(allele)) in self.screen.uns[uns_key].keys():
             self.screen.uns[uns_key][(guide_idx, str(allele))] += 1
         else:

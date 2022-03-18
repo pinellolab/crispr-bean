@@ -69,7 +69,8 @@ class ReporterScreen(Screen):
         if "edit_counts" in self.uns.keys():
             self.uns["edit_counts"].edit = self.uns["edit_counts"].edit.map(lambda s: Edit.from_str(s))
         if "allele_counts" in self.uns.keys():
-            self.uns["allele_counts"].allele = self.uns["allele_counts"].allele.map(lambda s: Allele.from_str(s))
+            pass
+            #self.uns["allele_counts"].allele = self.uns["allele_counts"].allele.map(lambda s: Allele.from_str(s))
         if "guide_reporter_allele_counts" in self.uns.keys():
             self.uns["guide_reporter_allele_counts"].reporter_allele = \
                 self.uns["guide_reporter_allele_counts"].reporter_allele.map(lambda s: Allele.from_str(s))            
@@ -185,7 +186,7 @@ class ReporterScreen(Screen):
         else:
             old_edits = None
         for i in edits.index:
-            edit = Edit.from_str(edits.edit[i])
+            edit = edits.edit[i]
             if edit.rel_pos < rel_pos_start or edit.rel_pos >= rel_pos_end: continue
             guide_idx = np.where(edits.guide[i] == self.guides.reset_index().name)[
                 0
@@ -320,6 +321,17 @@ class ReporterScreen(Screen):
         if return_result:
             return (guide_fc_agg, edit_fc_agg)
 
+    def write(self, out_path):
+        """
+        Write .h5ad
+        """
+        try:
+            super().write(out_path)
+        except:
+            for k in self.uns.keys():
+                print(self.uns[k])
+                exit(1)
+
 
 
 
@@ -368,3 +380,4 @@ def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
 def read_h5ad(filename):
     adata = ad.read_h5ad(filename)
     return ReporterScreen.from_adata(adata)
+

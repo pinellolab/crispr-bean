@@ -20,6 +20,7 @@ class Edit:
 
     @classmethod
     def from_str(cls, edit_str): #pos:strand:start>end
+        if type(edit_str) is Edit: return(edit_str)
         pos, rel_pos, strand, base_change = edit_str.split(":")
         pos = int(pos)
         rel_pos = int(rel_pos)
@@ -66,6 +67,7 @@ class Allele:
 
     @classmethod
     def from_str(cls, allele_str): #pos:strand:start>end
+        if type(allele_str) is Allele: return(allele_str)
         edits = set()
         try:
             for edit_str in allele_str.split(","):
@@ -75,6 +77,32 @@ class Allele:
             if allele_str.strip() == '':
                 return(cls(None))
         return(cls(edits))
+
+    def has_edit(self, ref_base, alt_base, pos = None, rel_pos = None):
+        if not (pos is None) + (rel_pos is None): 
+            raise ValueError("Either pos or rel_pos should be specified")
+        
+        for e in self.edits:
+            if e.ref_base == ref_base and e.alt_base == alt_base:
+                if not pos is None:
+                    if e.pos == pos: return True
+                elif e.rel_pos == rel_pos: return True
+        return False
+
+    def has_other_edit(self, ref_base, alt_base, pos = None, rel_pos = None):
+        '''
+        Has other edit than specified.
+        '''
+        if len(self.edits) == 0: return False
+        if not (pos is None) + (rel_pos is None): 
+            raise ValueError("Either pos or rel_pos should be specified")
+        for e in self.edits:
+            if e.ref_base == ref_base and e.alt_base == alt_base:
+                if not pos is None:
+                    if e.pos != pos: return True
+                elif e.rel_pos != rel_pos: return True
+            else: return True
+        return False
 
     def __eq__(self, other):
         if self.edits == other.edits:

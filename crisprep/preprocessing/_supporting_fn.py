@@ -158,13 +158,16 @@ def _get_edited_allele_lv(
     assert len(positionwise_quality) == len(query_seq), "query seq and qual length mismatch"
 
     allele = Allele()
-    dest_seq = query_seq[start_pos:end_pos]
+    
     source_seq = ref_seq[start_pos:end_pos]
+    dest_seq = query_seq[start_pos:end_pos]
     if positionwise_quality is None: use_pos_qual = False
     else: 
         use_pos_qual = True
         pos_qual = positionwise_quality[start_pos:end_pos]
+
     edit_ops = lv.editops(source_seq, dest_seq)
+
     for op, spos, dpos in edit_ops:
         if use_pos_qual:
             if dpos >= len(pos_qual) : assert op == "delete"
@@ -174,7 +177,11 @@ def _get_edited_allele_lv(
         elif op == "insert":
             edit = Edit(spos, "-", dest_seq[dpos], offset, strand = strand) # TODO: consecutive insertion are ignored.
         elif op == "replace":
-            edit = Edit(spos, source_seq[spos], dest_seq[dpos], offset, strand = strand)
+            if source_seq[spos] != ref_seq[spos]: 
+                print("Refseq mismatch in allele counting: ref {}, alt {}\n ops = {}".format(ref_seq, query_seq, edit_ops))
+            else:
+                edit = Edit(spos, source_seq[spos], dest_seq[dpos], offset, strand = strand)
+            
         elif op == "equal":
             continue
         else:

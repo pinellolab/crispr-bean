@@ -235,18 +235,36 @@ class ReporterScreen(Screen):
             self.guides["edit_rate"][n_counts < bcmatch_thres] = np.nan
             if return_result:
                 return(n_edits, n_counts)
-            
         else:
             raise ValueError("edits or barcode matched guide counts not available.")
 
     def get_edit_from_allele(self):
-        pass
-    
-    def _get_allele_norm(self):
+        df = self.uns["allele_counts"].copy()
+        df["edits"] = df.allele.map(lambda s: list(s.edits))
+        df = df.explode("edits").groupby("guide", "edits").sum()
+        return(df.reset_index())
+
+    def _get_allele_norm(self, allele_count_df = None, thres = 10):
         '''
         Get bcmatched count to normalize allele counts
+        thres: normalizing count below this number would be disregarded.
         '''
-        pass
+        if allele_count_df is None:
+            allele_count_df = self.uns["allele_counts"]
+        guide_to_idx = self.guides[["name"]].reset_index().set_index("name")
+        guide_idx = guide_to_idx["index"][self.uns["allele_counts"].guide]
+        norm_counts = self.layers["X_bcmatch"][guide_idx.values.astype(int), :]
+        norm_counts[norm_counts < thres] = np.nan
+        return(norm_counts)
+
+    def get_normalized_allele_counts(self, allele_count_df = None, norm_thres = 10):
+        if allele_count_df is None:
+            allele_count_df = self.uns["allele_counts"]
+        alleles_norm = allele_count_df.copy()
+        count_columns = self.condit["index"]
+        norm_counts = self._get_allele_norm(allele_count_df = allele_count_df, thres = norm_thres)
+        alleles_norm.loc[:,count_columns] = alleles_norm.loc[:,count_columns]/norm_counts
+        return(alleles_norm)
 
     def filter_allele_counts_by_pos(self, 
         rel_pos_start = 0, rel_pos_end = 32,
@@ -261,12 +279,23 @@ class ReporterScreen(Screen):
         self.uns[allele_uns_key] = self.uns[allele_uns_key].groupby(["guide", "allele"]).sum()
         return(filtered_edits)
 
-    def translate_alleles(allele: Allele):
+    def collapse_allele_by_target(self, ref_base, alt_base, target_pos_column = "target_pos"):
+        if not target_pos_column in self.guides.columns:
+            raise ValueError("The .guides have to have 'target_pos' specifying the relative position of target edit.")
+        df = self.uns["allele_counts"].copy()
+        df["target_pos"] = self.guides.set_index("name").loc[df.guide, "target_pos"]
+        df["has_target"] = df.apply(lambda row: row.allele.has_edit(ref_base, alt_base, rel_pos = row.target_pos))
+        df["has_nontarget"] = df.apply(lambda row: row.allele.has_other_edit(ref_base, alt_base, rel_pos = row.target_pos))
+        res = df.groupby(["guide", "has_target", "has_nontarget"]).sum()
+        return(res)
+
+
+    def translate_alleles(self, allele: Allele):
         if self.uns["allele_counts"] is None:
             print("No allele information. Run crisrpep-count with -a option.")
             return
         self.uns["allele_counts"]["aa_allele"] = self.uns["allele_counts"].allele.map(
-            lambda s: edit_alleles(s)
+            lambda s: get_aa_alleles(s)
         )
 
     def log_norm(self):

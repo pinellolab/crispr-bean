@@ -153,7 +153,10 @@ class GuideEditCounter:
                 )
             sgRNA_df = sgRNA_df.set_index("name")
         self.guides_info_df = sgRNA_df
+        self.guides_info_df['sequence_masked'] = self.guides_info_df.sequence.map(lambda s: s.replace(self.base_edited_from, self.base_edited_to))
+        self.guides_info_df['barcode_masked'] = self.guides_info_df.barcode.map(lambda s: s.replace(self.base_edited_from, self.base_edited_to))
         self.guide_lengths = sgRNA_df.sequence.map(lambda s: len(s)).unique()
+
 
     def check_filter_fastq(self):
         self.filtered_R1_filename = self._jp(
@@ -472,18 +475,11 @@ class GuideEditCounter:
             if seq is None:
                 continue
 
-            _seq_match = np.array(
-                list(map(lambda x: self.masked_equal(x, seq), self.guides_info_df.sequence))
-            )
-            assert len(_seq_match) == len(self.guides_info_df.sequence)
-            _bc_match = np.array(
-                list(map(lambda x: self.masked_equal(x, guide_barcode), self.guides_info_df.barcode))
-            )
-            assert len(_bc_match) == len(self.guides_info_df.barcode)
-            bc_match_idx = np.append(bc_match_idx, np.where(_seq_match & _bc_match)[0])
-            semimatch_idx = np.append(
-                semimatch_idx, np.where(_seq_match & np.invert(_bc_match))[0]
-            )
+            _seq_match = np.where(seq.replace(self.base_edited_from, self.base_edited_to) == self.guides_info_df.masked_sequence)[0]
+            _bc_match = np.where(guide_barcode.replace(self.base_edited_from, self.base_edited_to) == self.guides_info_df.masked_barcode)[0]
+            
+            bc_match_idx = np.append(bc_match_idx, np.intersect1d(_seq_match, _bc_match))
+            semimatch_idx = np.append(semimatch_idx, _seq_match)
 
         return (bc_match_idx.astype(int), semimatch_idx.astype(int))
 

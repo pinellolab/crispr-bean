@@ -153,8 +153,8 @@ class GuideEditCounter:
                 )
             sgRNA_df = sgRNA_df.set_index("name")
         self.guides_info_df = sgRNA_df
-        self.guides_info_df['sequence_masked'] = self.guides_info_df.sequence.map(lambda s: s.replace(self.base_edited_from, self.base_edited_to))
-        self.guides_info_df['barcode_masked'] = self.guides_info_df.barcode.map(lambda s: s.replace(self.base_edited_from, self.base_edited_to))
+        self.guides_info_df['masked_sequence'] = self.guides_info_df.sequence.map(lambda s: s.replace(self.base_edited_from, self.base_edited_to))
+        self.guides_info_df['masked_barcode'] = self.guides_info_df.barcode.map(lambda s: s.replace(self.base_edited_from, self.base_edited_to))
         self.guide_lengths = sgRNA_df.sequence.map(lambda s: len(s)).unique()
 
 
@@ -232,7 +232,7 @@ class GuideEditCounter:
             self.screen.uns["guide_reporter_allele_counts"].guide = self.screen.guides.index[
                 self.screen.uns["guide_reporter_allele_counts"].guide.to_numpy(dtype=int)
             ]
-
+        print(self.guide_to_allele)
         count_stat_path = self._jp("mapping_stats.txt")
         count_stat_file = open(count_stat_path, "w")
         count_stat_file.write("Read count with \n")
@@ -280,6 +280,7 @@ class GuideEditCounter:
         '''
         Count edits in single read to save as allele.
         '''
+        print("counting called")
         strand_str_to_int = {"neg": -1, "pos": 1}
         ref_reporter_seq = self.screen.guides.Reporter[matched_guide_idx]
         read_reporter_seq, read_reporter_qual = self.get_reporter_seq_qual(R2_record)
@@ -318,7 +319,9 @@ class GuideEditCounter:
         #     strand=guide_strand,
         #     positionwise_quality = pos_good_quality
         # )
+        print(allele)
         if allele != ref_reporter_seq:
+            print("mismatch")
             if self.count_edited_alleles:
                 if matched_guide_idx in self.guide_to_allele.keys():
                     if allele in self.guide_to_allele[matched_guide_idx].keys():
@@ -349,8 +352,8 @@ class GuideEditCounter:
         for i, (r1, r2) in tqdm(
             enumerate(zip(R1_iter, R2_iter)), total=self.n_reads_after_filtering
         ):
-            R1_seq = r1.seq
-            R2_seq = r2.seq
+            R1_seq = str(r1.seq)
+            R2_seq = str(r2.seq)
 
             bc_match, semimatch = self._match_read_to_sgRNA_bcmatch_semimatch(
                 R1_seq, R2_seq
@@ -386,6 +389,7 @@ class GuideEditCounter:
                 self.duplicate_match += 1
 
             else:  # unique barcode match
+                print("unique match")
                 matched_guide_idx = bc_match[0]
                 self.screen.layers[bcmatch_layer][matched_guide_idx, 0] += 1
                 self.bcmatch += 1

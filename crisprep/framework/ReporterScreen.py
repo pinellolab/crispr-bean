@@ -69,8 +69,7 @@ class ReporterScreen(Screen):
         if "edit_counts" in self.uns.keys():
             self.uns["edit_counts"].edit = self.uns["edit_counts"].edit.map(lambda s: Edit.from_str(s))
         if "allele_counts" in self.uns.keys():
-            pass
-            #self.uns["allele_counts"].allele = self.uns["allele_counts"].allele.map(lambda s: Allele.from_str(s))
+            self.uns["allele_counts"].allele = self.uns["allele_counts"].allele.map(lambda s: Allele.from_str(s))
         if "guide_reporter_allele_counts" in self.uns.keys():
             self.uns["guide_reporter_allele_counts"].reporter_allele = \
                 self.uns["guide_reporter_allele_counts"].reporter_allele.map(lambda s: Allele.from_str(s))            
@@ -355,8 +354,14 @@ class ReporterScreen(Screen):
         Write .h5ad
         """
         try:
+            for k in self.uns.keys():
+                if 'edit' in self.uns[k].columns:
+                    self.uns[k].edit = self.uns[k].edit.map(str)
+                if 'allele' in self.uns[k].columns:
+                    self.uns[k].allele = self.uns[k].allele.map(str)
             super().write(out_path)
         except:
+            "Error writing into h5ad file."
             for k in self.uns.keys():
                 print(self.uns[k])
                 exit(1)

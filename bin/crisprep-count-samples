@@ -135,7 +135,7 @@ if __name__ == '__main__':
         print(result[0])
     screen.condit = screen.condit.reset_index()
     screen.write("{}.h5ad".format(output_path))
-    screen.to_Excel("{}.xlsx".format(output_path))
+    #screen.to_Excel("{}.xlsx".format(output_path))
 
 
     info('All Done!')

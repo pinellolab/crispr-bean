@@ -1,3 +1,4 @@
+from turtle import position
 from typing import List, Union, Literal
 import subprocess as sb
 import numpy as np
@@ -7,6 +8,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 import Levenshtein as lv
+from CRISPResso2 import CRISPResso2Align
 from crisprep.framework.Edit import Allele, Edit
 
 
@@ -84,7 +86,6 @@ def _check_readname_match(R1: List[SeqIO.SeqRecord], R2: List[SeqIO.SeqRecord]):
                         R1_record.name, R2_record.name
                     )
                 )
-
 
 def _get_guide_to_reporter_df(sgRNA_filename: str) -> pd.DataFrame:
     """Returns a gRNA name to reporter sequence mapping."""
@@ -189,6 +190,84 @@ def _get_edited_allele_lv(
         allele.add(edit)
     return allele
 
+def _write_alignment_matrix(
+    ref_base: str,
+    alt_base: str, 
+    path):
+    '''
+    Writes base substitution matrix
+    '''
+    bases = ["A", "C", "T", "G"]
+    if not (ref_base in bases and alt_base in bases):
+        raise ValueError("Specified ref base '{}' or alt base '{}' isn't valid".format(ref_base, alt_base))
+    mat = np.ones((4,4), dtype=int)*-4
+    np.fill_diagonal(mat, 5)
+    aln_df = pd.DataFrame(mat, index = bases, columns = bases)
+    aln_df.loc[ref_base, alt_base] = 0
+    aln_df.to_csv(path, sep = " ")
+
+def _get_allele_from_alignment(
+    ref_aligned: str, 
+    query_aligned: str, 
+    offset: int, 
+    strand, 
+    start_pos: int, end_pos: int, 
+    positionwise_quality: np.ndarray, 
+    quality_thres: float):
+    assert len(ref_aligned) == len(query_aligned)
+    allele = Allele()
+    ref_gaps = 0
+    alt_gaps = 0
+    alt_seq_len = len(query_aligned) - query_aligned.count('-')
+    assert len(positionwise_quality) == alt_seq_len
+    alt_position_is_good_quality = np.zeros(alt_seq_len)
+    if not positionwise_quality is None:
+        alt_position_is_good_quality = positionwise_quality > quality_thres
+    for i in range(len(ref_aligned)):
+        if ref_aligned[i] == query_aligned[i]: continue
+        ref_base = ref_aligned[i]
+        alt_base = query_aligned[i]
+        alt_base_is_good_quality = alt_position_is_good_quality[i - alt_gaps]
+        if ref_base == '-': ref_gaps += 1
+        elif alt_base == '-': alt_gaps += 1
+        ref_pos = i - ref_gaps
+        if alt_base_is_good_quality and ref_pos >= start_pos and ref_pos < end_pos:
+            allele.add(Edit(rel_pos = ref_pos, ref_base = ref_base, alt_base = alt_base,
+            offset = offset, strand = strand
+            ))
+    return(allele)
+
+def _get_edited_allele_crispresso(
+    ref_seq: str,
+    query_seq: str,
+    aln_mat_path: str,
+    offset: int,
+    strand: Literal[1, -1] = 1,
+    start_pos: int = 0,
+    end_pos: int = 100,
+    positionwise_quality: np.ndarray = None,
+    quality_thres: float = 30
+):
+    aln_matrix = CRISPResso2Align.read_matrix(aln_mat_path)
+    gap_incentive = np.zeros(len(ref_seq) + 1, dtype = np.int)
+    query_aligned, ref_aligned, _ = CRISPResso2Align.global_align(
+        query_seq, 
+        ref_seq, 
+        aln_matrix, 
+        gap_incentive,
+        gap_open = -20,
+        gap_extend = -10
+    )
+    allele = _get_allele_from_alignment(ref_aligned, query_aligned, offset, strand, start_pos, end_pos, 
+    positionwise_quality, quality_thres)
+
+    for e in allele.edits:
+        if e.ref_base == '-': continue
+        assert ref_seq[e.rel_pos] == e.ref_base, "relative position mismatch: ref pos {}: {} vs {}".format(
+            e.rel_pos, ref_seq[e.rel_pos], e.ref_base) + \
+        "\nallele {}, \nrefseq {}, \naltseq {}, \n".format(allele, ref_seq, query_seq) + \
+            "ref_align {}, \nalt_align {}".format(ref_aligned, query_aligned)
+    return(allele)
 
 def _multiindex_dict_to_df(input_dict, key_column_names, value_column_name):
     if not isinstance(key_column_names, list):

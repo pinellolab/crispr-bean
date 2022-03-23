@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqPhredIterator
-import Levenshtein as lv
 from crisprep import ReporterScreen, Edit, Allele
 
 # from crisprep.framework.Edit import Allele
@@ -20,11 +19,12 @@ from ._supporting_fn import (
     _read_count_match,
     _get_fastq_handle,
     _write_paired_end_reads,
-    _get_edited_allele_lv,
+    _get_edited_allele_crispresso,
     _check_readname_match,
     _read_is_good_quality,
     revcomp,
     _multiindex_dict_to_df,
+    _write_alignment_matrix
 )
 
 logging.basicConfig(
@@ -186,6 +186,8 @@ class GuideEditCounter:
         self.semimatch_R2_filename = self.R2_filename.replace(
             ".fastq", "_semimatch.fastq"
         )
+        if self.count_edited_alleles:
+            _write_alignment_matrix(self.base_edited_from, self.base_edited_to, self.output_dir + "/.aln_mat.txt")
 
         if self.count_only_bcmatched:
             # count X
@@ -232,7 +234,7 @@ class GuideEditCounter:
             self.screen.uns["guide_reporter_allele_counts"].guide = self.screen.guides.index[
                 self.screen.uns["guide_reporter_allele_counts"].guide.to_numpy(dtype=int)
             ]
-        print(self.guide_to_allele)
+        
         count_stat_path = self._jp("mapping_stats.txt")
         count_stat_file = open(count_stat_path, "w")
         count_stat_file.write("Read count with \n")
@@ -280,11 +282,10 @@ class GuideEditCounter:
         '''
         Count edits in single read to save as allele.
         '''
-        print("counting called")
         strand_str_to_int = {"neg": -1, "pos": 1}
         ref_reporter_seq = self.screen.guides.Reporter[matched_guide_idx]
         read_reporter_seq, read_reporter_qual = self.get_reporter_seq_qual(R2_record)
-        bad_quality_pos = np.where(np.array(read_reporter_qual) < single_base_qual_cutoff)[0]
+
         if self.guides_has_strands:
             try:
                 guide_strand = strand_str_to_int[
@@ -305,23 +306,18 @@ class GuideEditCounter:
             guide_strand = 1
             offset = -(self.screen.guides["Target base position in reporter"][matched_guide_idx] -1)
             # TODO: clean this up
-
-        allele = read_reporter_seq
-        if len(bad_quality_pos) > 0:
-            allele_bases = np.array(list(allele))
-            allele_bases[bad_quality_pos] = np.array(list(ref_reporter_seq))[bad_quality_pos]
-            allele = "".join(allele_bases.astype(list))
         
-        # allele = _get_edited_allele_lv(
-        #     ref_seq=ref_reporter_seq,
-        #     query_seq=read_reporter_seq,
-        #     offset=offset,
-        #     strand=guide_strand,
-        #     positionwise_quality = pos_good_quality
-        # )
-        print(allele)
-        if allele != ref_reporter_seq:
-            print("mismatch")
+        allele = _get_edited_allele_crispresso(
+            ref_seq=ref_reporter_seq,
+            query_seq=read_reporter_seq,
+            aln_mat_path = self.output_dir + "/.aln_mat.txt",
+            offset=offset,
+            strand=guide_strand,
+            positionwise_quality = np.array(read_reporter_qual),
+            quality_thres = single_base_qual_cutoff
+        )
+
+        if allele.edits:
             if self.count_edited_alleles:
                 if matched_guide_idx in self.guide_to_allele.keys():
                     if allele in self.guide_to_allele[matched_guide_idx].keys():
@@ -389,7 +385,6 @@ class GuideEditCounter:
                 self.duplicate_match += 1
 
             else:  # unique barcode match
-                print("unique match")
                 matched_guide_idx = bc_match[0]
                 self.screen.layers[bcmatch_layer][matched_guide_idx, 0] += 1
                 self.bcmatch += 1

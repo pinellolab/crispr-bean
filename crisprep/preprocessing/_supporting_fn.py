@@ -220,14 +220,18 @@ def _get_allele_from_alignment(
     alt_gaps = 0
     alt_seq_len = len(query_aligned) - query_aligned.count('-')
     assert len(positionwise_quality) == alt_seq_len
-    alt_position_is_good_quality = np.zeros(alt_seq_len)
-    if not positionwise_quality is None:
+    if positionwise_quality is None:
+        alt_position_is_good_quality = np.ones(alt_seq_len, dtype=bool)
+    else:
         alt_position_is_good_quality = positionwise_quality > quality_thres
     for i in range(len(ref_aligned)):
         if ref_aligned[i] == query_aligned[i]: continue
         ref_base = ref_aligned[i]
         alt_base = query_aligned[i]
-        alt_base_is_good_quality = alt_position_is_good_quality[i - alt_gaps]
+        if alt_base != '-':
+            alt_base_is_good_quality = alt_position_is_good_quality[i - alt_gaps]
+        else:
+            alt_base_is_good_quality = True
         if ref_base == '-': ref_gaps += 1
         elif alt_base == '-': alt_gaps += 1
         ref_pos = i - ref_gaps

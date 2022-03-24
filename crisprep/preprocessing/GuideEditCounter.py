@@ -212,10 +212,19 @@ class GuideEditCounter:
             #     self.screen.uns["edit_counts"].guide.to_numpy(dtype=int)
             # ]
         if self.count_edited_alleles:
-            df = pd.DataFrame.from_dict(self.guide_to_allele, orient="index").stack().to_frame()
-            assert type(df) is pd.DataFrame, df
-            self.screen.uns["allele_counts"] = pd.DataFrame(df[0].values.tolist(), index = df.index).reset_index()
-            self.screen.uns["allele_counts"] = self.screen.uns["allele_counts"].rename(columns={"level_0": "guide", "level_1": "allele", 0:self.database_id})
+            # df = pd.DataFrame.from_dict(self.guide_to_allele, orient="index").stack().to_frame()
+            # assert type(df) is pd.DataFrame, df
+            # self.screen.uns["allele_counts"] = pd.DataFrame(df[0].values.tolist(), index = df.index).reset_index()
+            # self.screen.uns["allele_counts"] = self.screen.uns["allele_counts"].rename(columns={"level_0": "guide", "level_1": "allele", 0:self.database_id})
+            guides = []
+            alleles = []
+            counts = []
+            for guide, allele_to_count in self.guide_to_allele.items():
+                guides.append([guide]*len(allele_to_count.keys()))
+                for allele, count in allele_to_count.items():
+                    alleles.append(allele)
+                    counts.append(count)
+            self.screen.uns["allele_counts"] = pd.DataFrame({"guide": guides, "allele": alleles, self.database_id: counts})
             
             if 'guide' in self.screen.uns["allele_counts"].columns:
                 self.screen.uns["allele_counts"].guide = self.screen.guides.index[self.screen.uns["allele_counts"].guide]
@@ -474,8 +483,8 @@ class GuideEditCounter:
             if seq is None:
                 continue
 
-            _seq_match = np.where(seq.replace(self.base_edited_from, self.base_edited_to) == self.guides_info_df.masked_sequence)[0]
-            _bc_match = np.where(guide_barcode.replace(self.base_edited_from, self.base_edited_to) == self.guides_info_df.masked_barcode)[0]
+            _seq_match = np.where(seq.replace(self.base_edited_from, self.base_edited_to) == self.screen.guides.masked_sequence)[0]
+            _bc_match = np.where(guide_barcode.replace(self.base_edited_from, self.base_edited_to) == self.screen.guides.masked_barcode)[0]
             
             bc_match_idx = np.append(bc_match_idx, np.intersect1d(_seq_match, _bc_match))
             semimatch_idx = np.append(semimatch_idx, _seq_match)

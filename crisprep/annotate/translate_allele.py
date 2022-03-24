@@ -1,7 +1,7 @@
 from typing import List
 import numpy as np
 from Bio import SeqIO
-from crisprep.framework.Edit import Edit
+from crisprep.framework.Edit import Edit, Allele
 from crisprep.annotate.AminoAcidEdit import AminoAcidEdit, AminoAcidAllele
 import logging
 import sys
@@ -153,6 +153,8 @@ class CDS():
         self.edited_nt[rel_pos] = alt_base
         
     def edit_allele(self, allele_str):
+        if type(allele_str) is Allele:
+            edit_strs = allele_str.edits
         edit_strs = allele_str.split(",")
         for edit_str in edit_strs:
             self.edit_single(edit_str)
@@ -169,7 +171,4 @@ class CDS():
             aa_mutations.add(AminoAcidEdit(
                 edited_aa_pos + 1, ref_aa, mt_aa))
         return(aa_mutations)
-
-    
-
-    
+   

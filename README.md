@@ -1,6 +1,12 @@
 # crisprep
 Tool for analyzing CRISPR data with reporter edit counts.
 
+### Installation
+Clone and do 
+```
+pip install -e .
+```
+
 ### Read count
 ```
 crisprep-count-samples  \

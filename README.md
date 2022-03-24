@@ -32,7 +32,10 @@ cdata_combined = cdata_jul + cdata_oct
 ```
 
 ### Annotate alleles
+This is only implemented for LDLR. 
 ```
-from crisprep.annotate.translate_allele import *  
-# TBD
+from crisprep.framework._supporting_fn import get_aa_alleles
+allele = cp.Allele.from_str('11222248:5:-:A>G,11222252:1:-:A>G')
+get_aa_alleles(allele, include_synonymous = False)
+$ ['375:Y>H']
 ```

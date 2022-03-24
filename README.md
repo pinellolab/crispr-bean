@@ -35,7 +35,7 @@ cdata_combined = cdata_jul + cdata_oct
 This is only implemented for LDLR. 
 ```
 from crisprep.framework._supporting_fn import get_aa_alleles
-allele = cp.Allele.from_str('11222248:5:-:A>G,11222252:1:-:A>G')
+allele = cp.Allele.from_str('11222248:5:-:A>G,11222252:1:-:A>G')  # abs_pos:rel_pos:strand:base_edit
 get_aa_alleles(allele, include_synonymous = False)
 $ ['375:Y>H']
 ```

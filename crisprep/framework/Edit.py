@@ -42,6 +42,12 @@ class Edit:
         ):
             return True
         return False
+    
+    def __lt__(self, other): # Implemented for pandas compatibility
+        return self.pos < other.pos
+
+    def __gt__(self, other): # Implemented for pandas compatibility
+        return self.pos > other.pos
 
     def __hash__(self):
         # Note that this doesn't include relative bases. 
@@ -119,6 +125,6 @@ class Allele:
         self.edits.add(edit)  # TBD: adding to set?
 
     def __repr__(self):
-        list_edits = list(map(lambda s: str(s), self.edits))
-        list_edits.sort()
+        list_edits = self.edits.copy().sort()
+        list_edits = list(map(lambda s: str(s), list_edits))
         return(",".join(list_edits))

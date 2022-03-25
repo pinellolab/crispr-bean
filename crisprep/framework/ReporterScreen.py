@@ -1,18 +1,12 @@
-# uncompyle6 version 3.8.1.dev0
-# Python bytecode 3.8.0 (3413)
-# Decompiled from: Python 3.8.11 (default, Aug  3 2021, 15:09:35)
-# [GCC 7.5.0]
-# Embedded file name: /data/pinello/PROJECTS/2021_08_ANBE/software/crisprep/crisprep/ReporterScreen.py
-# Compiled at: 2021-12-30 21:34:00
-# Size of source mod 2**32: 8519 bytes
+from typing import List, Union, Collection
 from functools import reduce
-from perturb_tools import Screen
+from copy import deepcopy
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
-from typing import List, Union, Collection
 from anndata import AnnData
 import anndata as ad
+from perturb_tools import Screen
 from .Edit import Edit, Allele
 from ..framework._supporting_fn import get_aa_alleles, filter_allele_by_pos
 
@@ -67,9 +61,11 @@ class ReporterScreen(Screen):
         if not X_bcmatch is None:
             self.layers["X_bcmatch"] = X_bcmatch
         if "edit_counts" in self.uns.keys():
-            self.uns["edit_counts"].edit = self.uns["edit_counts"].edit.map(lambda s: Edit.from_str(s))
+            if "edit" in self.uns["edit_counts"].columns:
+                self.uns["edit_counts"].edit = self.uns["edit_counts"].edit.map(lambda s: Edit.from_str(s))
         if "allele_counts" in self.uns.keys():
-            self.uns["allele_counts"].allele = self.uns["allele_counts"].allele.map(lambda s: Allele.from_str(s))
+            if "allele" in self.uns["allele_counts"].columns:
+                self.uns["allele_counts"].allele = self.uns["allele_counts"].allele.map(lambda s: Allele.from_str(s))
         if "guide_reporter_allele_counts" in self.uns.keys():
             self.uns["guide_reporter_allele_counts"].reporter_allele = \
                 self.uns["guide_reporter_allele_counts"].reporter_allele.map(lambda s: Allele.from_str(s))            
@@ -167,6 +163,38 @@ class ReporterScreen(Screen):
                     )
                 return added
         raise ValueError("Guides/sample description mismatch")
+
+    def __getitem__(self, index):
+        ''' TODO: currently the condit names are in ['index'] column. Making it to be the idnex will 
+        allow the subsetting by condition names.
+        '''
+        oidx, vidx = self._normalize_indices(index)
+        if isinstance(oidx, (int, np.integer)):
+            if not (-self.n_obs <= oidx < self.n_obs):
+                raise IndexError(f"Observation index `{oidx}` is out of range.")
+            oidx += self.n_obs * (oidx < 0)
+            oidx = slice(oidx, oidx + 1, 1)
+        if isinstance(vidx, (int, np.integer)):
+            if not (-self.n_vars <= vidx < self.n_vars):
+                raise IndexError(f"Variable index `{vidx}` is out of range.")
+            vidx += self.n_vars * (vidx < 0)
+            vidx = slice(vidx, vidx + 1, 1)
+        print(oidx, vidx)
+        guides_include = self.guides.iloc[oidx]["name"]
+        condit_include = self.condit.iloc[vidx]['index'].tolist()
+        print(condit_include)
+        adata = super().__getitem__(index)
+        new_uns = deepcopy(adata.uns)
+        for k, df in adata.uns.items():
+            if "guide" in df.columns:
+                if "allele" in df.columns: key_col = ["guide", "allele"]
+                elif "edit" in df.columns: key_col = ["guide", "edit"]
+                df_new = df.loc[df.guide.isin(guides_include), key_col + condit_include]
+                new_uns[k] = df_new
+        adata.uns = new_uns
+        return(type(self).from_adata(adata))
+
+
 
     def get_edit_mat_from_uns(
         self, 
@@ -273,19 +301,27 @@ class ReporterScreen(Screen):
         Filter alleles based on barcode matched counts, allele counts, 
         or proportion
         '''
-        self.uns[allele_uns_key].allele, filtered_edits = \
-            zip(*self.uns[allele_uns_key].allele.map(lambda a:
+        allele_count_df = self.uns[allele_uns_key]
+        filtered_allele, filtered_edits = \
+            zip(*allele_count_df.allele.map(lambda a:
                 filter_allele_by_pos(a, rel_pos_start, rel_pos_end, filter_rel_pos)))
-        self.uns[allele_uns_key] = self.uns[allele_uns_key].groupby(["guide", "allele"]).sum()
-        return(filtered_edits)
+        self.uns[allele_uns_key].loc[:, "allele"] = filtered_allele
+        # Hashing on Allele object messes up the order. Converting it to str and back to allele for groupby.
+        allele_count_df["str_allele"] = allele_count_df.allele.map(str)
+        allele_count_df = allele_count_df.groupby(["guide", "str_allele"]).sum().reset_index()
+        allele_count_df.insert(1, "allele", allele_count_df.str_allele.map(lambda s: Allele.from_str(s)))
+        allele_count_df.drop("str_allele", axis=1)
+        print("{} edits filtered from {} alleles.".format(sum(filtered_edits), len(filtered_edits)))
+        return(allele_count_df)
+        
 
     def collapse_allele_by_target(self, ref_base, alt_base, target_pos_column = "target_pos"):
         if not target_pos_column in self.guides.columns:
             raise ValueError("The .guides have to have 'target_pos' specifying the relative position of target edit.")
         df = self.uns["allele_counts"].copy()
-        df["target_pos"] = self.guides.set_index("name").loc[df.guide, "target_pos"]
-        df["has_target"] = df.apply(lambda row: row.allele.has_edit(ref_base, alt_base, rel_pos = row.target_pos))
-        df["has_nontarget"] = df.apply(lambda row: row.allele.has_other_edit(ref_base, alt_base, rel_pos = row.target_pos))
+        df["target_pos"] = self.guides.set_index("name").loc[df.guide, "target_pos"].reset_index(drop=True)
+        df["has_target"] = df.apply(lambda row: row.allele.has_edit(ref_base, alt_base, rel_pos = row.target_pos), axis = 1)
+        df["has_nontarget"] = df.apply(lambda row: row.allele.has_other_edit(ref_base, alt_base, rel_pos = row.target_pos), axis = 1)
         res = df.groupby(["guide", "has_target", "has_nontarget"]).sum()
         return(res)
 

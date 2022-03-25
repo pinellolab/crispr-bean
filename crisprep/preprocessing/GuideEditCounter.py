@@ -220,10 +220,13 @@ class GuideEditCounter:
             alleles = []
             counts = []
             for guide, allele_to_count in self.guide_to_allele.items():
-                guides.append([guide]*len(allele_to_count.keys()))
+                if len(allele_to_count.keys()) == 0: continue
+                guides.extend([guide]*len(allele_to_count.keys()))
                 for allele, count in allele_to_count.items():
                     alleles.append(allele)
                     counts.append(count)
+            if not (len(guides) == len(alleles) == len(counts)): 
+                raise ValueError("Guides:{}, alleles:{}, counts:{}".format(len(guides), len(alleles), len(counts)))
             self.screen.uns["allele_counts"] = pd.DataFrame({"guide": guides, "allele": alleles, self.database_id: counts})
             
             if 'guide' in self.screen.uns["allele_counts"].columns:

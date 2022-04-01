@@ -153,9 +153,9 @@ class CDS():
         self.edited_nt[rel_pos] = alt_base
         
     def edit_allele(self, allele_str):
-        if type(allele_str) is Allele:
+        if isinstance(allele_str, Allele):
             edit_strs = allele_str.edits
-        edit_strs = allele_str.split(",")
+        else: edit_strs = allele_str.split(",")
         for edit_str in edit_strs:
             self.edit_single(edit_str)
     

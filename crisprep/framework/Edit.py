@@ -125,6 +125,6 @@ class Allele:
         self.edits.add(edit)  # TBD: adding to set?
 
     def __repr__(self):
-        list_edits = self.edits.copy().sort()
+        list_edits = sorted(list(self.edits.copy()))
         list_edits = list(map(lambda s: str(s), list_edits))
         return(",".join(list_edits))

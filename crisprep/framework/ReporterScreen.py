@@ -179,7 +179,7 @@ class ReporterScreen(Screen):
                 raise IndexError(f"Variable index `{vidx}` is out of range.")
             vidx += self.n_vars * (vidx < 0)
             vidx = slice(vidx, vidx + 1, 1)
-        print(oidx, vidx)
+        
         guides_include = self.guides.iloc[oidx]["name"]
         condit_include = self.condit.iloc[vidx]['index'].tolist()
         print(condit_include)
@@ -189,6 +189,7 @@ class ReporterScreen(Screen):
             if "guide" in df.columns:
                 if "allele" in df.columns: key_col = ["guide", "allele"]
                 elif "edit" in df.columns: key_col = ["guide", "edit"]
+                else: continue
                 df_new = df.loc[df.guide.isin(guides_include), key_col + condit_include]
                 new_uns[k] = df_new
         adata.uns = new_uns
@@ -319,14 +320,14 @@ class ReporterScreen(Screen):
         if not target_pos_column in self.guides.columns:
             raise ValueError("The .guides have to have 'target_pos' specifying the relative position of target edit.")
         df = self.uns["allele_counts"].copy()
-        df["target_pos"] = self.guides.set_index("name").loc[df.guide, "target_pos"].reset_index(drop=True)
+        df["target_pos"] = self.guides.set_index("name").loc[df.guide, target_pos_column].reset_index(drop=True)
         df["has_target"] = df.apply(lambda row: row.allele.has_edit(ref_base, alt_base, rel_pos = row.target_pos), axis = 1)
         df["has_nontarget"] = df.apply(lambda row: row.allele.has_other_edit(ref_base, alt_base, rel_pos = row.target_pos), axis = 1)
         res = df.groupby(["guide", "has_target", "has_nontarget"]).sum()
         return(res)
 
 
-    def translate_alleles(self, allele: Allele):
+    def translate_alleles(self):
         if self.uns["allele_counts"] is None:
             print("No allele information. Run crisrpep-count with -a option.")
             return

@@ -227,7 +227,6 @@ class GuideEditCounter:
             guide_alleles = []
             reporter_alleles = []
             counts = []
-            print(self.guide_to_guide_reporter_allele)
             for guide, allele_to_count in self.guide_to_guide_reporter_allele.items():
                 if len(allele_to_count.keys()) == 0: continue
                 guides.extend([guide]*len(allele_to_count.keys()))
@@ -239,13 +238,11 @@ class GuideEditCounter:
             if not (len(guides) == len(reporter_alleles) == len(guide_alleles) == len(counts)): 
                 raise ValueError("Guides:{}, guide_alleles:{}, reporter_alleles: {}, counts:{}".format(
                     len(guides), len(guide_alleles), len(reporter_alleles), len(counts)))
-            self.screen.uns["guide_repoter_allele_counts"] = pd.DataFrame(
+            self.screen.uns["guide_reporter_allele_counts"] = pd.DataFrame(
                 {"guide": guides, "guide_allele": guide_alleles, "reporter_allele": reporter_alleles, self.database_id: counts})
             
-            if 'guide' in self.screen.uns["guide_repoter_allele_counts"].columns:
-                self.screen.uns["guide_repoter_allele_counts"].guide = self.screen.guides.index[self.screen.uns["guide_repoter_allele_counts"].guide]
-            print(self.screen.uns["guide_repoter_allele_counts"].iloc[:5,1:3])
-            
+            if 'guide' in self.screen.uns["guide_reporter_allele_counts"].columns:
+                self.screen.uns["guide_reporter_allele_counts"].guide = self.screen.guides.index[self.screen.uns["guide_reporter_allele_counts"].guide]            
         
         count_stat_path = self._jp("mapping_stats.txt")
         count_stat_file = open(count_stat_path, "w")

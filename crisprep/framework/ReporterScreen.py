@@ -425,33 +425,13 @@ class ReporterScreen(Screen):
         """
         Write .h5ad
         """
-        # try:
         adata = self.copy()
         for k in adata.uns.keys():
             if 'edit' in adata.uns[k].columns:
                 adata.uns[k].edit = adata.uns[k].edit.map(str)
-            if 'allele' in adata.uns[k].columns:
-                adata.uns[k].allele = adata.uns[k].allele.map(str)
-            if 'guide_allele' in adata.uns[k].columns:
-                adata.uns[k].guide_allele = adata.uns[k].guide_allele.map(str)
-            if 'reporter_allele' in adata.uns[k].columns:
-                adata.uns[k].reporter_allele = adata.uns[k].reporter_allele.map(str)
-            # for c in [colname for colname in adata.uns[k].columns if "allele" in colname]:
-            #     print(c)
-            #     adata.uns[k].loc[:,c] = adata.uns[k][c].map(str)
-            print(type(adata.uns[k].guide[1]))
-            print(type(adata.uns[k].guide_allele[1]))
-            print(type(adata.uns[k].reporter_allele[1]))
-            print(type(adata.uns[k].iloc[1,-1]))
+            for c in [colname for colname in adata.uns[k].columns if "allele" in colname]:
+                adata.uns[k].loc[:,c] = adata.uns[k][c].map(str)
         super(ReporterScreen, adata).write(out_path)
-        # except:
-        #     print("Error writing into h5ad file.")
-        #     for k in self.uns.keys():
-        #         print(k, self.uns[k])
-        #         outfile= out_path + ".tmp_{}.csv".format(k)
-        #         self.uns[k].to_csv(outfile)
-        #         print(outfile)
-        #     exit(1)
 
 
 
@@ -482,6 +462,7 @@ def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
             elif k == "guide_reporter_allele_counts":
                 merge_on = ["guide", "reporter_allele", "guide_allele"]
             else:
+                print("uns '{}' ignored during concat.".format(k))
                 continue
             for i, screen in enumerate(screens):
                 if i == 0:

@@ -103,7 +103,9 @@ def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
                 print("warning: no matching aa with codon {}".format(codon))
                 return("_")
         else:
-            raise ValueError("Cannot translate codon due to ambiguity: {}".format(codon))
+            #raise ValueError("Cannot translate codon due to ambiguity: {}".format(codon))
+            print("Cannot translate codon due to ambiguity: {}".format(codon))
+            return("_")
     
 
 class CDS():  
@@ -165,7 +167,8 @@ class CDS():
         for edited_aa_pos in self.edited_aa_pos:
             ref_aa = _translate_single_codon(type(self).nt, edited_aa_pos)
             mt_aa = _translate_single_codon(self.edited_nt, edited_aa_pos)
-            if mt_aa == "_": continue
+            if mt_aa == "_": 
+                return("translation error")
             if not include_synonymous and ref_aa == mt_aa:
                 continue
             aa_mutations.add(AminoAcidEdit(

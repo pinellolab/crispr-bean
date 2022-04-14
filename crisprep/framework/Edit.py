@@ -111,7 +111,7 @@ class Allele:
         return False
 
     def __eq__(self, other):
-        if self.edits == other.edits:
+        if self.__repr__() == other.__repr__():
             return True
         return False
 
@@ -119,12 +119,13 @@ class Allele:
         return self.edits < other.edits
 
     def __hash__(self):
-        return(hash(frozenset(self.edits)))
+        return(hash(self.__repr__()))
 
     def add(self, edit: Edit):
         self.edits.add(edit)  # TBD: adding to set?
 
     def __repr__(self):
+        if len(self.edits) == 0: return ""
         list_edits = sorted(list(self.edits.copy()))
         list_edits = list(map(lambda s: str(s), list_edits))
         return(",".join(list_edits))

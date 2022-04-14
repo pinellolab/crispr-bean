@@ -122,6 +122,10 @@ class ReporterScreen(Screen):
         )
         return repscreen
 
+    def copy(self):
+        adata = super().copy()
+        return(type(self).from_adata(adata))
+
     def __add__(self, other):
         if all(self.guides.index == other.guides.index):
             if all(self.condit.index == other.condit.index):
@@ -203,9 +207,11 @@ class ReporterScreen(Screen):
         alt_base, 
         match_target_position=True,
         rel_pos_start = 0,
-        rel_pos_end = np.Inf
+        rel_pos_end = np.Inf,
+        rel_pos_is_reporter = True,
+        target_pos_col = "target_pos"
         ):
-        edits = self.uns["edit_counts"]
+        edits = self.uns["edit_counts"].copy()
         if not self.layers["edits"] is None:
             old_edits = self.layers["edits"].copy()
             self.layers["edits"] = np.zeros_like(
@@ -213,19 +219,30 @@ class ReporterScreen(Screen):
             )
         else:
             old_edits = None
-        for i in edits.index:
-            edit = edits.edit[i]
-            if edit.rel_pos < rel_pos_start or edit.rel_pos >= rel_pos_end: continue
-            guide_idx = np.where(edits.guide[i] == self.guides.reset_index().name)[
-                0
-            ].item()
-            if (
-                match_target_position
-                and edit.rel_pos
-                == self.guides.reset_index().loc[guide_idx, "target_pos"]
-            ) or not match_target_position:
-                if edit.ref_base == ref_base and edit.alt_base == alt_base:
-                    self.layers["edits"][guide_idx, :] += edits.iloc[i, 2:].astype(int)
+        edits["ref_base"] = edits.edit.map(lambda e: e.ref_base)
+        edits["alt_base"] = edits.edit.map(lambda e: e.alt_base)
+        edits = edits.loc[(edits.ref_base == ref_base) & (edits.alt_base == alt_base),:].reset_index()
+        guide_len = self.guides.sequence.map(len)
+        guide_name_to_idx = self.guides[["name"]].reset_index().set_index("name")
+        edits["guide_idx"] = guide_name_to_idx.loc[edits.guide, "index"].reset_index(drop=True)
+        edits["guide_start_pos"] = 32 - 6 - guide_len[edits.guide_idx].reset_index(drop=True)
+        if not match_target_position:
+            edits["rel_pos"] = edits.edit.map(lambda e: e.rel_pos)
+            edits["in_rel_pos_range"] = (edits.rel_pos >= rel_pos_start + edits.guide_start_pos) & (edits.rel_pos < rel_pos_end + edits.guide_start_pos)
+            good_edits = edits.loc[edits.in_rel_pos_range, ["guide", "edit"] + self.condit["index"].tolist()]
+        else:
+            edits["rel_pos"] = edits.edit.map(lambda e: e.rel_pos)
+            edits["target_pos_guides"] = self.guides.loc[edits.guide_idx, target_pos_col].reset_index(drop=True)
+            edits["target_pos_matches"] = edits.rel_pos == edits.target_pos_guides
+            good_edits = edits.loc[edits.target_pos_matches, ["guide", "edit"] + self.condit["index"].tolist()]
+        
+        good_guide_idx = guide_name_to_idx.loc[good_edits.guide, "index"].astype(int)
+        try:
+            for gidx, eidx in zip(good_guide_idx, good_edits.index):
+                self.layers["edits"][gidx, :] += good_edits.loc[eidx, self.condit["index"].tolist()].astype(int)
+        except:
+            return((good_guide_idx, good_edits))
+        print("New edit matrix saved in .layers['edits']. Returning old edits.")
         return old_edits
 
     def get_edit_rate(
@@ -260,8 +277,11 @@ class ReporterScreen(Screen):
                 prior_weight = 1
             n_edits = self.layers[edit_layer][:, bulk_idx].sum(axis=1)
             n_counts = self.layers[count_layer][:, bulk_idx].sum(axis=1)
-            self.guides["edit_rate"] = (n_edits + prior_weight / 2) / ((n_counts*num_targetable_sites) + prior_weight)
+            self.guides["edit_rate"] = (n_edits + prior_weight / 2) / \
+                ((n_counts*num_targetable_sites) + prior_weight/2)
             self.guides["edit_rate"][n_counts < bcmatch_thres] = np.nan
+            if normalize_by_editable_base:
+                self.guides["edit_rate"][num_targetable_sites == 0] = np.nan
             if return_result:
                 return(n_edits, n_counts)
         else:
@@ -269,9 +289,11 @@ class ReporterScreen(Screen):
 
     def get_edit_from_allele(self):
         df = self.uns["allele_counts"].copy()
-        df["edits"] = df.allele.map(lambda s: list(s.edits))
-        df = df.explode("edits").groupby("guide", "edits").sum()
-        return(df.reset_index())
+        df["edits"] = df.allele.map(lambda a: str(a).split(","))
+        df = df.explode("edits").groupby(["guide", "edits"]).sum()
+        df = df.reset_index().rename(columns={"edits":"edit"})
+        df["edit"] = df.edit.map(lambda s: Edit.from_str(s))
+        return(df)
 
     def _get_allele_norm(self, allele_count_df = None, thres = 10):
         '''
@@ -281,7 +303,7 @@ class ReporterScreen(Screen):
         if allele_count_df is None:
             allele_count_df = self.uns["allele_counts"]
         guide_to_idx = self.guides[["name"]].reset_index().set_index("name")
-        guide_idx = guide_to_idx["index"][self.uns["allele_counts"].guide]
+        guide_idx = guide_to_idx["index"][allele_count_df.guide]
         norm_counts = self.layers["X_bcmatch"][guide_idx.values.astype(int), :]
         norm_counts[norm_counts < thres] = np.nan
         return(norm_counts)
@@ -323,6 +345,7 @@ class ReporterScreen(Screen):
         df["target_pos"] = self.guides.set_index("name").loc[df.guide, target_pos_column].reset_index(drop=True)
         df["has_target"] = df.apply(lambda row: row.allele.has_edit(ref_base, alt_base, rel_pos = row.target_pos), axis = 1)
         df["has_nontarget"] = df.apply(lambda row: row.allele.has_other_edit(ref_base, alt_base, rel_pos = row.target_pos), axis = 1)
+        df = df.drop("target_pos", axis=1)
         res = df.groupby(["guide", "has_target", "has_nontarget"]).sum()
         return(res)
 
@@ -386,27 +409,56 @@ class ReporterScreen(Screen):
         if return_result:
             return (guide_fc_agg, edit_fc_agg)
 
+    def allele_log_fold_change_aggregate(
+        self,
+        cond1,
+        cond2,
+        aggregate_condit="replicate",
+        compare_condit="sort",
+        aggregate_fn="median",
+        return_result=False,
+        keep_per_replicate=False,
+    ):
+        pass
+
     def write(self, out_path):
         """
         Write .h5ad
         """
-        try:
-            for k in self.uns.keys():
-                if 'edit' in self.uns[k].columns:
-                    self.uns[k].edit = self.uns[k].edit.map(str)
-                if 'allele' in self.uns[k].columns:
-                    self.uns[k].allele = self.uns[k].allele.map(str)
-            super().write(out_path)
-        except:
-            "Error writing into h5ad file."
-            for k in self.uns.keys():
-                print(self.uns[k])
-                exit(1)
+        # try:
+        adata = self.copy()
+        for k in adata.uns.keys():
+            if 'edit' in adata.uns[k].columns:
+                adata.uns[k].edit = adata.uns[k].edit.map(str)
+            if 'allele' in adata.uns[k].columns:
+                adata.uns[k].allele = adata.uns[k].allele.map(str)
+            if 'guide_allele' in adata.uns[k].columns:
+                adata.uns[k].guide_allele = adata.uns[k].guide_allele.map(str)
+            if 'reporter_allele' in adata.uns[k].columns:
+                adata.uns[k].reporter_allele = adata.uns[k].reporter_allele.map(str)
+            # for c in [colname for colname in adata.uns[k].columns if "allele" in colname]:
+            #     print(c)
+            #     adata.uns[k].loc[:,c] = adata.uns[k][c].map(str)
+            print(type(adata.uns[k].guide[1]))
+            print(type(adata.uns[k].guide_allele[1]))
+            print(type(adata.uns[k].reporter_allele[1]))
+            print(type(adata.uns[k].iloc[1,-1]))
+        super(ReporterScreen, adata).write(out_path)
+        # except:
+        #     print("Error writing into h5ad file.")
+        #     for k in self.uns.keys():
+        #         print(k, self.uns[k])
+        #         outfile= out_path + ".tmp_{}.csv".format(k)
+        #         self.uns[k].to_csv(outfile)
+        #         print(outfile)
+        #     exit(1)
 
 
 
 
 def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
+    # TODO: var/obs info not concated if doesn't overlap
+    # TODO: concat 2 times: allele_counts merging doesn't work?
     if axis == 1:
         if not all(screen.guides.index.equals(screens[0].guides.index) for screen in screens):
             raise ValueError("Guide index doesn't match.")
@@ -416,35 +468,39 @@ def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
     keys = set()
 
     # Merging uns
-    for screen in screens:
-        keys.update(screen.uns.keys())
+    if axis == 1:
+        for screen in screens:
+            keys.update(screen.uns.keys())
 
-    for k in keys:
-        if k == "guide_edit_counts":
-            merge_on = ["guide", "edit"]
-        elif k == "edit_counts":
-            merge_on = ["guide", "edit"]
-        elif k == "allele_counts":
-            merge_on = ["guide", "allele"]
-        elif k == "guide_reporter_allele_counts":
-            merge_on = ["guide", "reporter_allele", "guide_allele"]
-        else:
-            continue
-        for i, screen in enumerate(screens):
-            if i == 0:
-                adata.uns[k] = screen.uns[k]
+        for k in keys:
+            if k == "guide_edit_counts":
+                merge_on = ["guide", "edit"]
+            elif k == "edit_counts":
+                merge_on = ["guide", "edit"]
+            elif k == "allele_counts":
+                merge_on = ["guide", "allele"]
+            elif k == "guide_reporter_allele_counts":
+                merge_on = ["guide", "reporter_allele", "guide_allele"]
             else:
-                try:
-                    adata.uns[k] = pd.merge(
-                        adata.uns[k], screen.uns[k], on=merge_on, how="outer"
-                    )
-                except:
-                    print(k)
-                    print(screen.uns[k])
-        adata.uns[k] = adata.uns[k].fillna(0)
-        float_col = adata.uns[k].select_dtypes(include=["float64"])
-        for col in float_col.columns.values:
-            adata.uns[k][col] = adata.uns[k][col].astype("int64")
+                continue
+            for i, screen in enumerate(screens):
+                if i == 0:
+                    adata.uns[k] = screen.uns[k]
+                else:
+                    try:
+                        adata.uns[k] = pd.merge(
+                            adata.uns[k], screen.uns[k], on=merge_on, how="outer"
+                        )
+                    except:
+                        print("Error occurred concatenating '{}' for {}:".format(k, screen))
+                        if not k in screen.uns.keys(): print("Warning: '{}' not in this screen. Skipping...".format(k))
+                        else:
+                            print(k)
+                            print(screen.uns[k])
+            adata.uns[k] = adata.uns[k].fillna(0)
+            float_col = adata.uns[k].select_dtypes(include=["float64"])
+            for col in float_col.columns.values:
+                adata.uns[k][col] = adata.uns[k][col].astype("int64")
 
     return ReporterScreen.from_adata(adata)
 

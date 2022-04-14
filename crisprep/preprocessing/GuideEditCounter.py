@@ -115,8 +115,7 @@ class GuideEditCounter:
 
         self.count_guide_reporter_alleles = kwargs["count_guide_reporter_alleles"]
         if self.count_guide_reporter_alleles:
-            self.screen.uns["guide_reporter_allele_counts"] = dict()
-
+            self.guide_to_guide_reporter_allele = dict()
 
         self.guide_start_seq = kwargs["guide_start_seq"]
         self.guide_bc = kwargs["guide_bc"]
@@ -124,9 +123,9 @@ class GuideEditCounter:
             self.guide_bc_len = kwargs["guide_bc_len"]
 
         self.offset = kwargs["offset"]
-        if self.count_reporter_edits or self.count_edited_alleles:
+        if self.count_reporter_edits or self.count_edited_alleles or self.count_guide_reporter_alleles:
             self.reporter_length = kwargs["reporter_length"]
-        self.guide_to_allele = {}
+        self.guide_to_allele = dict()
         self.n_total_reads = _read_count_match(self.R1_filename, self.R2_filename)
 
         self.keep_intermediate = kwargs["keep_intermediate"]
@@ -186,7 +185,7 @@ class GuideEditCounter:
         self.semimatch_R2_filename = self.R2_filename.replace(
             ".fastq", "_semimatch.fastq"
         )
-        if self.count_edited_alleles:
+        if self.count_edited_alleles or self.count_guide_reporter_alleles:
             _write_alignment_matrix(self.base_edited_from, self.base_edited_to, self.output_dir + "/.aln_mat.txt")
 
         if self.count_only_bcmatched:
@@ -205,17 +204,8 @@ class GuideEditCounter:
 
         if self.count_reporter_edits:
             self.screen.uns["edit_counts"] = pd.DataFrame.from_dict(self.screen.uns["edit_counts"])
-            # self.screen.uns["edit_counts"] = _multiindex_dict_to_df(
-            #     self.screen.uns["edit_counts"], "edit", self.database_id
-            # )
-            # self.screen.uns["edit_counts"].guide = self.screen.guides.index[
-            #     self.screen.uns["edit_counts"].guide.to_numpy(dtype=int)
-            # ]
+
         if self.count_edited_alleles:
-            # df = pd.DataFrame.from_dict(self.guide_to_allele, orient="index").stack().to_frame()
-            # assert type(df) is pd.DataFrame, df
-            # self.screen.uns["allele_counts"] = pd.DataFrame(df[0].values.tolist(), index = df.index).reset_index()
-            # self.screen.uns["allele_counts"] = self.screen.uns["allele_counts"].rename(columns={"level_0": "guide", "level_1": "allele", 0:self.database_id})
             guides = []
             alleles = []
             counts = []
@@ -231,21 +221,31 @@ class GuideEditCounter:
             
             if 'guide' in self.screen.uns["allele_counts"].columns:
                 self.screen.uns["allele_counts"].guide = self.screen.guides.index[self.screen.uns["allele_counts"].guide]
-        
-            # self.screen.uns["allele_counts"] = _multiindex_dict_to_df(
-            #     self.screen.uns["allele_counts"], "allele", self.database_id
-            # )
-            # self.screen.uns["allele_counts"].guide = self.screen.guides.index[
-            #     self.screen.uns["allele_counts"].guide.to_numpy(dtype=int)
-            # ]
 
         if self.count_guide_reporter_alleles:
-            self.screen.uns["guide_reporter_allele_counts"] = _multiindex_dict_to_df(
-                self.screen.uns["guide_reporter_allele_counts"], ["reporter_allele", "guide_allele"], self.database_id
-            )
-            self.screen.uns["guide_reporter_allele_counts"].guide = self.screen.guides.index[
-                self.screen.uns["guide_reporter_allele_counts"].guide.to_numpy(dtype=int)
-            ]
+            guides = []
+            guide_alleles = []
+            reporter_alleles = []
+            counts = []
+            print(self.guide_to_guide_reporter_allele)
+            for guide, allele_to_count in self.guide_to_guide_reporter_allele.items():
+                if len(allele_to_count.keys()) == 0: continue
+                guides.extend([guide]*len(allele_to_count.keys()))
+                for key, count in allele_to_count.items():
+                    reporter_allele, guide_allele = key
+                    guide_alleles.append(guide_allele)
+                    reporter_alleles.append(reporter_allele)
+                    counts.append(count)
+            if not (len(guides) == len(reporter_alleles) == len(guide_alleles) == len(counts)): 
+                raise ValueError("Guides:{}, guide_alleles:{}, reporter_alleles: {}, counts:{}".format(
+                    len(guides), len(guide_alleles), len(reporter_alleles), len(counts)))
+            self.screen.uns["guide_repoter_allele_counts"] = pd.DataFrame(
+                {"guide": guides, "guide_allele": guide_alleles, "reporter_allele": reporter_alleles, self.database_id: counts})
+            
+            if 'guide' in self.screen.uns["guide_repoter_allele_counts"].columns:
+                self.screen.uns["guide_repoter_allele_counts"].guide = self.screen.guides.index[self.screen.uns["guide_repoter_allele_counts"].guide]
+            print(self.screen.uns["guide_repoter_allele_counts"].iloc[:5,1:3])
+            
         
         count_stat_path = self._jp("mapping_stats.txt")
         count_stat_file = open(count_stat_path, "w")
@@ -259,7 +259,7 @@ class GuideEditCounter:
     def _get_guide_counts_bcmatch(self):
         NotImplemented
 
-    def _count_guide_edits(self, matched_guide_idx, R1_record: SeqIO.SeqRecord):
+    def _count_guide_edits(self, matched_guide_idx, R1_record: SeqIO.SeqRecord, single_base_qual_cutoff = 30):
         strand_str_to_int = {"neg": -1, "pos": 1}
         if self.guides_has_strands:
             try:
@@ -272,19 +272,16 @@ class GuideEditCounter:
             guide_strand = 1
         ref_guide_seq = self.screen.guides.sequence[matched_guide_idx]
         read_guide_seq, read_guide_qual = self.get_guide_seq_qual(R1_record, len(ref_guide_seq))
-        guide_edit_allele = _get_edited_allele_lv(
+        guide_edit_allele = _get_edited_allele_crispresso(
             ref_seq=ref_guide_seq,
             query_seq=read_guide_seq,
+            aln_mat_path = self.output_dir + "/.aln_mat.txt",
             offset=0,
             strand=guide_strand,
             start_pos=0,
             end_pos=len(ref_guide_seq),
-            positionwise_quality = read_guide_qual
-        )
-        self._write_allele(
-            matched_guide_idx,
-            guide_edit_allele,
-            "guide_edit_counts",
+            positionwise_quality = np.array(read_guide_qual),
+            quality_thres = single_base_qual_cutoff
         )
         return(guide_edit_allele)
         
@@ -339,8 +336,14 @@ class GuideEditCounter:
                 else:
                     self.guide_to_allele[matched_guide_idx] = {allele: 1}
                 #self._write_allele(matched_guide_idx, allele)
-                # if self.count_guide_reporter_alleles and (not guide_allele is None):
-                #     self._write_guide_reporter_allele(matched_guide_idx, allele, guide_allele)
+            if self.count_guide_reporter_alleles and (not guide_allele is None):
+                if matched_guide_idx in self.guide_to_guide_reporter_allele.keys():
+                    if (allele, guide_allele) in self.guide_to_guide_reporter_allele[matched_guide_idx].keys():
+                        self.guide_to_guide_reporter_allele[matched_guide_idx][(allele, guide_allele)] += 1
+                    else:
+                        self.guide_to_guide_reporter_allele[matched_guide_idx][(allele, guide_allele)] = 1
+                else:
+                    self.guide_to_guide_reporter_allele[matched_guide_idx] = {(allele, guide_allele): 1}
         #self._write_edits(matched_guide_idx, allele)
 
     def _get_guide_counts_bcmatch_semimatch(
@@ -400,9 +403,9 @@ class GuideEditCounter:
                 matched_guide_idx = bc_match[0]
                 self.screen.layers[bcmatch_layer][matched_guide_idx, 0] += 1
                 self.bcmatch += 1
-                if self.count_guide_edits:
+                if self.count_guide_edits or self.count_guide_reporter_alleles:
                     guide_allele = self._count_guide_edits(matched_guide_idx, r1)
-                if self.count_reporter_edits or self.count_edited_alleles:
+                if self.count_reporter_edits or self.count_edited_alleles or self.count_guide_reporter_alleles:
                     # TBD: what if reporter seq doesn't match barcode & guide?
                     if self.count_guide_reporter_alleles:
                         self._count_reporter_edits(matched_guide_idx, R1_seq, r2, guide_allele = guide_allele)

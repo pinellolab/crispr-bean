@@ -1,3 +1,8 @@
+Subsetting & addition
+---------------------
+
+Load the required packages. (Anndata import isn't required to use the package).
+
 .. code:: ipython3
 
     import numpy as np
@@ -8,10 +13,7 @@
     import crisprep as cp
 
 
-.. parsed-literal::
-
-    pp module imported
-
+crisprep `ReporterScreen` object and perturb-seq Screen` object are both `anndata` compatible.
 
 .. code:: ipython3
 
@@ -20,9 +22,6 @@
 .. code:: ipython3
 
     adata
-
-
-
 
 
 .. parsed-literal::
@@ -57,7 +56,15 @@
        layers:    'X_bcmatch', 'edits'
        uns:       'allele_counts', 'edit_counts'
 
+-  cdata.X: guide count
+-  cdata.guides: guide metadata
+-  cdata.condit: sample/condition metadata
+-  cdata.layers["X_bcmatch"]: barcode-matched guide counts
+-  cdata.layers["edits"]: edit counts
+-  cdata.uns["allele_counts"]: allele counts per guide and condition
+-  cdata.uns["edit_counts"]: edit counts per guide and condition
 
+`guides` attribute contains the information about each guide.
 
 .. code:: ipython3
 
@@ -381,6 +388,7 @@
     </div>
 
 
+`condit` attribute contains the sample and condition specific information.
 
 .. code:: ipython3
 
@@ -493,6 +501,7 @@
     </div>
 
 
+Allele_counts information is stored in `.uns["allele_counts"]`.
 
 .. code:: ipython3
 
@@ -732,6 +741,7 @@
     </div>
 
 
+Base-level edit counts can be saved at `.uns["edit_counts"]`.
 
 .. code:: ipython3
 
@@ -996,7 +1006,7 @@
 
 
 
--  X: guide count
+
 
 Subsetting & addition
 ---------------------
@@ -1172,7 +1182,6 @@ LFC calculation & Addition
     cdata1.condit["sort"] = cdata1.condit["index"].map(lambda s: s.rsplit("_", 1)[-1])
     cdata1.condit["replicate"] = cdata1.condit["index"].map(lambda s: s.rsplit("_", 1)[0])
     cdata2.condit["sort"] = cdata2.condit["index"].map(lambda s: s.rsplit("_", 1)[-1])
-    
     cdata2.condit["replicate"] = cdata2.condit["index"].map(lambda s: s.rsplit("_", 1)[0])
 
 .. code:: ipython3
@@ -1181,36 +1190,8 @@ LFC calculation & Addition
     lfc1 = cdata1.log_fold_change_reps("bot", "top")
     cdata2.log_norm()
     lfc2 = cdata2.log_fold_change_reps("bot", "top")
-
-.. code:: ipython3
-
     lfcs = lfc1.join(lfc2, lsuffix = "_1", rsuffix = "_2")
-
-
-.. code:: ipython3
-
     sns.pairplot(lfcs)
-    
-
-
-
-.. parsed-literal::
-
-    WARNING @ Fri, 15 Apr 2022 12:30:00:
-    	 findfont: Font family ['sans-serif'] not found. Falling back to DejaVu Sans. 
-    
-    WARNING @ Fri, 15 Apr 2022 12:30:00:
-    	 findfont: Generic family 'sans-serif' not found because none of the following families were found: Arial 
-    
-
-
-
-
-.. parsed-literal::
-
-    <seaborn.axisgrid.PairGrid at 0x7f8771f888e0>
-
-
 
 
 .. image:: output_20_2.png
@@ -1578,15 +1559,6 @@ You can concatenate different samples with shared guides.
     cp.concat((cdata1, cdata2))
 
 
-
-.. parsed-literal::
-
-    Variable names are not unique. To make them unique, call `.var_names_make_unique`.
-    Variable names are not unique. To make them unique, call `.var_names_make_unique`.
-
-
-
-
 .. parsed-literal::
 
     Genome Editing Screen comprised of n_guides x n_conditions = 3455 x 24
@@ -1621,56 +1593,9 @@ Getting edit rates from allele counts
 .. code:: ipython3
 
     cdata.get_edit_mat_from_uns("A", "G", match_target_position = True)
-
-
-
-.. parsed-literal::
-
-    New edit matrix saved in .layers['edits']. Returning old edits.
-
-
-
-
-.. parsed-literal::
-
-    array([[0., 0., 0., ..., 0., 0., 0.],
-           [0., 0., 0., ..., 0., 0., 0.],
-           [0., 0., 0., ..., 0., 0., 0.],
-           ...,
-           [0., 0., 0., ..., 0., 0., 0.],
-           [0., 0., 0., ..., 0., 0., 0.],
-           [0., 0., 0., ..., 0., 0., 0.]])
-
-
-
-.. code:: ipython3
-
     cdata.get_edit_rate(edited_base = "A", bcmatch_thres = 10)
-
-
-.. code:: ipython3
-
     plt.hist(cdata.guides.edit_rate, bins=30)
-
-
-
-
-.. parsed-literal::
-
-    (array([190., 180., 169., 200., 177., 181., 182., 171., 172., 171., 143.,
-            125., 146., 128., 145., 133., 102., 135., 120.,  91.,  78.,  69.,
-             66.,  65.,  40.,  27.,  18.,  12.,   8.,   2.]),
-     array([2.98596596e-04, 2.87497248e-02, 5.72008530e-02, 8.56519811e-02,
-            1.14103109e-01, 1.42554238e-01, 1.71005366e-01, 1.99456494e-01,
-            2.27907622e-01, 2.56358750e-01, 2.84809878e-01, 3.13261007e-01,
-            3.41712135e-01, 3.70163263e-01, 3.98614391e-01, 4.27065519e-01,
-            4.55516648e-01, 4.83967776e-01, 5.12418904e-01, 5.40870032e-01,
-            5.69321160e-01, 5.97772288e-01, 6.26223417e-01, 6.54674545e-01,
-            6.83125673e-01, 7.11576801e-01, 7.40027929e-01, 7.68479058e-01,
-            7.96930186e-01, 8.25381314e-01, 8.53832442e-01]),
-     <BarContainer object of 30 artists>)
-
-
+    plt.show()
 
 
 .. image:: output_34_1.png

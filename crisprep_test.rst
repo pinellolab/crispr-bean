@@ -1,5 +1,5 @@
-Subsetting & addition
----------------------
+Tutorial
+==================
 
 Load the required packages. (Anndata import isn't required to use the package).
 

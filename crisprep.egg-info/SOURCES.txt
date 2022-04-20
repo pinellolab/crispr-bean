@@ -16,6 +16,7 @@ crisprep/annotate/translate_allele.py
 crisprep/framework/Edit.py
 crisprep/framework/ReporterScreen.py
 crisprep/framework/__init__.py
+crisprep/framework/_supporting_fn.py
 crisprep/preprocessing/GuideEditCounter.py
 crisprep/preprocessing/Step1_count_gRNA.py
 crisprep/preprocessing/__init__.py

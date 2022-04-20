@@ -18,7 +18,7 @@ debug   = logging.debug
 info    = logging.info
 
 BASE_SET = {"A", "C", "T", "G"}
-reverse_map = {"A":"T", "C":"G", "G":"C", "T":"A", "N":"N"}
+reverse_map = {"A":"T", "C":"G", "G":"C", "T":"A", "N":"N", "-":"-"}
 
 codon_map = {'TTT':'F', 'TTC':'F', 'TTA':'L', 'TTG':'L', 'CTT':'L', 'CTC':'L', 'CTA':'L', 'CTG':'L', 'ATT':'I', 'ATC':'I',
          'ATA':'I', 'ATG':'M', 'GTT':'V', 'GTC':'V', 'GTA':'V', 'GTG':'V', 'TCT':'S', 'TCC':'S', 'TCA':'S', 'TCG':'S',
@@ -27,6 +27,9 @@ codon_map = {'TTT':'F', 'TTC':'F', 'TTA':'L', 'TTG':'L', 'CTT':'L', 'CTC':'L', '
          'AAT':'N', 'AAC':'N', 'AAA':'K', 'AAG':'K', 'GAT':'D', 'GAC':'D', 'GAA':'E', 'GAG':'E', 'TGT':'C', 'TGC':'C',
          'TGA':'*', 'TGG':'W', 'CGT':'R', 'CGC':'R', 'CGA':'R', 'CGG':'R', 'AGT':'S', 'AGC':'S', 'AGA':'R', 'AGG':'R',
          'GGT':'G', 'GGC':'G', 'GGA':'G', 'GGG':'G'}
+
+class RefBaseMismatchException(Exception):
+    pass
 
 # This function is adopted from https://github.com/gpp-rnd/be-validation-pipeline/blob/main/notebooks/01_BEV_allele_frequencies.ipynb
 def _translate(seq, codon_map):
@@ -151,7 +154,7 @@ class CDS():
             ref_base = edit.ref_base
             alt_base = edit.alt_base
         if type(self).nt[rel_pos] != ref_base:
-            raise ValueError("Ref base mismatch: {},{},{}".format(type(self).nt[rel_pos], edit, rel_pos))
+            raise RefBaseMismatchException("ref:{} at pos {}, got edit {}".format(type(self).nt[rel_pos], rel_pos, edit))
         self.edited_nt[rel_pos] = alt_base
         
     def edit_allele(self, allele_str):

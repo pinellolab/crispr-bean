@@ -1,6 +1,6 @@
 from typing import Iterable
 from enum import IntEnum
-from ..framework.Edit import Allele
+from ..framework.Edit import Allele, Edit
 
 AA_SET = {'A', 'C', 'D', 'E', 'F', 
 'G', 'H', 'I', 'K', 'L', 
@@ -13,7 +13,7 @@ class MutationType(IntEnum):
     MISSENSE = 1
     NONSENSE = 2
 
-class AminoAcidEdit:
+class AminoAcidEdit(Edit):
     def __init__(self, pos: int, ref: str, alt: str):
         self.pos = pos
         assert ref in AA_SET, "Invalid ref aa: {}".format(ref)
@@ -32,7 +32,7 @@ class AminoAcidEdit:
         self.ref, self.alt))
 
     def __hash__(self):
-        return(hash((self.pos, self.ref, self.alt)))
+        return(hash(self.__repr__()))
 
     def _severity(self):
         if self.ref == self.alt: return(MutationType.SYNONYMOUS)

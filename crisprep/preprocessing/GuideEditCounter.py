@@ -300,11 +300,10 @@ class GuideEditCounter:
                 if guide_strand == -1:
                     offset = (
                         self.screen.guides.start_pos[matched_guide_idx]
-                        + self.screen.guides.guide_len[matched_guide_idx]
-                        - 1
+                        + 32 - 6 - 1
                     )
                 if guide_strand == 1:
-                    offset = self.screen.guides.start_pos[matched_guide_idx]
+                    offset = self.screen.guides.start_pos[matched_guide_idx] - 32 - 6 - self.screen.guides.guide_len[matched_guide_idx]
             except KeyError:  # control guides
                 guide_strand = 1
                 offset = 0
@@ -332,7 +331,6 @@ class GuideEditCounter:
                         self.guide_to_allele[matched_guide_idx][allele] = 1
                 else:
                     self.guide_to_allele[matched_guide_idx] = {allele: 1}
-                #self._write_allele(matched_guide_idx, allele)
             if self.count_guide_reporter_alleles and (not guide_allele is None):
                 if matched_guide_idx in self.guide_to_guide_reporter_allele.keys():
                     if (allele, guide_allele) in self.guide_to_guide_reporter_allele[matched_guide_idx].keys():
@@ -341,8 +339,7 @@ class GuideEditCounter:
                         self.guide_to_guide_reporter_allele[matched_guide_idx][(allele, guide_allele)] = 1
                 else:
                     self.guide_to_guide_reporter_allele[matched_guide_idx] = {(allele, guide_allele): 1}
-        #self._write_edits(matched_guide_idx, allele)
-
+        
     def _get_guide_counts_bcmatch_semimatch(
         self, bcmatch_layer="X_bcmatch", semimatch_layer="X"
     ):

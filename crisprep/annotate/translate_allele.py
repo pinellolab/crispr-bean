@@ -2,7 +2,7 @@ from typing import List
 import numpy as np
 from Bio import SeqIO
 from crisprep.framework.Edit import Edit, Allele
-from crisprep.annotate.AminoAcidEdit import AminoAcidEdit, AminoAcidAllele
+from crisprep.annotate.AminoAcidEdit import AminoAcidEdit, AminoAcidAllele, CodingNoncodingAllele
 import logging
 import sys
 
@@ -92,6 +92,9 @@ def _get_seq_pos_from_fasta(fasta_file_name: str):
 
 def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
     codon = ''.join(nt_seq_string[aa_pos*3:(aa_pos*3+3)])
+    if len(codon) != 3:
+        print("reached the end of CDS, frameshift.")
+        return("/")
     try:
         aa = codon_map[codon]
         return(aa)
@@ -106,7 +109,6 @@ def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
                 print("warning: no matching aa with codon {}".format(codon))
                 return("_")
         else:
-            #raise ValueError("Cannot translate codon due to ambiguity: {}".format(codon))
             print("Cannot translate codon due to ambiguity: {}".format(codon))
             return("_")
     
@@ -120,6 +122,7 @@ class CDS():
     def __init__(self):
         self.edited_nt = type(self).nt.copy()
         self.edited_aa_pos = set()
+        self.edits_noncoding = set()
     
     @classmethod
     def set_exon_fasta_name(cls, fasta_file_name: str):
@@ -146,16 +149,21 @@ class CDS():
     def edit_single(self, edit_str):
         edit = Edit.from_str(edit_str)
         rel_pos= self._edit_pos_to_aa_pos(edit.pos)
-        if rel_pos == -1 : return # do nothing
         if edit.strand == '-': 
             ref_base = reverse_map[edit.ref_base]
             alt_base = reverse_map[edit.alt_base]
         else:
             ref_base = edit.ref_base
             alt_base = edit.alt_base
-        if type(self).nt[rel_pos] != ref_base:
+        if rel_pos == -1 : # position outside CDS
+            self.edits_noncoding.add(edit)
+        elif type(self).nt[rel_pos] != ref_base:
             raise RefBaseMismatchException("ref:{} at pos {}, got edit {}".format(type(self).nt[rel_pos], rel_pos, edit))
-        self.edited_nt[rel_pos] = alt_base
+        else:
+            self.edited_nt[rel_pos] = alt_base
+        if alt_base == '-': #frameshift
+            #self.edited_nt.pop(rel_pos)
+            self.edited_aa_pos.update(list(range(rel_pos, len(CDS.nt) // 3)))
         
     def edit_allele(self, allele_str):
         if isinstance(allele_str, Allele):
@@ -163,10 +171,12 @@ class CDS():
         else: edit_strs = allele_str.split(",")
         for edit_str in edit_strs:
             self.edit_single(edit_str)
+        if '-' in self.edited_nt:
+            self.edited_nt.remove('-')
     
     def get_aa_change(self, include_synonymous = True) -> List[str]:
-        aa_mutations = AminoAcidAllele()
-
+        mutations = CodingNoncodingAllele()
+        mutations.nt_allele.update(self.edits_noncoding)
         for edited_aa_pos in self.edited_aa_pos:
             ref_aa = _translate_single_codon(type(self).nt, edited_aa_pos)
             mt_aa = _translate_single_codon(self.edited_nt, edited_aa_pos)
@@ -174,7 +184,8 @@ class CDS():
                 return("translation error")
             if not include_synonymous and ref_aa == mt_aa:
                 continue
-            aa_mutations.add(AminoAcidEdit(
+            mutations.aa_allele.add(AminoAcidEdit(
                 edited_aa_pos + 1, ref_aa, mt_aa))
-        return(aa_mutations)
+        
+        return(mutations)
    

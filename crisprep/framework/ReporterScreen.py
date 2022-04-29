@@ -341,13 +341,23 @@ class ReporterScreen(Screen):
     def collapse_allele_by_target(self, ref_base, alt_base, target_pos_column = "target_pos"):
         if not target_pos_column in self.guides.columns:
             raise ValueError("The .guides have to have 'target_pos' specifying the relative position of target edit.")
-        df = self.uns["allele_counts"].copy()
+        df = self.uns["allele_counts"].copy().reset_index(drop=True)
         df["target_pos"] = self.guides.set_index("name").loc[df.guide, target_pos_column].reset_index(drop=True)
         df["has_target"] = df.apply(lambda row: row.allele.has_edit(ref_base, alt_base, rel_pos = row.target_pos), axis = 1)
         df["has_nontarget"] = df.apply(lambda row: row.allele.has_other_edit(ref_base, alt_base, rel_pos = row.target_pos), axis = 1)
         df = df.drop("target_pos", axis=1)
         res = df.groupby(["guide", "has_target", "has_nontarget"]).sum()
         return(res)
+
+    def collapse_allele_by_nedit(self, ref_base, alt_base):
+        df = self.uns["allele_counts"].copy().reset_index(drop=True)
+        df["n_edits"] = df.allele.map(lambda a: sum(
+            [(e.ref_base == ref_base and e.alt_base == alt_base and e.rel_pos >= 6 and e.rel_pos < 6 + 20)
+            for e in a.edits]))
+        df.loc[df.n_edits > 4,"n_edits"] = 4
+        res = df.groupby(["guide", "n_edits"]).sum()
+        return(res)
+
 
 
     def translate_alleles(self):

@@ -5,8 +5,8 @@ class Edit:
     strand_map = {"+":1, "-":-1}
     def __init__(self, rel_pos: int, ref_base: chr, alt_base: chr, offset: int = None, strand: Literal[1, -1] = 1):
         strand_to_symbol = {1:'+', -1:'-'}
-        self.rel_pos = rel_pos
-        self.ref_base = ref_base
+        self.rel_pos = rel_pos  
+        self.ref_base = ref_base  # TODO make it ref / alt instead of ref_base and alt_base for AAEdit comp. or make abstract class
         self.alt_base = alt_base
         if type(strand) == int:
             self.strand = strand_to_symbol[strand]
@@ -123,6 +123,9 @@ class Allele:
 
     def add(self, edit: Edit):
         self.edits.add(edit)  # TBD: adding to set?
+
+    def update(self, edits: Iterable[Edit]):
+        self.edits.update(edits)
 
     def __repr__(self):
         if len(self.edits) == 0: return ""

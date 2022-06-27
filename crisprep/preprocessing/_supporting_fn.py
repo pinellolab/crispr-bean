@@ -11,7 +11,6 @@ import Levenshtein as lv
 from CRISPResso2 import CRISPResso2Align
 from crisprep.framework.Edit import Allele, Edit
 
-
 class InputFileError(Exception):
     pass
 
@@ -193,7 +192,8 @@ def _get_edited_allele_lv(
 def _write_alignment_matrix(
     ref_base: str,
     alt_base: str, 
-    path):
+    path,
+    allow_complementary= False):
     '''
     Writes base substitution matrix
     '''
@@ -204,6 +204,9 @@ def _write_alignment_matrix(
     np.fill_diagonal(mat, 5)
     aln_df = pd.DataFrame(mat, index = bases, columns = bases)
     aln_df.loc[ref_base, alt_base] = 0
+    if allow_complementary:
+        comp_map = {"A":"T", "C":"G", "T":"A", "G":"C"}
+        aln_df.loc[comp_map[ref_base], comp_map[alt_base]] = 0
     aln_df.to_csv(path, sep = " ")
 
 def _get_allele_from_alignment(

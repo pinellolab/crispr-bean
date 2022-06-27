@@ -1,11 +1,18 @@
 from typing import Iterable
 from enum import IntEnum
+import numpy as np
 from ..framework.Edit import Allele, Edit
 
 AA_SET = {'A', 'C', 'D', 'E', 'F', 
 'G', 'H', 'I', 'K', 'L', 
 'M', 'N', 'P', 'Q', 'R',
  'S', 'T', 'V', 'W', 'Y', '*', '/'}
+
+def jaccard(set1, set2):
+    intersection = len(set(set1).intersection(set2))
+    union = (len(set1) + len(set2)) - intersection
+    if union == 0: return np.nan
+    return float(intersection) / union
 
 class MutationType(IntEnum):
     NO_CHANGE = -1
@@ -15,7 +22,7 @@ class MutationType(IntEnum):
 
 class AminoAcidEdit(Edit):
     def __init__(self, pos: int, ref: str, alt: str):
-        self.pos = pos
+        self.pos = int(pos)
         assert ref in AA_SET, "Invalid ref aa: {}".format(ref)
         assert alt in AA_SET, "Invalid alt aa: {}".format(alt)
         self.ref = ref
@@ -26,6 +33,9 @@ class AminoAcidEdit(Edit):
         pos, aa_change = edit_str.split(":")
         ref, alt = aa_change.split(">")
         return(cls(pos, ref, alt))
+
+    def get_abs_edit(self):
+        return("A"+self.__repr__())
 
     def __repr__(self):
         return("{}:{}>{}".format(int(self.pos),
@@ -63,6 +73,19 @@ class AminoAcidAllele(Allele):
         else:
             self.edits = set(edits)
 
+    @classmethod
+    def from_str(cls, allele_str): #pos:strand:start>end
+        if type(allele_str) is AminoAcidAllele: return(allele_str)
+        edits = set()
+        try:
+            for edit_str in allele_str.split(","):
+                edit = AminoAcidEdit.from_str(edit_str)
+                edits.add(edit)
+        except ValueError:
+            if allele_str.strip() == '':
+                return(cls(None))
+        return(cls(edits))
+
     def get_most_severe(self):
         if len(self.edits) == 0:
             return(MutationType.NO_CHANGE)
@@ -73,21 +96,52 @@ class AminoAcidAllele(Allele):
 
 
 class CodingNoncodingAllele():
-    def __init__(self, aa_edits: Iterable[AminoAcidEdit] = None, base_edits: Iterable[Edit] = None):
+    def __init__(self, aa_edits: Iterable[AminoAcidEdit] = None, base_edits: Iterable[Edit] = None, unique_identifier = None):
         self.aa_allele = AminoAcidAllele(aa_edits)
         self.nt_allele = Allele(base_edits)
+        self.uid = unique_identifier
+        if not self.uid is None:
+            self.set_uid(self.uid)
+
+    @classmethod
+    def from_str(cls, allele_str):
+        if isinstance(allele_str, cls): return(allele_str)
+        uid = None
+        if '!' in allele_str:
+            uid, allele_str = allele_str.split('!')
+        try:
+            aa_allele_str, nt_allele_str = allele_str.split("|")
+            aa_allele = AminoAcidAllele.from_str(aa_allele_str)
+            nt_allele = Allele.from_str(nt_allele_str)
+        except ValueError:
+            if allele_str.strip() == '':
+                return(cls(None))
+            else:
+                print(allele_str)
+        return(cls(aa_allele.edits, nt_allele.edits, unique_identifier = uid))
 
     def get_most_severe(self):
         aa_sev = self.aa_allele.get_most_severe()
         if len(self.nt_allele.edits) > 0: return max(aa_sev, 0.1)
         return aa_sev
 
+    def set_uid(self, uid):
+        self.uid = uid
+        self.nt_allele.edits = set([e.set_uid(uid) for e in self.nt_allele.edits])
+
+    def get_jaccard(self, other):
+        aa_jaccard = jaccard(self.aa_allele.edits, other.aa_allele.edits)
+        nt_jaccard = jaccard(self.nt_allele.edits, other.nt_allele.edits)
+        return(aa_jaccard, nt_jaccard)
+
     def __repr__(self):
+        if not self.uid is None:
+            return self.uid + "!" + str(self.aa_allele) + "|" + str(self.nt_allele)
         return str(self.aa_allele) + "|" + str(self.nt_allele)
 
     def __eq__(self, other):
         if not isinstance(other, type(self)): return False
-        return(self.aa_allele == other.aa_allele and self.nt_allele == other.nt_allele)
+        return(self.uid == other.uid and self.aa_allele == other.aa_allele and self.nt_allele == other.nt_allele)
     
     def __lt__(self, other):
         if self.aa_allele < other.aa_allele: return True
@@ -103,3 +157,5 @@ class CodingNoncodingAllele():
 
     def __hash__(self):
         return(hash(self.__repr__()))
+
+

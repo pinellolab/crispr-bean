@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from anndata import AnnData
 import anndata as ad
 from perturb_tools import Screen
+from crisprep.annotate.AminoAcidEdit import AminoAcidAllele, CodingNoncodingAllele
 from .Edit import Edit, Allele
 from ..framework._supporting_fn import get_aa_alleles, filter_allele_by_pos
 
@@ -60,17 +61,30 @@ class ReporterScreen(Screen):
             self.layers["edits"] = X_edit
         if not X_bcmatch is None:
             self.layers["X_bcmatch"] = X_bcmatch
-        if "edit_counts" in self.uns.keys():
-            if "edit" in self.uns["edit_counts"].columns:
-                self.uns["edit_counts"].edit = self.uns["edit_counts"].edit.map(lambda s: Edit.from_str(s))
-        if "allele_counts" in self.uns.keys():
-            if "allele" in self.uns["allele_counts"].columns:
-                self.uns["allele_counts"].allele = self.uns["allele_counts"].allele.map(lambda s: Allele.from_str(s))
-        if "guide_reporter_allele_counts" in self.uns.keys():
-            self.uns["guide_reporter_allele_counts"].reporter_allele = \
-                self.uns["guide_reporter_allele_counts"].reporter_allele.map(lambda s: Allele.from_str(s))            
-            self.uns["guide_reporter_allele_counts"].guide_allele = \
-                self.uns["guide_reporter_allele_counts"].guide_allele.map(lambda s: Allele.from_str(s))
+        for k, df in self.uns.items():
+            if "guide" in df.columns:
+                if "allele" in df.columns: 
+                    self.uns[k].allele = self.uns[k].allele.map(lambda s: Allele.from_str(s))
+                if "edit" in df.columns:
+                    self.uns[k].edit = self.uns[k].edit.map(lambda s: Edit.from_str(s))
+                if 'reporter_allele' in df.columns and 'guide_allele' in df.columns:
+                    self.uns[k].reporter_allele = self.uns[k].reporter_allele.map(lambda s: Allele.from_str(s))
+                    self.uns[k].guide_allele = self.uns[k].guide_allele.map(lambda s: Allele.from_str(s))
+                if "aa_allele" in df.columns:
+                    self.uns[k].aa_allele = self.uns[k].aa_allele.map(lambda s: CodingNoncodingAllele.from_str(s))
+
+        
+        # if "edit_counts" in self.uns.keys():
+        #     if "edit" in self.uns["edit_counts"].columns:
+        #         self.uns["edit_counts"].edit = self.uns["edit_counts"].edit.map(lambda s: Edit.from_str(s))
+        # if "allele_counts" in self.uns.keys():
+        #     if "allele" in self.uns["allele_counts"].columns:
+        #         self.uns["allele_counts"].allele = self.uns["allele_counts"].allele.map(lambda s: Allele.from_str(s))
+        # if "guide_reporter_allele_counts" in self.uns.keys():
+        #     self.uns["guide_reporter_allele_counts"].reporter_allele = \
+        #         self.uns["guide_reporter_allele_counts"].reporter_allele.map(lambda s: Allele.from_str(s))            
+        #     self.uns["guide_reporter_allele_counts"].guide_allele = \
+        #         self.uns["guide_reporter_allele_counts"].guide_allele.map(lambda s: Allele.from_str(s))
         
     @classmethod
     def from_file_paths(
@@ -193,8 +207,10 @@ class ReporterScreen(Screen):
             if "guide" in df.columns:
                 if "allele" in df.columns: key_col = ["guide", "allele"]
                 elif "edit" in df.columns: key_col = ["guide", "edit"]
+                elif "aa_allele" in df.columns: key_col = ["guide", "aa_allele"]
                 else: continue
                 df_new = df.loc[df.guide.isin(guides_include), key_col + condit_include]
+                df_new = df_new.loc[df_new.loc[:, condit_include].sum(axis=1) > 0, :]
                 new_uns[k] = df_new
         adata.uns = new_uns
         return(type(self).from_adata(adata))
@@ -324,11 +340,11 @@ class ReporterScreen(Screen):
         Filter alleles based on barcode matched counts, allele counts, 
         or proportion
         '''
-        allele_count_df = self.uns[allele_uns_key]
+        allele_count_df = self.uns[allele_uns_key].copy()
         filtered_allele, filtered_edits = \
             zip(*allele_count_df.allele.map(lambda a:
                 filter_allele_by_pos(a, rel_pos_start, rel_pos_end, filter_rel_pos)))
-        self.uns[allele_uns_key].loc[:, "allele"] = filtered_allele
+        allele_count_df.loc[:, "allele"] = filtered_allele
         # Hashing on Allele object messes up the order. Converting it to str and back to allele for groupby.
         allele_count_df["str_allele"] = allele_count_df.allele.map(str)
         allele_count_df = allele_count_df.groupby(["guide", "str_allele"]).sum().reset_index()

@@ -5,8 +5,6 @@ Summary: Tools for analyzing CRISPR data with REPorter edits
 Home-page: https://github.com/jykr/crisprep
 Author: Jayoung Ryu
 Author-email: jayoung_ryu@g.harvard.edu
-License: UNKNOWN
-Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
@@ -51,5 +49,3 @@ cdata = cp.read_h5ad("crisprep_counts_sample.h5ad")
 ```
 
 See the [tutorial](crisprep_test.rst) for more detail.
-
-

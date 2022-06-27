@@ -1,13 +1,16 @@
+from enum import unique
 from typing import Iterable, Literal
 
 class Edit:
     reverse_map = {"A":"T", "C":"G", "T":"A", "G":"C", "-":"-"}
     strand_map = {"+":1, "-":-1}
-    def __init__(self, rel_pos: int, ref_base: chr, alt_base: chr, offset: int = None, strand: Literal[1, -1] = 1):
+    def __init__(self, rel_pos: int, ref_base: chr, alt_base: chr, offset: int = None, strand: Literal[1, -1] = 1, 
+    unique_identifier = None):
         strand_to_symbol = {1:'+', -1:'-'}
         self.rel_pos = rel_pos  
         self.ref_base = ref_base  # TODO make it ref / alt instead of ref_base and alt_base for AAEdit comp. or make abstract class
         self.alt_base = alt_base
+        self.uid = unique_identifier
         if type(strand) == int:
             self.strand = strand_to_symbol[strand]
         else:
@@ -34,6 +37,24 @@ class Edit:
         #     end = cls.reverse_map[end]
         return(cls(rel_pos, ref_base, alt_base, offset = offset, strand = strand))
 
+    def get_abs_edit(self):
+        '''
+        Returns absolute edit representation regardless of the relative edit position by guide.
+        '''
+        if self.strand == '-':
+            ref_base = type(self).reverse_map[self.ref_base]
+            alt_base = type(self).reverse_map[self.alt_base]
+        else:
+            ref_base = self.ref_base
+            alt_base = self.alt_base
+        if not self.uid is None:
+            return("{}!{}:{}>{}".format(self.uid, int(self.pos), ref_base, alt_base))
+        return("{}:{}>{}".format(int(self.pos), ref_base, alt_base))
+
+    def set_uid(self, uid):
+        self.uid = uid
+        return(self)
+
     def __eq__(self, other):
         if (
             self.pos == other.pos
@@ -47,7 +68,10 @@ class Edit:
         return self.pos < other.pos
 
     def __gt__(self, other): # Implemented for pandas compatibility
-        return self.pos > other.pos
+        if isinstance(other, Edit):
+            return self.pos > other.pos
+        else:
+            return self.__repr__() > str(other)
 
     def __hash__(self):
         # Note that this doesn't include relative bases. 
@@ -116,7 +140,7 @@ class Allele:
         return False
 
     def __lt__(self, other): # Implemented for pandas compatibility
-        return self.edits < other.edits
+        return len(self.edits) < len(other.edits)
 
     def __hash__(self):
         return(hash(self.__repr__()))

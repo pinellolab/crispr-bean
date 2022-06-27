@@ -303,7 +303,8 @@ class GuideEditCounter:
                         + 32 - 6 - 1
                     )
                 if guide_strand == 1:
-                    offset = self.screen.guides.start_pos[matched_guide_idx] - 32 - 6 - self.screen.guides.guide_len[matched_guide_idx]
+                    offset = self.screen.guides.start_pos[matched_guide_idx] \
+                        - (32 - 6 - self.screen.guides.guide_len[matched_guide_idx])
             except KeyError:  # control guides
                 guide_strand = 1
                 offset = 0
@@ -436,7 +437,9 @@ class GuideEditCounter:
 
     def get_guide_seq(self, R1_seq, R2_seq, guide_length):
         """This can be edited by user based on the read construct."""
-        guide_start_idx = R1_seq.find(self.guide_start_seq)
+        #_seq_match = np.where(seq.replace(self.base_edited_from, self.base_edited_to) == self.screen.guides.masked_sequence)[0]
+        guide_start_idx = R1_seq.replace(self.base_edited_from, self.base_edited_to).find(
+            self.guide_start_seq.replace(self.base_edited_from, self.base_edited_to))
         if guide_start_idx == -1:
             return None
         if guide_start_idx + guide_length >= len(R1_seq): 
@@ -449,7 +452,8 @@ class GuideEditCounter:
 
     def get_guide_seq_qual(self, R1_record: SeqIO.SeqRecord, guide_length):
         R1_seq = R1_record.seq
-        guide_start_idx = R1_seq.find(self.guide_start_seq)
+        guide_start_idx = R1_seq.replace(self.base_edited_from, self.base_edited_to).find(
+            self.guide_start_seq.replace(self.base_edited_from, self.base_edited_to))
         if guide_start_idx == -1:
             return None, None
         if guide_start_idx + guide_length >= len(R1_seq): 

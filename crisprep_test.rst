@@ -10,7 +10,7 @@ Load the required packages. (Anndata import isn't required to use the package).
     import anndata as ad
     import seaborn as sns
     import matplotlib.pyplot as plt
-    import beret as cp
+    import beret as br
 
 
 beret `ReporterScreen` object and perturb-seq Screen` object are both `anndata` compatible.
@@ -36,7 +36,7 @@ beret `ReporterScreen` object and perturb-seq Screen` object are both `anndata` 
 
 .. code:: ipython3
 
-    cdata = cp.read_h5ad("beret_count_07+1021_LDLvar.h5ad")
+    cdata = br.read_h5ad("beret_count_07+1021_LDLvar.h5ad")
 
 .. code:: ipython3
 
@@ -1173,8 +1173,8 @@ LFC calculation & Addition
 
 .. code:: ipython3
 
-    cdata1 = cp.read_h5ad("/data/pinello/PROJECTS/2021_08_ANBE/data/072121_ABE_topbot/beret_counts/LDLvar/032422_crispresso/beret_count_072121_ABE_topbot_LDLvar.h5ad")
-    cdata2 = cp.read_h5ad("/data/pinello/PROJECTS/2021_08_ANBE/data/102121_ABE_topbot/beret_counts/LDLvar/032422_crispresso/beret_count_102121_ABE_topbot_LDLvar.h5ad")
+    cdata1 = br.read_h5ad("/data/pinello/PROJECTS/2021_08_ANBE/data/072121_ABE_topbot/beret_counts/LDLvar/032422_crispresso/beret_count_072121_ABE_topbot_LDLvar.h5ad")
+    cdata2 = br.read_h5ad("/data/pinello/PROJECTS/2021_08_ANBE/data/102121_ABE_topbot/beret_counts/LDLvar/032422_crispresso/beret_count_102121_ABE_topbot_LDLvar.h5ad")
 
 
 .. code:: ipython3
@@ -1556,7 +1556,7 @@ You can concatenate different samples with shared guides.
 
 .. code:: ipython3
 
-    cp.concat((cdata1, cdata2))
+    br.concat((cdata1, cdata2))
 
 
 .. parsed-literal::
@@ -1937,7 +1937,7 @@ Allele translation
 
 .. code:: ipython3
 
-    cdata_tiling = cp.read_h5ad("../../072121_ABE_topbot/beret_counts/LDLRCDS/032422_crispresso/beret_count_072121_ABE_topbot_LDLRCDS.h5ad")
+    cdata_tiling = br.read_h5ad("../../072121_ABE_topbot/beret_counts/LDLRCDS/032422_crispresso/beret_count_072121_ABE_topbot_LDLRCDS.h5ad")
 
 
 .. code:: ipython3

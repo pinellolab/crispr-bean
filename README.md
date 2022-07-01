@@ -32,8 +32,8 @@ adata.log_fold_change_aggregate("bot", "top")
 
 ## Using as python module
 ```
-import beret as cp
-cdata = cp.read_h5ad("beret_counts_sample.h5ad")
+import beret as br
+cdata = br.read_h5ad("beret_counts_sample.h5ad")
 ```
 
 See the [tutorial](beret_test.rst) for more detail.

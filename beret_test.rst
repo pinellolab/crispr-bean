@@ -57,13 +57,13 @@ beret :bash:`ReporterScreen` object and perturb-seq :bash:`Screen` object are bo
        layers:    'X_bcmatch', 'edits'
        uns:       'allele_counts', 'edit_counts'
 
--  cdata.X: guide count
--  cdata.guides: guide metadata
--  cdata.condit: sample/condition metadata
--  cdata.layers["X_bcmatch"]: barcode-matched guide counts
--  cdata.layers["edits"]: edit counts
--  cdata.uns["allele_counts"]: allele counts per guide and condition
--  cdata.uns["edit_counts"]: edit counts per guide and condition
+-  :bash:`cdata.X`: guide count
+-  :bash:`cdata.guides`: guide metadata
+-  :bash:`cdata.condit`: sample/condition metadata
+-  :bash:`cdata.layers["X_bcmatch"]`: barcode-matched guide counts
+-  :bash:`cdata.layers["edits"]`: edit counts
+-  :bash:`cdata.uns["allele_counts"]`: allele counts per guide and condition
+-  :bash:`cdata.uns["edit_counts"]`: edit counts per guide and condition
 
 :bash:`guides` attribute contains the information about each guide.
 

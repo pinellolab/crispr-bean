@@ -1,9 +1,10 @@
 # beret
 Base Editing with REporter analysis Toolkit.
 
-## Installation
-Clone and do 
+## Installation 
 ```
+git clone https://github.com/pinellolab/beret.git
+cd beret/
 pip install -e .
 ```
 

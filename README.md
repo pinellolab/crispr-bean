@@ -1,5 +1,5 @@
 # beret
-Tool for analyzing CRISPR data with reporter edit counts.
+Base Editing with REporter analysis Toolkit.
 
 ## Installation
 Clone and do 

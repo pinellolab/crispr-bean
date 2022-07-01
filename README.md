@@ -25,12 +25,6 @@ beret-count-samples  \
 
 This produces `.h5ad` and `.xlsx` file.
 
-## Analysis
-```
-adata.log_norm
-adata.log_fold_change_aggregate("bot", "top")
-``` 
-
 ## Using as python module
 ```
 import beret as br

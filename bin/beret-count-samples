@@ -7,7 +7,7 @@ import argparse
 from multiprocessing import Pool
 import pandas as pd
 import anndata as ad
-import crisprep
+import beret
 
 logging.basicConfig(level=logging.INFO,
                      format='%(levelname)-5s @ %(asctime)s:\n\t %(message)s \n',
@@ -23,7 +23,7 @@ info    = logging.info
 
 def get_input_parser():
     """Get the input data"""
-    print('  \n~~~CRISPRepCount~~~')
+    print('  \n~~~beretCount~~~')
     print('-Utility to perform sgRNA and reporter count from CRISPR base editors-')
     print(r'''
           )                                             )
@@ -81,9 +81,9 @@ def count_sample(R1, R2, sample_id, args):
     edited_to = base_editing_map[edited_from]
     match_target_pos = args_dict["match_target_pos"]
 
-    counter = crisprep.pp.GuideEditCounter(**args_dict)
+    counter = beret.pp.GuideEditCounter(**args_dict)
     if os.path.exists("{}.h5ad".format(counter.output_dir)) and not args_dict["rerun"]:
-        screen = crisprep.read_h5ad("{}.h5ad".format(counter.output_dir))
+        screen = beret.read_h5ad("{}.h5ad".format(counter.output_dir))
         if counter.count_reporter_edits:
             pass
             #screen.get_edit_mat_from_uns(edited_from, edited_to, match_target_pos)
@@ -122,11 +122,11 @@ if __name__ == '__main__':
     #result = p.starmap(count_sample, sample_tbl[0], sample_tbl[1], sample_tbl[2])
     p.close()
 
-    screen = crisprep.concat(result, axis = 1)
+    screen = beret.concat(result, axis = 1)
     if args.name: database_id = args.name
     else: database_id = args.input.split('.')[0]
     output_path = os.path.join(os.path.abspath(args.output_folder),
-            "crisprep_count_%s" % database_id)
+            "beret_count_%s" % database_id)
 
     guide_info_df = pd.read_csv(args.sgRNA_filename)
     try:

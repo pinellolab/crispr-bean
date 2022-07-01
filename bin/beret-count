@@ -16,7 +16,7 @@ from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from Bio.Seq import Seq
 from typing import Dict, List, Union, Tuple
-import crisprep
+import beret
 
 import logging
 
@@ -91,7 +91,7 @@ def mask_sequence_positions(seq: str, pos: np.array) -> str:
 
 def get_input_parser():
     """Get the input data"""
-    print('  \n~~~CRISPRepCount~~~')
+    print('  \n~~~beretCount~~~')
     print('-Utility to perform sgRNA and reporter count from CRISPR base editors-')
     print(r'''
           )                                             )
@@ -212,7 +212,7 @@ if __name__ == '__main__':
     edited_to = base_editing_map[edited_from]
     match_target_pos = args_dict["match_target_pos"]
 
-    counter = crisprep.pp.GuideEditCounter(**args_dict)
+    counter = beret.pp.GuideEditCounter(**args_dict)
     counter.check_filter_fastq()
     
     counter.get_counts()

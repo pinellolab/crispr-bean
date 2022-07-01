@@ -9,7 +9,7 @@ from Bio.Seq import Seq
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 import Levenshtein as lv
 from CRISPResso2 import CRISPResso2Align
-from crisprep.framework.Edit import Allele, Edit
+from beret.framework.Edit import Allele, Edit
 
 class InputFileError(Exception):
     pass

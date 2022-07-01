@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from anndata import AnnData
 import anndata as ad
 from perturb_tools import Screen
-from crisprep.annotate.AminoAcidEdit import AminoAcidAllele, CodingNoncodingAllele
+from beret.annotate.AminoAcidEdit import AminoAcidAllele, CodingNoncodingAllele
 from .Edit import Edit, Allele
 from ..framework._supporting_fn import get_aa_alleles, filter_allele_by_pos
 

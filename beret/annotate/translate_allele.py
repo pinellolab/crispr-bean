@@ -1,8 +1,8 @@
 from typing import List
 import numpy as np
 from Bio import SeqIO
-from crisprep.framework.Edit import Edit, Allele
-from crisprep.annotate.AminoAcidEdit import AminoAcidEdit, AminoAcidAllele, CodingNoncodingAllele
+from beret.framework.Edit import Edit, Allele
+from beret.annotate.AminoAcidEdit import AminoAcidEdit, AminoAcidAllele, CodingNoncodingAllele
 import logging
 import sys
 

@@ -1,4 +1,4 @@
-# crisprep
+# beret
 Tool for analyzing CRISPR data with reporter edit counts.
 
 ## Installation
@@ -9,10 +9,10 @@ pip install -e .
 
 ## Count reporter screen data
 ```
-crisprep-count-samples  \
+beret-count-samples  \
   --input sample_list.csv   \ # sample with lines 'R1_filepath,R2_filepath,sample_name\n'  
   -b A  \ # base that is being edited (A/G)
-  -f ../../../gRNA_info/LDLvar_gRNA_crisprep.csv  \ # sgRNA information 
+  -f ../../../gRNA_info/LDLvar_gRNA_beret.csv  \ # sgRNA information 
   -n sample  \ # number of sample  
   -o .  \ # output directory    
   -a  \ # read allele information  
@@ -32,8 +32,8 @@ adata.log_fold_change_aggregate("bot", "top")
 
 ## Using as python module
 ```
-import crisprep as cp
-cdata = cp.read_h5ad("crisprep_counts_sample.h5ad")
+import beret as cp
+cdata = cp.read_h5ad("beret_counts_sample.h5ad")
 ```
 
-See the [tutorial](crisprep_test.rst) for more detail.
+See the [tutorial](beret_test.rst) for more detail.

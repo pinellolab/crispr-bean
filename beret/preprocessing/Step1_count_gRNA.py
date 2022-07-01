@@ -447,12 +447,12 @@ if __name__ == '__main__':
         N_READS_INPUT = read_count_match(args.R1, args.R2)
 
         database_id = get_database_id(args)
-        OUTPUT_DIRECTORY='CRISPRepCount_on_%s' % database_id
+        OUTPUT_DIRECTORY='beretCount_on_%s' % database_id
         if args.output_folder:
                 OUTPUT_DIRECTORY=os.path.join(os.path.abspath(args.output_folder),OUTPUT_DIRECTORY)
         
         _jp=lambda filename: os.path.join(OUTPUT_DIRECTORY,filename) #handy function to put a file in the output directory
-        log_filename=_jp('CRISPRepCount_RUNNING_LOG.txt')
+        log_filename=_jp('beretCount_RUNNING_LOG.txt')
         
         
         try:

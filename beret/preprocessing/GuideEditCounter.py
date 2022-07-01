@@ -10,9 +10,9 @@ import numpy as np
 import pandas as pd
 from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqPhredIterator
-from crisprep import ReporterScreen, Edit, Allele
+from beret import ReporterScreen, Edit, Allele
 
-# from crisprep.framework.Edit import Allele
+# from beret.framework.Edit import Allele
 
 from ._supporting_fn import (
     _base_edit_to_from,
@@ -85,7 +85,7 @@ class GuideEditCounter:
         self.database_id = self._get_database_name()
         self.output_dir = os.path.join(
             os.path.abspath(kwargs["output_folder"]),
-            "crisprep_count_%s" % self.database_id,
+            "beret_count_%s" % self.database_id,
         )
         self._write_start_log()
 
@@ -616,7 +616,7 @@ class GuideEditCounter:
             print("Creating Folder %s" % self.output_dir)
         except:
             print("Folder %s already exists." % self.output_dir)
-        self.log_filename = self._jp("CRISPRepCount_RUNNING_LOG.txt")
+        self.log_filename = self._jp("beretCount_RUNNING_LOG.txt")
         logging.getLogger().addHandler(logging.FileHandler(self.log_filename))
         with open(self.log_filename, "w+") as outfile:
             outfile.write(

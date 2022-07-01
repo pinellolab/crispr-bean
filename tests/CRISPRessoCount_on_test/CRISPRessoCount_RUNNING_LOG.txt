@@ -1,5 +1,5 @@
 [Command used]:
-CRISPRessoCount ../crisprep/preprocessing/count_guides_edits.py --R1 test_R1.fastq --R2 test_R2.fastq -f test_guide_info.csv -b A -r
+CRISPRessoCount ../beret/preprocessing/count_guides_edits.py --R1 test_R1.fastq --R2 test_R2.fastq -f test_guide_info.csv -b A -r
 
 [Execution log]:
 In the filtering, bases up to position 47 of R1 and 36 of R2 are considered.

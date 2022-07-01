@@ -31,7 +31,7 @@ beret-count-samples         \
 
 This produces `.h5ad` and `.xlsx` file with guide and per-guide allele counts.  
 `.h5ad` file follows annotated matrix format compatible with `AnnData` and is based on `Screen` object in [purturb_tools](https://github.com/pinellolab/perturb-tools) and contains the per-guide allele counts.    
-<img src="screendata.svg" alt="screendata" width="500"/>
+<img src="screendata.svg" alt="screendata" width="700"/>
 
 ## Using as python module
 ```

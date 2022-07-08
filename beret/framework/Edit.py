@@ -1,11 +1,12 @@
 from enum import unique
-from typing import Iterable, Literal
+from typing import Iterable
 
 class Edit:
     reverse_map = {"A":"T", "C":"G", "T":"A", "G":"C", "-":"-"}
     strand_map = {"+":1, "-":-1}
-    def __init__(self, rel_pos: int, ref_base: chr, alt_base: chr, offset: int = None, strand: Literal[1, -1] = 1, 
+    def __init__(self, rel_pos: int, ref_base: chr, alt_base: chr, offset: int = None, strand: int = 1, 
     unique_identifier = None):
+        assert strand in [+1, -1]
         strand_to_symbol = {1:'+', -1:'-'}
         self.rel_pos = rel_pos  
         self.ref_base = ref_base  # TODO make it ref / alt instead of ref_base and alt_base for AAEdit comp. or make abstract class

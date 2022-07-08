@@ -1,4 +1,4 @@
-from typing import Set, Literal, Iterable
+from typing import Set, Iterable
 import os
 from os import path
 import sys
@@ -517,10 +517,11 @@ class GuideEditCounter:
 
     def _get_fastq_handle(
         self,
-        out_type: Literal[
-            "semimatch", "nomatch", "duplicate_wo_barcode", "duplicate"
-        ] = None,
+        out_type: str = None,
     ):
+        assert out_type in [
+            "semimatch", "nomatch", "duplicate_wo_barcode", "duplicate"
+        ]
         R1_filename = self.R1_filename.replace(".fastq", "_{}.fastq".format(out_type))
         R2_filename = self.R2_filename.replace(".fastq", "_{}.fastq".format(out_type))
         R1_handle = _get_fastq_handle(R1_filename, "w")

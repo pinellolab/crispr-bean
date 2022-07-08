@@ -11,7 +11,7 @@ setuptools.setup(
      description="Tools for analyzing CRISPR data with REPorter edits",
      long_description=long_description,
      long_description_content_type="text/markdown",
-     url="https://github.com/jykr/beret",
+     url="https://github.com/pinellolab/beret",
      packages=setuptools.find_packages(),
      scripts=["bin/beret-count",
      "bin/beret-count-samples"],

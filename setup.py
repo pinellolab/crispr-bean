@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='beret',  
-     version='0.0.1',
+     version='0.5.1',
      author="Jayoung Ryu",
      author_email="jayoung_ryu@g.harvard.edu",
      description="Tools for analyzing CRISPR data with REPorter edits",

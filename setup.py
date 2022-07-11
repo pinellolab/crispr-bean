@@ -15,6 +15,10 @@ setuptools.setup(
      packages=setuptools.find_packages(),
      scripts=["bin/beret-count",
      "bin/beret-count-samples"],
+     install_requires=[
+        'numpy',
+        'git+https://github.com/pinellolab/perturb-tools'
+      ],
      classifiers=[
          "Programming Language :: Python :: 3",
          "License :: OSI Approved :: MIT License",

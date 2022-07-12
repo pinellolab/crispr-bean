@@ -1,5 +1,5 @@
 from turtle import position
-from typing import List, Union, Literal
+from typing import List, Union
 import subprocess as sb
 import numpy as np
 import pandas as pd
@@ -123,7 +123,7 @@ def _get_edited_allele(
     ref_seq: str,
     query_seq: str,
     offset: int,
-    strand: Literal[1, -1] = 1,
+    strand: int = 1,
     start_pos: int = 0,
     end_pos: int = 100,
 ):
@@ -203,13 +203,14 @@ def _get_edited_allele_crispresso(
     query_seq: str,
     aln_mat_path: str,
     offset: int,
-    strand: Literal[1, -1] = 1,
+    strand: int = 1,
     start_pos: int = 0,
     end_pos: int = 100,
     positionwise_quality: np.ndarray = None,
     quality_thres: float = 30
 ):
     aln_matrix = read_matrix(aln_mat_path)
+    assert strand in [-1, +1]
     gap_incentive = np.zeros(len(ref_seq) + 1, dtype = np.int)
     query_aligned, ref_aligned, _ = global_align(
         query_seq, 

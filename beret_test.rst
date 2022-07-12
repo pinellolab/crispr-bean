@@ -12,8 +12,9 @@ Load the required packages. (Anndata import isn't required to use the package).
     import matplotlib.pyplot as plt
     import beret as br
 
-
-beret `ReporterScreen` object and perturb-seq Screen` object are both `anndata` compatible.
+.. role:: bash(code)
+   :language: bash
+beret :bash:`ReporterScreen` object and perturb-seq :bash:`Screen` object are both :bash:`anndata` compatible.
 
 .. code:: ipython3
 
@@ -56,15 +57,15 @@ beret `ReporterScreen` object and perturb-seq Screen` object are both `anndata` 
        layers:    'X_bcmatch', 'edits'
        uns:       'allele_counts', 'edit_counts'
 
--  cdata.X: guide count
--  cdata.guides: guide metadata
--  cdata.condit: sample/condition metadata
--  cdata.layers["X_bcmatch"]: barcode-matched guide counts
--  cdata.layers["edits"]: edit counts
--  cdata.uns["allele_counts"]: allele counts per guide and condition
--  cdata.uns["edit_counts"]: edit counts per guide and condition
+-  :bash:`cdata.X`: guide count
+-  :bash:`cdata.guides`: guide metadata
+-  :bash:`cdata.condit`: sample/condition metadata
+-  :bash:`cdata.layers["X_bcmatch"]`: barcode-matched guide counts
+-  :bash:`cdata.layers["edits"]`: edit counts
+-  :bash:`cdata.uns["allele_counts"]`: allele counts per guide and condition
+-  :bash:`cdata.uns["edit_counts"]`: edit counts per guide and condition
 
-`guides` attribute contains the information about each guide.
+:bash:`guides` attribute contains the information about each guide.
 
 .. code:: ipython3
 
@@ -388,7 +389,7 @@ beret `ReporterScreen` object and perturb-seq Screen` object are both `anndata` 
     </div>
 
 
-`condit` attribute contains the sample and condition specific information.
+:bash:`condit` attribute contains the sample and condition specific information.
 
 .. code:: ipython3
 
@@ -501,7 +502,7 @@ beret `ReporterScreen` object and perturb-seq Screen` object are both `anndata` 
     </div>
 
 
-Allele_counts information is stored in `.uns["allele_counts"]`.
+Allele_counts information is stored in :bash:`.uns["allele_counts"]`.
 
 .. code:: ipython3
 

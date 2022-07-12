@@ -114,16 +114,12 @@ def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
     
 
 class CDS():  
-    fasta_file_name = "/data/pinello/PROJECTS/2021_08_ANBE/data/LDLR/exons.fa"
-    translated_seq, genomic_pos = _get_seq_pos_from_fasta(fasta_file_name)
-    nt = translated_seq
-    pos = np.array(genomic_pos)
-    
-    def __init__(self):
+    def __init__(self, fasta_file_name="ldlr_exons.fa"):
         self.edited_nt = type(self).nt.copy()
         self.edited_aa_pos = set()
         self.edits_noncoding = set()
-    
+        self.set_exon_fasta_name(fasta_file_name)
+        
     @classmethod
     def set_exon_fasta_name(cls, fasta_file_name: str):
         cls.fasta_file_name = fasta_file_name

@@ -4,8 +4,8 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-     name='beret',  
-     version='0.0.1',
+     name='berets',  
+     version='0.0.2',
      author="Jayoung Ryu",
      author_email="jayoung_ryu@g.harvard.edu",
      description="Tools for analyzing CRISPR data with REPorter edits",
@@ -17,8 +17,7 @@ setuptools.setup(
      "bin/beret-count-samples"],
      install_requires=[
         'numpy',
-        'perturb-tools @ git+https://github.com/pinellolab/perturb-tools',
-        'CRISPResso2 @ git+https://github.com/pinellolab/CRISPResso2'
+        'perturb-tools',
       ],
      classifiers=[
          "Programming Language :: Python :: 3",

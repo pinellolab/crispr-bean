@@ -17,7 +17,8 @@ setuptools.setup(
      "bin/beret-count-samples"],
      install_requires=[
         'numpy',
-        'perturb-tools @ git+https://github.com/pinellolab/perturb-tools'
+        'perturb-tools @ git+https://github.com/pinellolab/perturb-tools',
+        'CRISPResso2 @ git+https://github.com/pinellolab/CRISPResso2'
       ],
      classifiers=[
          "Programming Language :: Python :: 3",

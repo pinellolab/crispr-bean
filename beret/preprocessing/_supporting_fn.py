@@ -7,7 +7,7 @@ import gzip
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
-from CRISPResso2.CRISPResso2Align import read_matrix, global_align
+from beret.preprocessing.CRISPResso2Align import read_matrix, global_align
 from beret.framework.Edit import Allele, Edit
 
 class InputFileError(Exception):

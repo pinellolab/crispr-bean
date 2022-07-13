@@ -5,19 +5,9 @@ This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The r
 <img src="anbe.svg" alt="anbe" width="500"/>
 
 ## Installation 
-This package requires [CRISPResso2](https://github.com/pinellolab/CRISPResso2).
-```
-conda install CRISPResso2
-```
 Downloading from PyPI:
 ```
 pip install berets
-```
-Downloading from github:
-```
-git clone https://github.com/pinellolab/beret.git
-cd beret/
-pip install -e .
 ```
 
 ## Count reporter screen data  

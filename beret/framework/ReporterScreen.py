@@ -349,7 +349,7 @@ class ReporterScreen(Screen):
         allele_count_df["str_allele"] = allele_count_df.allele.map(str)
         allele_count_df = allele_count_df.groupby(["guide", "str_allele"]).sum().reset_index()
         allele_count_df.insert(1, "allele", allele_count_df.str_allele.map(lambda s: Allele.from_str(s)))
-        allele_count_df.drop("str_allele", axis=1)
+        allele_count_df = allele_count_df.drop("str_allele", axis=1)
         print("{} edits filtered from {} alleles.".format(sum(filtered_edits), len(filtered_edits)))
         return(allele_count_df)
         

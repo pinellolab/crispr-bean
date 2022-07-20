@@ -15,7 +15,8 @@ pool = None
 def sum_column_groups(mat, column_index_list):
     cols = []
     for colidx in column_index_list:
-        cols.append(mat[:,colidx].sum(axis=1))
+        cols.append(mat[:,np.array(colidx)].sum(axis=1, keepdims = True))
+        
     group_sums = np.concatenate(cols, axis=1)
     return(group_sums)
 
@@ -27,12 +28,20 @@ def get_edit_significance_to_ctrl(sample_adata, ctrl_adata, aggregate_cond = Non
     if not "edit_counts" in ctrl_adata.uns.keys():
         ctrl_adata.uns['edit_counts'] = ctrl_adata.get_edit_from_allele()
 
+    edit_counts_ctrl = ctrl_adata.uns['edit_counts']
+
+    
+    
     if not aggregate_cond is None:
         conds = sample_adata.condit.reset_index().groupby(aggregate_cond).groups
-        edit_counts_raw = sample_adata.uns['edit_counts'][['guide', 'edit'] + sample_columns].set_index(['guide', 'edit'])
-        edit_counts_sample = sample_adata.uns['edit_counts'][['guide', 'edit']]
+        edit_counts_raw = sample_adata.uns['edit_counts'][
+            ['guide', 'edit'] + sample_columns].set_index(['guide', 'edit'])
+        edit_counts_sample = sample_adata.uns['edit_counts'][['guide', 'edit']].set_index(['guide', 'edit'])
+        
         for k, col_idx in conds.items():
-            edit_counts_sample[k] = edit_counts_raw.iloc[:,col_idx].sum(axis=1)
+            edit_counts_sample[k] = edit_counts_raw.iloc[:,np.array(col_idx.tolist())].sum(axis=1)
+            
+            
         n_samples = len(conds.keys())
         sample_columns = conds.keys()
     else:
@@ -42,11 +51,12 @@ def get_edit_significance_to_ctrl(sample_adata, ctrl_adata, aggregate_cond = Non
                                   how = 'outer').fillna(0)
     guide_count_ctrl = ctrl_adata._get_allele_norm(edit_counts_merged, thres = 0)[:,0]
     guide_count_sample = sample_adata._get_allele_norm(edit_counts_merged, thres = 0)
-    edit_counts_ctrl = ctrl_adata.uns['edit_counts']
+    
     
     edit_counts_merged = edit_counts_merged.set_index(['guide', 'edit'])
     if not aggregate_cond is None:
-        guide_count_sample = sum_column_groups(guide_count_sample, conds.keys())
+        guide_count_sample = sum_column_groups(guide_count_sample, conds.values())
+        
     
     sample_edit = edit_counts_merged[sample_columns]
     ctrl_edit = edit_counts_merged.iloc[:,-1]

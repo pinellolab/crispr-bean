@@ -293,13 +293,15 @@ class ReporterScreen(Screen):
                 prior_weight = 1
             n_edits = self.layers[edit_layer][:, bulk_idx].sum(axis=1)
             n_counts = self.layers[count_layer][:, bulk_idx].sum(axis=1)
-            self.guides["edit_rate"] = (n_edits + prior_weight / 2) / \
+            edit_rate = (n_edits + prior_weight / 2) / \
                 ((n_counts*num_targetable_sites) + prior_weight/2)
-            self.guides["edit_rate"][n_counts < bcmatch_thres] = np.nan
+            edit_rate[n_counts < bcmatch_thres] = np.nan
             if normalize_by_editable_base:
-                self.guides["edit_rate"][num_targetable_sites == 0] = np.nan
+                edit_rate[num_targetable_sites == 0] = np.nan
             if return_result:
-                return(n_edits, n_counts)
+                return(edit_rate)
+            else:
+                self.guides["edit_rate"] = edit_rate
         else:
             raise ValueError("edits or barcode matched guide counts not available.")
 

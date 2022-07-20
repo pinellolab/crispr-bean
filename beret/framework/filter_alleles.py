@@ -1,11 +1,13 @@
 from functools import reduce
 import multiprocessing
 import numpy as np
-import mlcrate as mlc
-import pandas as pd
-from beret.framework.Edit import Allele
 from scipy.stats import fisher_exact
 from tqdm.auto import tqdm
+import pandas as pd
+import swifter
+import mlcrate as mlc
+from beret.framework.Edit import Allele
+
 
 tqdm.pandas()
 pool = None
@@ -76,7 +78,7 @@ def _row_filter_allele(row, sample_guide_to_sig_edit_dict):
 
 def _filter_allele_sample(sample_allele_tbl, sample_guide_to_sig_edit_dict):
     sample_allele_tbl = sample_allele_tbl.reset_index()
-    sample_allele_tbl['filtered_allele_str'] = sample_allele_tbl.progress_apply(
+    sample_allele_tbl['filtered_allele_str'] = sample_allele_tbl.swifter.apply(
         lambda row: _row_filter_allele(row, sample_guide_to_sig_edit_dict), axis=1).map(str)
     sample_filtered_allele_tbl = sample_allele_tbl.groupby(['guide', 'filtered_allele_str']).sum().reset_index()
     sample_filtered_allele_tbl = sample_filtered_allele_tbl.loc[
@@ -86,20 +88,28 @@ def _filter_allele_sample(sample_allele_tbl, sample_guide_to_sig_edit_dict):
 
 def _filter_alleles(allele_df, edit_significance_tbl):
     allele_df = allele_df.copy().set_index(['guide', 'allele'])
-    def _filter_allele_sample_multiproc(i):
+    def _get_sample_data(i):
         sample_allele_df = allele_df.iloc[:,i]
         sample_allele_df = sample_allele_df[sample_allele_df > 0]
         sample_sig_edit = edit_significance_tbl.iloc[:, i]
         sample_sig_edit = sample_sig_edit.loc[sample_sig_edit]
         sample_guide_to_sig_edit_dict = sample_sig_edit.index.to_frame().reset_index(drop=True).groupby('guide')['edit'].apply(list).to_dict()
-        return(_filter_allele_sample(sample_allele_df, sample_guide_to_sig_edit_dict))
+        return(sample_allele_df, sample_guide_to_sig_edit_dict)
+    # def _filter_allele_sample_multiproc(i):
+    #     sample_allele_df = allele_df.iloc[:,i]
+    #     sample_allele_df = sample_allele_df[sample_allele_df > 0]
+    #     sample_sig_edit = edit_significance_tbl.iloc[:, i]
+    #     sample_sig_edit = sample_sig_edit.loc[sample_sig_edit]
+    #     sample_guide_to_sig_edit_dict = sample_sig_edit.index.to_frame().reset_index(drop=True).groupby('guide')['edit'].apply(list).to_dict()
+    #     return(_filter_allele_sample(sample_allele_df, sample_guide_to_sig_edit_dict))
 #    filtered_allele_dfs = []
 #     for j in tqdm(range(len(allele_df.columns))):
 #         filtered_allele_dfs.append(_filter_allele_sample_multiproc(j))
+    sample_data = [_get_sample_data(i) for i in range(len(allele_df.columns))]
+    f = lambda x: _filter_allele_sample(*x)
     global pool
     pool.pool.restart()
-    filtered_allele_dfs = pool.map(_filter_allele_sample_multiproc, 
-                                        list(range(len(allele_df.columns))))
+    filtered_allele_dfs = pool.map(f, sample_data)
     pool.exit()
     try:
         filtered_alleles = reduce(lambda left, right: left.join(right, how="outer"), filtered_allele_dfs).reset_index()

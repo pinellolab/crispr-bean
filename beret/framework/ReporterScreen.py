@@ -462,7 +462,10 @@ class ReporterScreen(Screen):
         super(ReporterScreen, adata).write(out_path)
 
 
-
+def _convert_obj_column_to_str(df, obj_column):
+    df = df.rename(columns={obj_column:"obj_col"})
+    df[obj_column] = df['obj_col'].map(str)
+    df = df.drop('obj_col', axis=1)
 
 def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
     # TODO: var/obs info not concated if doesn't overlap
@@ -490,11 +493,20 @@ def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
                 merge_on = ["guide", "edit"]
             elif k == "allele_counts":
                 merge_on = ["guide", "allele"]
+            elif k == "sig_allele_counts":
+                merge_on = ["guide", "allele"]
             elif k == "guide_reporter_allele_counts":
                 merge_on = ["guide", "reporter_allele", "guide_allele"]
             else:
                 print("uns '{}' ignored during concat.".format(k))
                 continue
+
+            screen_uns_dfs = [screen.uns[k] for screen in screens]
+            if "edit" in merge_on:
+                screen_uns_dfs = [_convert_obj_column_to_str(df, "edit") for df in screen_uns_dfs]
+            if "allele" in merge_on:
+                screen_uns_dfs = [_convert_obj_column_to_str(df, "allele") for df in screen_uns_dfs]
+                
             for i, screen in enumerate(screens):
                 if i == 0:
                     adata.uns[k] = screen.uns[k]
@@ -511,9 +523,20 @@ def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
                             print(k)
                             print(screen.uns[k])
             adata.uns[k] = adata.uns[k].fillna(0)
+            if "edit" in merge_on:
+                df = adata.uns[k].rename(columns={"edit":"edit_str"})
+                df['edit'] = df['edit_str'].map(lambda s: Edit.from_str(s))
+                adata.uns[k] = df.drop('edit_str', axis=1)
+                
+            if "allele" in merge_on:
+                df = adata.uns[k].rename(columns={"allele":"allele_str"})
+                df['allele'] = df['allele_str'].map(lambda s: Allele.from_str(s))
+                adata.uns[k] = df.drop('allele_str', axis=1)
+
             float_col = adata.uns[k].select_dtypes(include=["float64"])
             for col in float_col.columns.values:
                 adata.uns[k][col] = adata.uns[k][col].astype("int64")
+            
 
     return ReporterScreen.from_adata(adata)
 

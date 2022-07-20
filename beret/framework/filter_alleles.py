@@ -1,13 +1,21 @@
-from scipy.stats import fisher_exact
-import pandas as pd
-from tqdm.notebook import tqdm
+from functools import reduce
 import multiprocessing
+import numpy as np
 import mlcrate as mlc
+import pandas as pd
 from beret.framework.Edit import Allele
+from scipy.stats import fisher_exact
+from tqdm.auto import tqdm
 
+tqdm.pandas()
+pool = None
 
 def get_edit_significance_to_ctrl(sample_adata, ctrl_adata):
     sample_columns = sample_adata.condit['index'].tolist()
+    if not "edit_counts" in sample_adata.uns.keys():
+        sample_adata.uns['edit_counts'] = sample_adata.get_edit_from_allele()
+    if not "edit_counts" in ctrl_adata.uns.keys():
+        ctrl_adata.uns['edit_counts'] = ctrl_adata.get_edit_from_allele()
     edit_counts_ctrl = ctrl_adata.uns['edit_counts']
     edit_counts_sample = sample_adata.uns['edit_counts'][['guide', 'edit'] + sample_columns]
     edit_counts_merged = pd.merge(edit_counts_sample, edit_counts_ctrl, on = ['guide', 'edit'], 
@@ -17,22 +25,25 @@ def get_edit_significance_to_ctrl(sample_adata, ctrl_adata):
     edit_counts_merged = edit_counts_merged.set_index(['guide', 'edit'])
 
     sample_edit = edit_counts_merged[sample_columns]
-    ctrl_edit = edit_counts_merged['LDLRCDS_plasmid']
-    odds_ratios_tbl = pd.DataFrame().reindex_like(sample_edit)
-    p_value_tbl = pd.DataFrame().reindex_like(sample_edit)
+    ctrl_edit = edit_counts_merged.iloc[:,-1]
     
     def fisher_test_single_sample(j):
         odds_ratio_series = pd.Series(dtype='float64').reindex_like(ctrl_edit)
         p_value_series = pd.Series(dtype='float64').reindex_like(ctrl_edit)
-
         for i in tqdm(range(len(edit_counts_merged))):
+            if sample_edit.iloc[i, j] == 0: 
+                odds_ratio_series[i], p_value_series[i] = 0, 1
+                continue
             fisher_tbl = [[sample_edit.iloc[i, j], guide_count_sample[i, j] - sample_edit.iloc[i, j]],
                             [ctrl_edit.iloc[i], guide_count_ctrl[i] - ctrl_edit.iloc[i]]]
             odds_ratio_series[i], p_value_series[i] = fisher_exact(fisher_tbl, alternative = "greater")
         return(odds_ratio_series, p_value_series)
     
-    pool = multiprocessing.Pool(len(sample_columns))
+    print("Running fisher exact test of edit significicance...")
+    global pool
+    pool = mlc.SuperPool(len(sample_columns))
     odds_ratios, p_values = zip(*pool.map(fisher_test_single_sample, range(len(sample_columns))))
+    pool.exit()
     
     p_value_tbl = pd.concat(p_values, axis=1)
     p_value_tbl.columns = sample_columns
@@ -77,22 +88,29 @@ def _filter_alleles(allele_df, edit_significance_tbl):
     allele_df = allele_df.copy().set_index(['guide', 'allele'])
     def _filter_allele_sample_multiproc(i):
         sample_allele_df = allele_df.iloc[:,i]
+        sample_allele_df = sample_allele_df[sample_allele_df > 0]
         sample_sig_edit = edit_significance_tbl.iloc[:, i]
         sample_sig_edit = sample_sig_edit.loc[sample_sig_edit]
         sample_guide_to_sig_edit_dict = sample_sig_edit.index.to_frame().reset_index(drop=True).groupby('guide')['edit'].apply(list).to_dict()
         return(_filter_allele_sample(sample_allele_df, sample_guide_to_sig_edit_dict))
-    filtered_allele_dfs = []
+#    filtered_allele_dfs = []
 #     for j in tqdm(range(len(allele_df.columns))):
 #         filtered_allele_dfs.append(_filter_allele_sample_multiproc(j))
-    pool = mlc.SuperPool(len(allele_df.columns))
-    filtered_allele_dfs = zip(*pool.map(_filter_allele_sample_multiproc, 
-                                        range(len(allele_df.columns))))
-    filtered_alleles = pd.DataFrame().join(filtered_allele_dfs, how="outer").reset_index()
-    filtered_alleles.insert(1, 'allele', 
-                                  filtered_alleles.filtered_allele_str.map(
-                                      lambda s: Allele.from_str(s)))
-    filtered_alleles = filtered_alleles.drop('filtered_allele_str', axis=1)
-    return(filtered_alleles)
+    global pool
+    pool.pool.restart()
+    filtered_allele_dfs = pool.map(_filter_allele_sample_multiproc, 
+                                        list(range(len(allele_df.columns))))
+    pool.exit()
+    try:
+        filtered_alleles = reduce(lambda left, right: left.join(right, how="outer"), filtered_allele_dfs).reset_index()
+        filtered_alleles.insert(1, 'allele', 
+                                    filtered_alleles.filtered_allele_str.map(
+                                        lambda s: Allele.from_str(s)))
+        filtered_alleles = filtered_alleles.drop('filtered_allele_str', axis=1)
+        return(filtered_alleles)
+    except Exception as e:
+        print(e)
+        return(filtered_allele_dfs)
 
 def filter_alleles(sample_adata, ctrl_adata, q_thres = 0.05):
     odds_ratio_tbl, q_bonf_tbl = get_edit_significance_to_ctrl(sample_adata, ctrl_adata)

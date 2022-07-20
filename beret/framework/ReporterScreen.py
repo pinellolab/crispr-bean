@@ -64,14 +64,14 @@ class ReporterScreen(Screen):
         for k, df in self.uns.items():
             if "guide" in df.columns:
                 if "allele" in df.columns: 
-                    self.uns[k].allele = self.uns[k].allele.map(lambda s: Allele.from_str(s))
+                    self.uns[k].loc[:, "allele"] = self.uns[k].allele.map(lambda s: Allele.from_str(s))
                 if "edit" in df.columns:
-                    self.uns[k].edit = self.uns[k].edit.map(lambda s: Edit.from_str(s))
+                    self.uns[k].loc[:, "edit"] = self.uns[k].edit.map(lambda s: Edit.from_str(s))
                 if 'reporter_allele' in df.columns and 'guide_allele' in df.columns:
-                    self.uns[k].reporter_allele = self.uns[k].reporter_allele.map(lambda s: Allele.from_str(s))
-                    self.uns[k].guide_allele = self.uns[k].guide_allele.map(lambda s: Allele.from_str(s))
+                    self.uns[k].loc[:, "reporter_allele"] = self.uns[k].reporter_allele.map(lambda s: Allele.from_str(s))
+                    self.uns[k].loc[:, "guide_allele"] = self.uns[k].guide_allele.map(lambda s: Allele.from_str(s))
                 if "aa_allele" in df.columns:
-                    self.uns[k].aa_allele = self.uns[k].aa_allele.map(lambda s: CodingNoncodingAllele.from_str(s))
+                    self.uns[k].loc[:, "aa_allele"] = self.uns[k].aa_allele.map(lambda s: CodingNoncodingAllele.from_str(s))
 
         
         # if "edit_counts" in self.uns.keys():
@@ -211,7 +211,7 @@ class ReporterScreen(Screen):
                 else: continue
                 df_new = df.loc[df.guide.isin(guides_include), key_col + condit_include]
                 df_new = df_new.loc[df_new.loc[:, condit_include].sum(axis=1) > 0, :]
-                new_uns[k] = df_new
+                new_uns[k] = df_new.reset_index(drop=True)
         adata.uns = new_uns
         return(type(self).from_adata(adata))
 
@@ -303,8 +303,8 @@ class ReporterScreen(Screen):
         else:
             raise ValueError("edits or barcode matched guide counts not available.")
 
-    def get_edit_from_allele(self):
-        df = self.uns["allele_counts"].copy()
+    def get_edit_from_allele(self, allele_count_key = "allele_counts"):
+        df = self.uns[allele_count_key].copy()
         df["edits"] = df.allele.map(lambda a: str(a).split(","))
         df = df.explode("edits").groupby(["guide", "edits"]).sum()
         df = df.reset_index().rename(columns={"edits":"edit"})
@@ -318,6 +318,8 @@ class ReporterScreen(Screen):
         '''
         if allele_count_df is None:
             allele_count_df = self.uns["allele_counts"]
+        if "name" not in self.guides.keys() and self.guides.index.name == "name":
+            self.guides = self.guides.reset_index()
         guide_to_idx = self.guides[["name"]].reset_index().set_index("name")
         guide_idx = guide_to_idx["index"][allele_count_df.guide]
         norm_counts = self.layers["X_bcmatch"][guide_idx.values.astype(int), :]
@@ -468,6 +470,9 @@ def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
     if axis == 1:
         if not all(screen.guides.index.equals(screens[0].guides.index) for screen in screens):
             raise ValueError("Guide index doesn't match.")
+        for screen in screens:
+            if screen.var.index.name != "index":
+                screen.var.set_index("index")
 
     adata = ad.concat(screens, *args, axis = axis, **kwargs)
     adata.obs = screens[0].guides
@@ -500,7 +505,8 @@ def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
                         )
                     except:
                         print("Error occurred concatenating '{}' for {}:".format(k, screen))
-                        if not k in screen.uns.keys(): print("Warning: '{}' not in this screen. Skipping...".format(k))
+                        if not k in screen.uns.keys(): 
+                            print("Warning: '{}' not in this screen. Skipping...".format(k))
                         else:
                             print(k)
                             print(screen.uns[k])

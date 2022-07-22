@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import List, Tuple
 from .Edit import Edit, Allele
 from ..annotate.translate_allele import CDS, RefBaseMismatchException
@@ -14,21 +15,21 @@ def filter_allele_by_pos(
     number of filtered edits.
     '''
     filtered_edits = 0
-    
+    allele_filtered = deepcopy(allele)
     if not (pos_start is None and pos_end is None):
         if filter_rel_pos:
-            for edit in allele.edits.copy():
+            for edit in allele.edits:
                 if not (edit.rel_pos >= pos_start and edit.rel_pos < pos_end): 
                     filtered_edits += 1
-                    allele.edits.remove(edit)
+                    allele_filtered.edits.remove(edit)
         else:
-            for edit in allele.edits.copy():
+            for edit in allele.edits:
                 if not (edit.pos >= pos_start and edit.pos < pos_end): 
                     filtered_edits += 1
-                    allele.edits.remove(edit)
+                    allele_filtered.edits.remove(edit)
     else:
         print("No threshold specified") # TODO: warn
-    return(allele, filtered_edits)
+    return(allele_filtered, filtered_edits)
 
 def filter_allele_by_base(
     allele: Allele,

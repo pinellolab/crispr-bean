@@ -156,10 +156,31 @@ class ReporterScreen(Screen):
                         index_pair = ["guide", "reporter_allele", "guide_allele"]
                     else:
                         continue
+                    if 'edit' in index_pair:
+                        self.uns[k]['edit_str'] = self.uns[k].edit.map(str)
+                        other.uns[k]['edit_str'] = other.uns[k].edit.map(str)
+                        self.uns[k] = self.uns[k].drop('edit', axis=1)
+                        other.uns[k] = other.uns[k].drop('edit', axis=1)
+                        index_pair.remove('edit')
+                        index_pair.append('edit_str')
+                    if 'allele' in index_pair:
+                        self.uns[k]['allele_str'] = self.uns[k].allele.map(str)
+                        other.uns[k]['allele_str'] = other.uns[k].allele.map(str)
+                        self.uns[k] = self.uns[k].drop('allele', axis=1)
+                        other.uns[k] = other.uns[k].drop('allele', axis=1)
+                        index_pair.remove('allele')
+                        index_pair.append('allele_str')
                     self_df = self.uns[k].set_index(index_pair, drop = True)
                     add_df = other.uns[k].set_index(index_pair, drop = True)
                     add_df = add_df.loc[:,self_df.columns]
                     added_uns[k] = self_df.add(add_df, fill_value = 0).astype(int).reset_index()
+
+                    if 'edit_str' in index_pair:
+                        added_uns[k].insert(1, 'edit', added_uns[k].edit_str.map(lambda s: Edit.from_str(s)))
+                        added_uns[k] = added_uns[k].drop('edit_str', axis=1)
+                    if 'allele_str' in index_pair:
+                        added_uns[k].insert(1, 'allele', added_uns[k].allele_str.map(lambda s: Allele.from_str(s)))
+                        added_uns[k] = added_uns[k].drop('allele_str', axis=1)
 
                 if "X_bcmatch" in self.layers and "X_bcmatch" in other.layers:
                 
@@ -477,7 +498,8 @@ def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
             raise ValueError("Guide index doesn't match.")
         for screen in screens:
             if screen.var.index.name != "index":
-                screen.var.set_index("index")
+                if "index" in screen.var.columns:
+                    screen.var = screen.var.set_index("index")
 
     adata = ad.concat(screens, *args, axis = axis, **kwargs)
     adata.obs = screens[0].guides
@@ -527,12 +549,12 @@ def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
             adata.uns[k] = adata.uns[k].fillna(0)
             if "edit" in merge_on:
                 df = adata.uns[k].rename(columns={"edit":"edit_str"})
-                df['edit'] = df['edit_str'].map(lambda s: Edit.from_str(s))
+                df.insert(1, 'edit', df['edit_str'].map(lambda s: Edit.from_str(s)))
                 adata.uns[k] = df.drop('edit_str', axis=1)
                 
             if "allele" in merge_on:
                 df = adata.uns[k].rename(columns={"allele":"allele_str"})
-                df['allele'] = df['allele_str'].map(lambda s: Allele.from_str(s))
+                df.insert(1, 'allele', df['allele_str'].map(lambda s: Allele.from_str(s)))
                 adata.uns[k] = df.drop('allele_str', axis=1)
 
             float_col = adata.uns[k].select_dtypes(include=["float64"])

@@ -16,7 +16,31 @@ def sum_column_groups(mat, column_index_list):
     group_sums = np.concatenate(cols, axis=1)
     return(group_sums)
 
-def get_edit_significance_to_ctrl(sample_adata, ctrl_adata, aggregate_cond = None):
+def fisher_test_single_sample_multiproc(j):
+    odds_ratio_series = pd.Series(dtype='float64').reindex_like(ctrl_edit)
+    p_value_series = pd.Series(dtype='float64').reindex_like(ctrl_edit)
+    for i in tqdm(range(len(sample_edit))):
+        if sample_edit.iloc[i, j] == 0: 
+            odds_ratio_series[i], p_value_series[i] = 0, 1
+            continue
+        fisher_tbl = [[sample_edit.iloc[i, j], guide_count_sample[i, j] - sample_edit.iloc[i, j]],
+                        [ctrl_edit.iloc[i], guide_count_ctrl[i] - ctrl_edit.iloc[i]]]
+        odds_ratio_series[i], p_value_series[i] = fisher_exact(fisher_tbl, alternative = "greater")
+    return(odds_ratio_series, p_value_series)
+
+def fisher_test_single_sample(j, sample_edit, ctrl_edit, guide_count_sample, guide_count_ctrl):
+    odds_ratio_series = pd.Series(dtype='float64').reindex_like(ctrl_edit)
+    p_value_series = pd.Series(dtype='float64').reindex_like(ctrl_edit)
+    for i in tqdm(range(len(sample_edit))):
+        if sample_edit.iloc[i, j] == 0: 
+            odds_ratio_series[i], p_value_series[i] = 0, 1
+            continue
+        fisher_tbl = [[sample_edit.iloc[i, j], guide_count_sample[i, j] - sample_edit.iloc[i, j]],
+                        [ctrl_edit.iloc[i], guide_count_ctrl[i] - ctrl_edit.iloc[i]]]
+        odds_ratio_series[i], p_value_series[i] = fisher_exact(fisher_tbl, alternative = "greater")
+    return(odds_ratio_series, p_value_series)
+
+def get_edit_significance_to_ctrl(sample_adata, ctrl_adata, aggregate_cond = None, run_parallel = False):
     if 'index' in sample_adata.condit.columns:
         sample_columns = sample_adata.condit['index'].tolist()
     else:
@@ -26,7 +50,6 @@ def get_edit_significance_to_ctrl(sample_adata, ctrl_adata, aggregate_cond = Non
         sample_adata.uns['edit_counts'] = sample_adata.get_edit_from_allele()
     if not "edit_counts" in ctrl_adata.uns.keys():
         ctrl_adata.uns['edit_counts'] = ctrl_adata.get_edit_from_allele()
-
     edit_counts_ctrl = ctrl_adata.uns['edit_counts']
 
     if not aggregate_cond is None:
@@ -34,16 +57,12 @@ def get_edit_significance_to_ctrl(sample_adata, ctrl_adata, aggregate_cond = Non
         edit_counts_raw = sample_adata.uns['edit_counts'][
             ['guide', 'edit'] + sample_columns].set_index(['guide', 'edit'])
         edit_counts_sample = sample_adata.uns['edit_counts'][['guide', 'edit']].set_index(['guide', 'edit'])
-        
         for k, col_idx in conds.items():
             edit_counts_sample[k] = edit_counts_raw.iloc[:,np.array(col_idx.tolist())].sum(axis=1)
-            
-            
         n_samples = len(conds.keys())
         sample_columns = conds.keys()
     else:
         edit_counts_sample = sample_adata.uns['edit_counts'][['guide', 'edit'] + sample_columns]
-
     edit_counts_merged = pd.merge(edit_counts_sample, edit_counts_ctrl, on = ['guide', 'edit'], 
                                   how = 'left').fillna(0)
     guide_count_ctrl = ctrl_adata._get_allele_norm(edit_counts_merged, thres = 0)[:,0]
@@ -54,22 +73,22 @@ def get_edit_significance_to_ctrl(sample_adata, ctrl_adata, aggregate_cond = Non
     sample_edit = edit_counts_merged[sample_columns]
     ctrl_edit = edit_counts_merged.iloc[:,-1]
     
-    def fisher_test_single_sample(j):
-        odds_ratio_series = pd.Series(dtype='float64').reindex_like(ctrl_edit)
-        p_value_series = pd.Series(dtype='float64').reindex_like(ctrl_edit)
-        for i in tqdm(range(len(edit_counts_merged))):
-            if sample_edit.iloc[i, j] == 0: 
-                odds_ratio_series[i], p_value_series[i] = 0, 1
-                continue
-            fisher_tbl = [[sample_edit.iloc[i, j], guide_count_sample[i, j] - sample_edit.iloc[i, j]],
-                            [ctrl_edit.iloc[i], guide_count_ctrl[i] - ctrl_edit.iloc[i]]]
-            odds_ratio_series[i], p_value_series[i] = fisher_exact(fisher_tbl, alternative = "greater")
-        return(odds_ratio_series, p_value_series)
-    
     print("Running Fisher's exact test to get significant edits compared to control...")
-    with multiprocessing.Pool(min(n_samples, 30)) as pool:
-        odds_ratios, p_values = zip(*pool.map(fisher_test_single_sample, range(n_samples)))
+    def child_initialize2(_sample_edit, _ctrl_edit, _guide_count_sample, _guide_count_ctrl):
+        global sample_edit, ctrl_edit, guide_count_sample, guide_count_ctrl
+        sample_edit = _sample_edit
+        ctrl_edit = _ctrl_edit
+        guide_count_sample = _guide_count_sample
+        guide_count_ctrl = _guide_count_ctrl
     
+    if run_parallel:
+        with multiprocessing.Pool(min(n_samples, 30),
+                                initializer = child_initialize2, 
+                                initargs=(sample_edit, ctrl_edit, guide_count_sample, guide_count_ctrl)) as pool:
+            odds_ratios, p_values = zip(*pool.map(fisher_test_single_sample_multiproc, range(n_samples)))
+    else:
+        odds_ratios, p_values = zip(*map(lambda i: fisher_test_single_sample(i,
+        sample_edit, ctrl_edit, guide_count_sample, guide_count_ctrl), range(n_samples)))
     p_value_tbl = pd.concat(p_values, axis=1)
     p_value_tbl.columns = sample_columns
     odds_ratio_tbl = pd.concat(odds_ratios, axis=1)
@@ -133,7 +152,7 @@ def _filter_allele_sample_loop(i, allele_df,
 
 def _filter_alleles(allele_df, edit_significance_tbl, q_thres, 
                     n_threads = None, 
-                    filter_each_sample = False, multiprocess = False):
+                    filter_each_sample = False, run_parallel = False):
     '''
     - args
         filter_each_sample (bool) : filter out edits that are insignificant in each of the sample. 
@@ -151,10 +170,9 @@ def _filter_alleles(allele_df, edit_significance_tbl, q_thres,
         filter_each_sample = _filter_each_sample
         q_thres = _q_thres
 
-    if multiprocess:
+    if run_parallel:
         print("Running {} parallel processes to filter alleles...".format(n_threads))
         with multiprocessing.Pool(n_threads, 
-
             initializer = child_initialize, 
             initargs=(allele_df, edit_significance_tbl, filter_each_sample, q_thres)) as pool:
             filtered_allele_dfs = pool.map(_filter_allele_sample_multiproc, list(range(len(allele_df.columns))))
@@ -184,7 +202,7 @@ def _filter_alleles(allele_df, edit_significance_tbl, q_thres,
 
 def filter_alleles(sample_adata, ctrl_adata, q_thres = 0.05, aggregate_cond = None, 
                    filter_each_sample = False, edit_sig_tbl = None, n_threads = 30,
-                  parallel_filter = False):
+                  run_parallel = False):
     if not aggregate_cond is None:
         sample_tested = sample_adata.condit.groupby(aggregate_cond).ngroups
     elif not filter_each_sample:
@@ -196,14 +214,14 @@ def filter_alleles(sample_adata, ctrl_adata, q_thres = 0.05, aggregate_cond = No
     
     if edit_sig_tbl is None:
         odds_ratio_tbl, q_bonf_tbl = get_edit_significance_to_ctrl(
-            sample_adata, ctrl_adata, aggregate_cond)
+            sample_adata, ctrl_adata, aggregate_cond, run_parallel=run_parallel)
         print("Done calculating significance.\n\n")
     else:
         q_bonf_tbl = edit_sig_tbl
         print("Using provided edit significance table.\n")    
     print("Filtering alleles for those containing significant edits (q < {})...".format(q_thres))
     filtered_alleles = _filter_alleles(sample_adata.uns['allele_counts'], q_bonf_tbl, q_thres,              
-        filter_each_sample=filter_each_sample, n_threads = n_threads, multiprocess = parallel_filter)
+        filter_each_sample=filter_each_sample, n_threads = n_threads, run_parallel = run_parallel)
     print("Done!")
     return(q_bonf_tbl, filtered_alleles)
 

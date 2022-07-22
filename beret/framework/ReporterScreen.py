@@ -486,9 +486,11 @@ class ReporterScreen(Screen):
 
 
 def _convert_obj_column_to_str(df, obj_column):
+    assert obj_column in df.columns
     df = df.rename(columns={obj_column:"obj_col"})
     df[obj_column] = df['obj_col'].map(str)
     df = df.drop('obj_col', axis=1)
+    return df
 
 def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
     # TODO: var/obs info not concated if doesn't overlap

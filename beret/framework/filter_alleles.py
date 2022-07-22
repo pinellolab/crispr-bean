@@ -19,7 +19,7 @@ def sum_column_groups(mat, column_index_list):
 def fisher_test_single_sample_multiproc(j):
     odds_ratio_series = pd.Series(dtype='float64').reindex_like(ctrl_edit)
     p_value_series = pd.Series(dtype='float64').reindex_like(ctrl_edit)
-    for i in tqdm(range(len(sample_edit))):
+    for i in tqdm(range(len(sample_edit)), leave=False):
         if sample_edit.iloc[i, j] == 0: 
             odds_ratio_series[i], p_value_series[i] = 0, 1
             continue
@@ -31,25 +31,27 @@ def fisher_test_single_sample_multiproc(j):
 def fisher_test_single_sample(j, sample_edit, ctrl_edit, guide_count_sample, guide_count_ctrl):
     odds_ratio_series = pd.Series(dtype='float64').reindex_like(ctrl_edit)
     p_value_series = pd.Series(dtype='float64').reindex_like(ctrl_edit)
-    for i in tqdm(range(len(sample_edit))):
+    for i in tqdm(range(len(sample_edit)), leave=False):
         if sample_edit.iloc[i, j] == 0: 
             odds_ratio_series[i], p_value_series[i] = 0, 1
             continue
         fisher_tbl = [[sample_edit.iloc[i, j], guide_count_sample[i, j] - sample_edit.iloc[i, j]],
                         [ctrl_edit.iloc[i], guide_count_ctrl[i] - ctrl_edit.iloc[i]]]
+        assert (np.array(fisher_tbl) >= 0).all(), fisher_tbl
         odds_ratio_series[i], p_value_series[i] = fisher_exact(fisher_tbl, alternative = "greater")
     return(odds_ratio_series, p_value_series)
 
 def get_edit_significance_to_ctrl(sample_adata, ctrl_adata, aggregate_cond = None, run_parallel = False):
+    '''
+    Calculate edit counts for all edits in sample_adata, regardless of the edit presence in the sample.
+    '''
     if 'index' in sample_adata.condit.columns:
         sample_columns = sample_adata.condit['index'].tolist()
     else:
         sample_columns = sample_adata.condit.index.tolist()
     n_samples = len(sample_columns)
-    if not "edit_counts" in sample_adata.uns.keys():
-        sample_adata.uns['edit_counts'] = sample_adata.get_edit_from_allele()
-    if not "edit_counts" in ctrl_adata.uns.keys():
-        ctrl_adata.uns['edit_counts'] = ctrl_adata.get_edit_from_allele()
+    sample_adata.uns['edit_counts'] = sample_adata.get_edit_from_allele()
+    ctrl_adata.uns['edit_counts'] = ctrl_adata.get_edit_from_allele()
     edit_counts_ctrl = ctrl_adata.uns['edit_counts']
 
     if not aggregate_cond is None:
@@ -160,7 +162,7 @@ def _filter_alleles(allele_df, edit_significance_tbl, q_thres,
     '''
     if n_threads is None:
         n_threads = len(allele_df.columns)
-    allele_df = allele_df.set_index(['guide', 'allele'])
+    allele_df = allele_df.set_index(['guide', 'allele']).copy()
     
     def child_initialize(_allele_df, _edit_significance_tbl, _filter_each_sample, _q_thres):
         #https://stackoverflow.com/questions/25825995/python-multiprocessing-only-one-process-is-running

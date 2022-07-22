@@ -77,7 +77,7 @@ class Edit:
     def __hash__(self):
         # Note that this doesn't include relative bases. 
         # This wouldn't matter if we assign edit to each guide.
-        return(hash((self.pos, self.ref_base, self.alt_base)))
+        return(hash(self.__repr__()))
 
     def __repr__(self):
         return(("{}:{}:{}:{}>{}".format(

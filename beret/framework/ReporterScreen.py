@@ -156,31 +156,10 @@ class ReporterScreen(Screen):
                         index_pair = ["guide", "reporter_allele", "guide_allele"]
                     else:
                         continue
-                    if 'edit' in index_pair:
-                        self.uns[k]['edit_str'] = self.uns[k].edit.map(str)
-                        other.uns[k]['edit_str'] = other.uns[k].edit.map(str)
-                        self.uns[k] = self.uns[k].drop('edit', axis=1)
-                        other.uns[k] = other.uns[k].drop('edit', axis=1)
-                        index_pair.remove('edit')
-                        index_pair.append('edit_str')
-                    if 'allele' in index_pair:
-                        self.uns[k]['allele_str'] = self.uns[k].allele.map(str)
-                        other.uns[k]['allele_str'] = other.uns[k].allele.map(str)
-                        self.uns[k] = self.uns[k].drop('allele', axis=1)
-                        other.uns[k] = other.uns[k].drop('allele', axis=1)
-                        index_pair.remove('allele')
-                        index_pair.append('allele_str')
                     self_df = self.uns[k].set_index(index_pair, drop = True)
                     add_df = other.uns[k].set_index(index_pair, drop = True)
                     add_df = add_df.loc[:,self_df.columns]
                     added_uns[k] = self_df.add(add_df, fill_value = 0).astype(int).reset_index()
-
-                    if 'edit_str' in index_pair:
-                        added_uns[k].insert(1, 'edit', added_uns[k].edit_str.map(lambda s: Edit.from_str(s)))
-                        added_uns[k] = added_uns[k].drop('edit_str', axis=1)
-                    if 'allele_str' in index_pair:
-                        added_uns[k].insert(1, 'allele', added_uns[k].allele_str.map(lambda s: Allele.from_str(s)))
-                        added_uns[k] = added_uns[k].drop('allele_str', axis=1)
 
                 if "X_bcmatch" in self.layers and "X_bcmatch" in other.layers:
                 
@@ -219,8 +198,14 @@ class ReporterScreen(Screen):
             vidx += self.n_vars * (vidx < 0)
             vidx = slice(vidx, vidx + 1, 1)
         
-        guides_include = self.guides.iloc[oidx]["name"]
-        condit_include = self.condit.iloc[vidx]['index'].tolist()
+        if 'name' in self.guides.columns:
+            guides_include = self.guides.iloc[oidx]["name"].tolist()
+        else:
+            guides_include = self.guides.iloc[oidx].index.tolist()
+        if 'index' in self.condit.columns:
+            condit_include = self.condit.iloc[vidx]['index'].tolist()
+        else:
+            condit_include = self.condit.iloc[vidx].index.tolist()
         print(condit_include)
         adata = super().__getitem__(index)
         new_uns = deepcopy(adata.uns)
@@ -486,7 +471,7 @@ class ReporterScreen(Screen):
 
 
 def _convert_obj_column_to_str(df, obj_column):
-    assert obj_column in df.columns
+    if not obj_column in df.columns: return df
     df = df.rename(columns={obj_column:"obj_col"})
     df[obj_column] = df['obj_col'].map(str)
     df = df.drop('obj_col', axis=1)
@@ -517,23 +502,30 @@ def concat(screens: Collection[ReporterScreen], *args, axis = 1, **kwargs):
                 merge_on = ["guide", "edit"]
             elif k == "edit_counts":
                 merge_on = ["guide", "edit"]
-            elif k == "allele_counts":
-                merge_on = ["guide", "allele"]
-            elif k == "sig_allele_counts":
-                merge_on = ["guide", "allele"]
             elif k == "guide_reporter_allele_counts":
                 merge_on = ["guide", "reporter_allele", "guide_allele"]
+            elif k.endswith("allele_counts"):
+                merge_on = ["guide", "allele"]
             else:
                 print("uns '{}' ignored during concat.".format(k))
                 continue
-
-            screen_uns_dfs = [screen.uns[k] for screen in screens]
+            try:
+                screen_uns_dfs = [screen.uns[k] for screen in screens]
+            except KeyError:
+                print("Not all ReporterScreen object has .uns['{}']. Ignoring the DataFrame.".format(k))
+                continue
+            empty_df = [len(df) == 0 for df in screen_uns_dfs]
+            if any(empty_df): 
+                print("One of the ReporterScreen object has empty .uns['{}']. Ignoring the DataFrame.".format(k))
+                continue
             if "edit" in merge_on:
                 screen_uns_dfs = [_convert_obj_column_to_str(df, "edit") for df in screen_uns_dfs]
             if "allele" in merge_on:
                 screen_uns_dfs = [_convert_obj_column_to_str(df, "allele") for df in screen_uns_dfs]
                 
             for i, screen in enumerate(screens):
+                if screen.uns[k][merge_on].duplicated().any(): 
+                    raise ValueError("{}-th ReporterScreen .uns['{}'] has duplicated row.".format(i, k))
                 if i == 0:
                     adata.uns[k] = screen.uns[k]
                 else:

@@ -65,23 +65,19 @@ class Edit:
             return True
         return False
     
-    def __lt__(self, other): # Implemented for pandas compatibility
+    def __lt__(self, other): 
         if isinstance(other, Edit):
             if self.pos != other.pos:
                 return self.pos < other.pos
         return self.__repr__() < str(other)
 
-
-
-    def __gt__(self, other): # Implemented for pandas compatibility
+    def __gt__(self, other): 
         if isinstance(other, Edit):
             if self.pos != other.pos:
                 return self.pos > other.pos
         return self.__repr__() > str(other)
 
     def __hash__(self):
-        # Note that this doesn't include relative bases. 
-        # This wouldn't matter if we assign edit to each guide.
         return(hash(self.__repr__()))
 
     def __repr__(self):

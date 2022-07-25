@@ -66,13 +66,18 @@ class Edit:
         return False
     
     def __lt__(self, other): # Implemented for pandas compatibility
-        return self.pos < other.pos
+        if isinstance(other, Edit):
+            if self.pos != other.pos:
+                return self.pos < other.pos
+        return self.__repr__() < str(other)
+
+
 
     def __gt__(self, other): # Implemented for pandas compatibility
         if isinstance(other, Edit):
-            return self.pos > other.pos
-        else:
-            return self.__repr__() > str(other)
+            if self.pos != other.pos:
+                return self.pos > other.pos
+        return self.__repr__() > str(other)
 
     def __hash__(self):
         # Note that this doesn't include relative bases. 

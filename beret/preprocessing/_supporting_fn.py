@@ -167,19 +167,20 @@ def _get_allele_from_alignment(
     ref_aligned: str, 
     query_aligned: str, 
     offset: int, 
-    strand, 
+    strand: int, 
     start_pos: int, end_pos: int, 
-    positionwise_quality: np.ndarray, 
-    quality_thres: float):
+    positionwise_quality: np.ndarray = None, 
+    quality_thres: float = -1):
     assert len(ref_aligned) == len(query_aligned)
     allele = Allele()
     ref_gaps = 0
     alt_gaps = 0
     alt_seq_len = len(query_aligned) - query_aligned.count('-')
-    assert len(positionwise_quality) == alt_seq_len
     if positionwise_quality is None:
-        alt_position_is_good_quality = np.ones(alt_seq_len, dtype=bool)
+        #alt_position_is_good_quality = np.ones(alt_seq_len, dtype=bool)
+        alt_position_is_good_quality = np.array([c != "N" for c in query_aligned.replace('-', '')])
     else:
+        assert len(positionwise_quality) == alt_seq_len
         alt_position_is_good_quality = positionwise_quality > quality_thres
     for i in range(len(ref_aligned)):
         if ref_aligned[i] == query_aligned[i]: continue

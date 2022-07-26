@@ -202,7 +202,7 @@ def _filter_alleles(allele_df, edit_significance_tbl, q_thres,
         print(e)
         return(filtered_allele_dfs)
 
-def filter_alleles(sample_adata, ctrl_adata, q_thres = 0.05, aggregate_cond = None, 
+def filter_alleles(sample_adata, ctrl_adata, q_thres = 0.05, OR_thres = 2, aggregate_cond = None, 
                    filter_each_sample = False, edit_sig_tbl = None, n_threads = 30,
                   run_parallel = False):
     if not aggregate_cond is None:

@@ -331,7 +331,7 @@ class ReporterScreen(Screen):
         if "name" not in self.guides.keys() and self.guides.index.name == "name":
             self.guides = self.guides.reset_index()
         guide_to_idx = self.guides[["name"]].reset_index().set_index("name")
-        guide_idx = guide_to_idx["index"][allele_count_df.guide]
+        guide_idx = guide_to_idx.loc[allele_count_df.guide, "index"]
         norm_counts = self.layers["X_bcmatch"][guide_idx.values.astype(int), :]
         norm_counts[norm_counts < thres] = np.nan
         return(norm_counts)

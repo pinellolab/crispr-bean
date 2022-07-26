@@ -58,9 +58,7 @@ class Edit:
 
     def __eq__(self, other):
         if (
-            self.pos == other.pos
-            and self.ref_base == other.ref_base
-            and self.alt_base == other.alt_base
+            self.__repr__() == other.__repr__()
         ):
             return True
         return False

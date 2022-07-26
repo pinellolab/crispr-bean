@@ -55,8 +55,6 @@ def _get_edits(filename_pattern, guide_info, reps, conditions, count_exact=True)
 class ReporterScreen(Screen):
     def __init__(self, X=None, X_edit=None, X_bcmatch=None, *args, **kwargs):
         (super().__init__)(X, *args, **kwargs)
-        if (X_edit is None) != (X_bcmatch is None):
-            raise ValueError("Only one of number of edits or barcode matched guide counts is specified.")
         if not X_edit is None:
             self.layers["edits"] = X_edit
         if not X_bcmatch is None:
@@ -125,9 +123,13 @@ class ReporterScreen(Screen):
             X_bcmatch = adata.layers["X_bcmatch"]
         else:
             X_bcmatch = None
+        if "edits" in adata.layers:
+            edits = adata.layers["edits"]
+        else:
+            edits = None
         repscreen = cls(
             (adata.X),
-            (adata.layers["edits"]),
+            X_edit = edits,
             X_bcmatch=X_bcmatch,
             guides=(adata.obs),
             condit=(adata.var),

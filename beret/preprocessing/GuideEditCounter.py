@@ -118,6 +118,8 @@ class GuideEditCounter:
             self.guide_to_guide_reporter_allele = dict()
 
         self.guide_start_seq = kwargs["guide_start_seq"]
+        self.guide_end_seq = kwargs["guide_end_seq"]
+        assert not (self.guide_start_seq !="" and self.guide_end_seq != ""), "Doesn't support both start & end seq matching"
         self.guide_bc = kwargs["guide_bc"]
         if self.guide_bc:
             self.guide_bc_len = kwargs["guide_bc_len"]
@@ -438,17 +440,29 @@ class GuideEditCounter:
     def get_guide_seq(self, R1_seq, R2_seq, guide_length):
         """This can be edited by user based on the read construct."""
         #_seq_match = np.where(seq.replace(self.base_edited_from, self.base_edited_to) == self.screen.guides.masked_sequence)[0]
-        guide_start_idx = R1_seq.replace(self.base_edited_from, self.base_edited_to).find(
-            self.guide_start_seq.replace(self.base_edited_from, self.base_edited_to))
-        if guide_start_idx == -1:
-            return None
-        if guide_start_idx + guide_length >= len(R1_seq): 
-            return None
-        guide_start_idx = guide_start_idx + len(self.guide_start_seq)
-        gRNA_seq = R1_seq[guide_start_idx : (guide_start_idx + guide_length)]
-        if len(gRNA_seq) != guide_length:
-            return None
-        return gRNA_seq
+        if self.guide_end_seq == "":
+            guide_start_idx = R1_seq.replace(self.base_edited_from, self.base_edited_to).find(
+                self.guide_start_seq.replace(self.base_edited_from, self.base_edited_to))     
+            if guide_start_idx == -1:
+                return None
+            if guide_start_idx + guide_length >= len(R1_seq): 
+                return None
+            guide_start_idx = guide_start_idx + len(self.guide_start_seq)
+            gRNA_seq = R1_seq[guide_start_idx : (guide_start_idx + guide_length)]
+            if len(gRNA_seq) != guide_length:
+                return None
+            return gRNA_seq
+        else:
+            guide_end_idx = R1_seq.replace(self.base_edited_from, self.base_edited_to).find(
+                self.guide_end_seq.replace(self.base_edited_from, self.base_edited_to))
+            if guide_end_idx == -1:
+                return None
+            if guide_end_idx - guide_length < 0: 
+                return None
+            gRNA_seq = R1_seq[(guide_end_idx-guide_length) : guide_end_idx]
+            if len(gRNA_seq) != guide_length:
+                return None
+            return gRNA_seq
 
     def get_guide_seq_qual(self, R1_record: SeqIO.SeqRecord, guide_length):
         R1_seq = R1_record.seq

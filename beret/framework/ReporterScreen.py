@@ -199,16 +199,10 @@ class ReporterScreen(Screen):
                 raise IndexError(f"Variable index `{vidx}` is out of range.")
             vidx += self.n_vars * (vidx < 0)
             vidx = slice(vidx, vidx + 1, 1)
-        
-        if 'name' in self.guides.columns:
-            guides_include = self.guides.iloc[oidx]["name"].tolist()
-        else:
-            guides_include = self.guides.iloc[oidx].index.tolist()
-        if 'index' in self.condit.columns:
-            condit_include = self.condit.iloc[vidx]['index'].tolist()
-        else:
-            condit_include = self.condit.iloc[vidx].index.tolist()
-        print(condit_include)
+        guides_include = self.guides.iloc[oidx].index.tolist()
+        condit_include = self.condit.iloc[vidx].index.tolist()
+        self.obs=self.guides
+        self.var=self.condit
         adata = super().__getitem__(index)
         new_uns = deepcopy(adata.uns)
         for k, df in adata.uns.items():
@@ -247,23 +241,23 @@ class ReporterScreen(Screen):
         edits["alt_base"] = edits.edit.map(lambda e: e.alt_base)
         edits = edits.loc[(edits.ref_base == ref_base) & (edits.alt_base == alt_base),:].reset_index()
         guide_len = self.guides.sequence.map(len)
-        guide_name_to_idx = self.guides[["name"]].reset_index().set_index("name")
+        guide_name_to_idx = self.guides.reset_index().reset_index().set_index("name")
         edits["guide_idx"] = guide_name_to_idx.loc[edits.guide, "index"].reset_index(drop=True)
         edits["guide_start_pos"] = 32 - 6 - guide_len[edits.guide_idx].reset_index(drop=True)
         if not match_target_position:
             edits["rel_pos"] = edits.edit.map(lambda e: e.rel_pos)
             edits["in_rel_pos_range"] = (edits.rel_pos >= rel_pos_start + edits.guide_start_pos) & (edits.rel_pos < rel_pos_end + edits.guide_start_pos)
-            good_edits = edits.loc[edits.in_rel_pos_range, ["guide", "edit"] + self.condit["index"].tolist()]
+            good_edits = edits.loc[edits.in_rel_pos_range, ["guide", "edit"] + self.condit.index.tolist()]
         else:
             edits["rel_pos"] = edits.edit.map(lambda e: e.rel_pos)
-            edits["target_pos_guides"] = self.guides.loc[edits.guide_idx, target_pos_col].reset_index(drop=True)
+            edits["target_pos_guides"] = self.guides.iloc[edits.guide_idx, :][target_pos_col].reset_index(drop=True)
             edits["target_pos_matches"] = edits.rel_pos == edits.target_pos_guides
-            good_edits = edits.loc[edits.target_pos_matches, ["guide", "edit"] + self.condit["index"].tolist()]
+            good_edits = edits.loc[edits.target_pos_matches, ["guide", "edit"] + self.condit.index.tolist()]
         
         good_guide_idx = guide_name_to_idx.loc[good_edits.guide, "index"].astype(int)
         try:
             for gidx, eidx in zip(good_guide_idx, good_edits.index):
-                self.layers["edits"][gidx, :] += good_edits.loc[eidx, self.condit["index"].tolist()].astype(int)
+                self.layers["edits"][gidx, :] += good_edits.loc[eidx, self.condit.index.tolist()].astype(int)
         except:
             return((good_guide_idx, good_edits))
         print("New edit matrix saved in .layers['edits']. Returning old edits.")
@@ -328,9 +322,7 @@ class ReporterScreen(Screen):
         '''
         if allele_count_df is None:
             allele_count_df = self.uns["allele_counts"]
-        if "name" not in self.guides.keys() and self.guides.index.name == "name":
-            self.guides = self.guides.reset_index()
-        guide_to_idx = self.guides[["name"]].reset_index().set_index("name")
+        guide_to_idx = self.guides.reset_index().reset_index().set_index("name")
         guide_idx = guide_to_idx.loc[allele_count_df.guide, "index"]
         norm_counts = self.layers["X_bcmatch"][guide_idx.values.astype(int), :]
         norm_counts[norm_counts < thres] = np.nan
@@ -368,9 +360,9 @@ class ReporterScreen(Screen):
 
     def collapse_allele_by_target(self, ref_base, alt_base, target_pos_column = "target_pos"):
         if not target_pos_column in self.guides.columns:
-            raise ValueError("The .guides have to have 'target_pos' specifying the relative position of target edit.")
+            raise ValueError("The .guides have to have '{}' specifying the relative position of target edit.".format(target_pos_column))
         df = self.uns["allele_counts"].copy().reset_index(drop=True)
-        df["target_pos"] = self.guides.set_index("name").loc[df.guide, target_pos_column].reset_index(drop=True)
+        df["target_pos"] = self.guides.loc[df.guide, target_pos_column].reset_index(drop=True)
         df["has_target"] = df.apply(lambda row: row.allele.has_edit(ref_base, alt_base, rel_pos = row.target_pos), axis = 1)
         df["has_nontarget"] = df.apply(lambda row: row.allele.has_other_edit(ref_base, alt_base, rel_pos = row.target_pos), axis = 1)
         df = df.drop("target_pos", axis=1)

@@ -115,6 +115,7 @@ def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
 
 class CDS():  
     def __init__(self, fasta_file_name="ldlr_exons.fa"):
+        type(self).set_exon_fasta_name(fasta_file_name)
         self.edited_nt = type(self).nt.copy()
         self.edited_aa_pos = set()
         self.edits_noncoding = set()

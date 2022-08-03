@@ -9,7 +9,7 @@ import anndata as ad
 from perturb_tools import Screen
 from beret.annotate.AminoAcidEdit import AminoAcidAllele, CodingNoncodingAllele
 from .Edit import Edit, Allele
-from ..framework._supporting_fn import get_aa_alleles, filter_allele_by_pos
+from ..framework._supporting_fn import get_aa_alleles, filter_allele_by_pos, filter_allele_by_base
 
 
 def _get_counts(filename_pattern, guides, reps, conditions):
@@ -217,8 +217,6 @@ class ReporterScreen(Screen):
         adata.uns = new_uns
         return(type(self).from_adata(adata))
 
-
-
     def get_edit_mat_from_uns(
         self, 
         ref_base, 
@@ -356,7 +354,26 @@ class ReporterScreen(Screen):
         allele_count_df = allele_count_df.drop("str_allele", axis=1)
         print("{} edits filtered from {} alleles.".format(sum(filtered_edits), len(filtered_edits)))
         return(allele_count_df)
-        
+    
+    def filter_allele_counts_by_base(self, 
+        ref_base = "A", alt_base = "G",
+        allele_uns_key = "allele_counts"):
+        '''
+        Filter alleles based on base change
+        '''
+        allele_count_df = self.uns[allele_uns_key].copy()
+        filtered_allele, filtered_edits = \
+            zip(*allele_count_df.allele.map(lambda a:
+                filter_allele_by_base(a, allowed_ref_base = ref_base,
+                allowed_alt_base = alt_base)))
+        allele_count_df.loc[:, "allele"] = filtered_allele
+        # Hashing on Allele object messes up the order. Converting it to str and back to allele for groupby.
+        allele_count_df["str_allele"] = allele_count_df.allele.map(str)
+        allele_count_df = allele_count_df.groupby(["guide", "str_allele"]).sum().reset_index()
+        allele_count_df.insert(1, "allele", allele_count_df.str_allele.map(lambda s: Allele.from_str(s)))
+        allele_count_df = allele_count_df.drop("str_allele", axis=1)
+        print("{} edits filtered from {} alleles.".format(sum(filtered_edits), len(filtered_edits)))
+        return(allele_count_df)
 
     def collapse_allele_by_target(self, ref_base, alt_base, target_pos_column = "target_pos"):
         if not target_pos_column in self.guides.columns:

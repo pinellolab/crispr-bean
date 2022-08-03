@@ -23,6 +23,8 @@ setuptools.setup(
         'numpy',
         'perturb-tools>=0.0.16',
       ],
+      include_package_data=True,
+    package_data={'': ['beret/annotate/ldlr_exons.fa']},
      classifiers=[
          "Programming Language :: Python :: 3",
          "License :: OSI Approved :: MIT License",

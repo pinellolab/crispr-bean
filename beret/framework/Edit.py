@@ -1,5 +1,6 @@
 from enum import unique
 from typing import Iterable
+import re
 
 class Edit:
     reverse_map = {"A":"T", "C":"G", "T":"A", "G":"C", "-":"-"}
@@ -32,11 +33,12 @@ class Edit:
         strand = cls.strand_map[strand]
         offset = pos - rel_pos*strand
         ref_base, alt_base = base_change.split(">")
-        
-        # if strand == "-":
-        #     start = cls.reverse_map[start]
-        #     end = cls.reverse_map[end]
         return(cls(rel_pos, ref_base, alt_base, offset = offset, strand = strand))
+
+    @classmethod
+    def match_str(cls, edit_str):
+        pattern= r"\d+;\d+;[+-];[A-Z*-]>[A-Z*-]"
+        return(re.fullmatch(pattern, edit_str))
 
     def get_abs_edit(self):
         '''
@@ -108,6 +110,13 @@ class Allele:
                 return(cls(None))
         return(cls(edits))
 
+    @classmethod
+    def match_str(cls, allele_str):
+        try:
+            return all(map(Edit.match_str, allele_str.split(",")))
+        except:
+            return False
+    
     def has_edit(self, ref_base, alt_base, pos = None, rel_pos = None):
         if not (pos is None) + (rel_pos is None): 
             raise ValueError("Either pos or rel_pos should be specified")

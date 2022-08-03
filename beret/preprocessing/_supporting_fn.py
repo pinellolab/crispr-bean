@@ -242,10 +242,11 @@ def _get_edited_allele_crispresso(
     return(allele, score)
 
 def _string_filter_basewise_quality(ref_seq, query_seq, positionwise_quality, quality_thres):
+    query_seq_chars = list(query_seq)
     for i in range(len(positionwise_quality)):
         if positionwise_quality[i] < quality_thres:
-            query_seq[i] = ref_seq[i]
-    return(query_seq)
+            query_seq_chars[i] = ref_seq[i]
+    return("".join(query_seq_chars))
 
 def _multiindex_dict_to_df(input_dict, key_column_names, value_column_name):
     if not isinstance(key_column_names, list):

@@ -62,14 +62,14 @@ class ReporterScreen(Screen):
         for k, df in self.uns.items():
             if "guide" in df.columns:
                 if len(df) > 0:
-                    if "allele" in df.columns and isinstance(df["allele"].iloc[0], Allele): 
+                    if "allele" in df.columns and any(df["allele"].map(Allele.match_str)): 
                         self.uns[k].loc[:, "allele"] = self.uns[k].allele.map(lambda s: Allele.from_str(s))
-                    if "edit" in df.columns and isinstance(df['edit'].iloc[0], Edit):
+                    if "edit" in df.columns and any(df['edit'].map(Edit.match_str)):
                         self.uns[k].loc[:, "edit"] = self.uns[k].edit.map(lambda s: Edit.from_str(s))
                     if 'reporter_allele' in df.columns and 'guide_allele' in df.columns:
                         self.uns[k].loc[:, "reporter_allele"] = self.uns[k].reporter_allele.map(lambda s: Allele.from_str(s))
                         self.uns[k].loc[:, "guide_allele"] = self.uns[k].guide_allele.map(lambda s: Allele.from_str(s))
-                    if "aa_allele" in df.columns and isinstance(df['aa_allele'].iloc[0], CodingNoncodingAllele):
+                    if "aa_allele" in df.columns and any(df['aa_allele'].map(CodingNoncodingAllele.match_str)):
                         self.uns[k].loc[:, "aa_allele"] = self.uns[k].aa_allele.map(lambda s: CodingNoncodingAllele.from_str(s))
 
         

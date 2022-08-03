@@ -103,7 +103,7 @@ class GuideEditCounter:
         if self.count_reporter_edits:
             self.screen.uns["edit_counts"] = dict()
             self.gstart_reporter = kwargs["gstart_reporter"]
-        self.align_score_threshold = 90
+        self.align_score_threshold = 80
 
         self.count_edited_alleles = kwargs["count_allele"]
         if self.count_edited_alleles:
@@ -125,7 +125,9 @@ class GuideEditCounter:
             self.reporter_length = kwargs["reporter_length"]
         self.guide_to_allele = dict()
         self.n_total_reads = _read_count_match(self.R1_filename, self.R2_filename)
-
+        
+        self.objectify_allele = not kwargs["string_allele"]
+        if not self.objectify_allele: print("Storing allele as strings.")
         self.keep_intermediate = kwargs["keep_intermediate"]
         self.semimatch = 0
         self.bcmatch = 0
@@ -254,7 +256,7 @@ class GuideEditCounter:
     def _get_guide_counts_bcmatch(self):
         NotImplemented
 
-    def _count_guide_edits(self, matched_guide_idx, R1_record: SeqIO.SeqRecord, single_base_qual_cutoff = 30, objectify_allele = True):
+    def _count_guide_edits(self, matched_guide_idx, R1_record: SeqIO.SeqRecord, single_base_qual_cutoff = 30):
         strand_str_to_int = {"neg": -1, "pos": 1}
         if self.guides_has_strands:
             try:
@@ -279,13 +281,13 @@ class GuideEditCounter:
             end_pos=len(ref_guide_seq),
             positionwise_quality = np.array(read_guide_qual),
             quality_thres = single_base_qual_cutoff,
-            objectify_allele = objectify_allele
+            objectify_allele = self.objectify_allele
         )
         return(guide_edit_allele, score)
         
 
     def _count_reporter_edits(self, matched_guide_idx: int, R1_seq, R2_record: SeqIO.SeqRecord, 
-    single_base_qual_cutoff=30, guide_allele = None, objectify_allele = True):
+    single_base_qual_cutoff=30, guide_allele = None):
         '''
         Count edits in single read to save as allele.
         '''
@@ -317,12 +319,14 @@ class GuideEditCounter:
         allele, score = _get_edited_allele_crispresso(
             ref_seq=ref_reporter_seq,
             query_seq=read_reporter_seq,
+            ref_base=self.base_edited_from,
+            alt_base=self.base_edited_to,
             aln_mat_path = self.output_dir + "/.aln_mat.txt",
             offset=offset,
             strand=guide_strand,
             positionwise_quality = np.array(read_reporter_qual),
             quality_thres = single_base_qual_cutoff,
-            objectify_allele = objectify_allele
+            objectify_allele = self.objectify_allele
         )
 
         if score < self.align_score_threshold:

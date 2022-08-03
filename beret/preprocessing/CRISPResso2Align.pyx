@@ -192,10 +192,6 @@ def global_align_base_editor(str pystr_seqj, str pystr_seqi, str ref_base, str a
                     mScore[i, j] = iVal
                     mPointer[i, j] = IARRAY
 
-#            print('mScore['+str(i) + ',' + str(j) +']: ' + str(mScore[i,j]) + ': max(' + str(mScore[i - 1, j - 1])+ '+ (' + str(ci)+ ',' + str(cj) + ') ' + str(matrix[ci,cj]) + ', i:'+str(iVal) + ',j:' + str(jVal))
-
-    #for last column and last row, ignore gap opening penalty
-    #last column
     j = max_j
     cj = seqj[j-1]
     for i in range(1, max_i):

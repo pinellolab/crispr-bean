@@ -120,6 +120,17 @@ class CodingNoncodingAllele():
                 print(allele_str)
         return(cls(aa_allele.edits, nt_allele.edits, unique_identifier = uid))
 
+    @classmethod
+    def match_str(cls, allele_str):
+        try:
+            aa_allele, nt_allele = allele_str.split("|")
+            aa_match = AminoAcidAllele.match_str(aa_allele)
+            nt_match = Allele.match_str(nt_allele)
+            return(aa_match and nt_match)
+        except:
+            return False
+        
+
     def get_most_severe(self):
         aa_sev = self.aa_allele.get_most_severe()
         if len(self.nt_allele.edits) > 0: return max(aa_sev, 0.1)

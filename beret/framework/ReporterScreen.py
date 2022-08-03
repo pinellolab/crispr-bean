@@ -61,15 +61,16 @@ class ReporterScreen(Screen):
             self.layers["X_bcmatch"] = X_bcmatch
         for k, df in self.uns.items():
             if "guide" in df.columns:
-                if "allele" in df.columns: 
-                    self.uns[k].loc[:, "allele"] = self.uns[k].allele.map(lambda s: Allele.from_str(s))
-                if "edit" in df.columns:
-                    self.uns[k].loc[:, "edit"] = self.uns[k].edit.map(lambda s: Edit.from_str(s))
-                if 'reporter_allele' in df.columns and 'guide_allele' in df.columns:
-                    self.uns[k].loc[:, "reporter_allele"] = self.uns[k].reporter_allele.map(lambda s: Allele.from_str(s))
-                    self.uns[k].loc[:, "guide_allele"] = self.uns[k].guide_allele.map(lambda s: Allele.from_str(s))
-                if "aa_allele" in df.columns:
-                    self.uns[k].loc[:, "aa_allele"] = self.uns[k].aa_allele.map(lambda s: CodingNoncodingAllele.from_str(s))
+                if len(df) > 0:
+                    if "allele" in df.columns and isinstance(df["allele"].iloc[0], Allele): 
+                        self.uns[k].loc[:, "allele"] = self.uns[k].allele.map(lambda s: Allele.from_str(s))
+                    if "edit" in df.columns and isinstance(df['edit'].iloc[0], Edit):
+                        self.uns[k].loc[:, "edit"] = self.uns[k].edit.map(lambda s: Edit.from_str(s))
+                    if 'reporter_allele' in df.columns and 'guide_allele' in df.columns:
+                        self.uns[k].loc[:, "reporter_allele"] = self.uns[k].reporter_allele.map(lambda s: Allele.from_str(s))
+                        self.uns[k].loc[:, "guide_allele"] = self.uns[k].guide_allele.map(lambda s: Allele.from_str(s))
+                    if "aa_allele" in df.columns and isinstance(df['aa_allele'].iloc[0], CodingNoncodingAllele):
+                        self.uns[k].loc[:, "aa_allele"] = self.uns[k].aa_allele.map(lambda s: CodingNoncodingAllele.from_str(s))
 
         
         # if "edit_counts" in self.uns.keys():
@@ -474,10 +475,12 @@ class ReporterScreen(Screen):
         """
         adata = self.copy()
         for k in adata.uns.keys():
-            if 'edit' in adata.uns[k].columns:
-                adata.uns[k].edit = adata.uns[k].edit.map(str)
-            for c in [colname for colname in adata.uns[k].columns if "allele" in colname]:
-                adata.uns[k].loc[:,c] = adata.uns[k][c].map(str)
+            if len(adata.uns[k]) > 0:
+                if 'edit' in adata.uns[k].columns and  isinstance(adata.uns[k]['edit'].iloc[0], Edit):
+                    adata.uns[k].edit = adata.uns[k].edit.map(str)
+                for c in [colname for colname in adata.uns[k].columns if "allele" in colname]:
+                    if isinstance(adata.uns[k][c].iloc[0], Allele) or isinstance(adata.uns[k][c].iloc[0], CodingNoncodingAllele):
+                        adata.uns[k].loc[:,c] = adata.uns[k][c].map(str)
         super(ReporterScreen, adata).write(out_path)
 
 

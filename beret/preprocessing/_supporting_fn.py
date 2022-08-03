@@ -105,8 +105,10 @@ def revcomp(seq: Union[Seq, str]) -> str:
     return str(seq.reverse_complement())
 
 
-def _fastq_iter_to_text(record):
-    t, seq, q = record
+def _fastq_iter_to_text(record: SeqIO.SeqRecord):
+    t = record.id, 
+    seq = record.seq
+    q = record.letter_annotations['phred_quality']
     return "{}\n{}\n+\n{}\n".format(t, seq, q)
 
 
@@ -170,7 +172,7 @@ def _get_allele_from_alignment(
     strand: int, 
     start_pos: int, end_pos: int, 
     positionwise_quality: np.ndarray = None, 
-    quality_thres: float = -1):
+    quality_thres: float = -1,):
     assert len(ref_aligned) == len(query_aligned)
     allele = Allele()
     ref_gaps = 0
@@ -208,7 +210,8 @@ def _get_edited_allele_crispresso(
     start_pos: int = 0,
     end_pos: int = 100,
     positionwise_quality: np.ndarray = None,
-    quality_thres: float = 30
+    quality_thres: float = 30,
+    objectify_allele = True
 ):
     aln_matrix = read_matrix(aln_mat_path)
     assert strand in [-1, +1]
@@ -221,16 +224,24 @@ def _get_edited_allele_crispresso(
         gap_open = -20,
         gap_extend = -10
     )
-    allele = _get_allele_from_alignment(ref_aligned, query_aligned, offset, strand, start_pos, end_pos, 
-    positionwise_quality, quality_thres)
-
-    for e in allele.edits:
-        if e.ref_base == '-': continue
-        assert ref_seq[e.rel_pos] == e.ref_base, "relative position mismatch: ref pos {}: {} vs {}".format(
-            e.rel_pos, ref_seq[e.rel_pos], e.ref_base) + \
-        "\nallele {}, \nrefseq {}, \naltseq {}, \n".format(allele, ref_seq, query_seq) + \
-            "ref_align {}, \nalt_align {}".format(ref_aligned, query_aligned)
+    if objectify_allele:
+        allele = _get_allele_from_alignment(ref_aligned, query_aligned, offset, strand, start_pos, end_pos, 
+        positionwise_quality, quality_thres)
+        for e in allele.edits:
+            if e.ref_base == '-': continue
+            assert ref_seq[e.rel_pos] == e.ref_base, "relative position mismatch: ref pos {}: {} vs {}".format(
+                e.rel_pos, ref_seq[e.rel_pos], e.ref_base) + \
+            "\nallele {}, \nrefseq {}, \naltseq {}, \n".format(allele, ref_seq, query_seq) + \
+                "ref_align {}, \nalt_align {}".format(ref_aligned, query_aligned)
+    else:
+        allele = _string_filter_basewise_quality(ref_aligned, query_aligned, positionwise_quality, quality_thres)
     return(allele)
+
+def _string_filter_basewise_quality(ref_seq, query_seq, positionwise_quality, quality_thres):
+    for i in range(len(positionwise_quality)):
+        if positionwise_quality[i] < quality_thres:
+            query_seq[i] = ref_seq[i]
+    return(query_seq)
 
 def _multiindex_dict_to_df(input_dict, key_column_names, value_column_name):
     if not isinstance(key_column_names, list):

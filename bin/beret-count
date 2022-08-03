@@ -114,6 +114,7 @@ def get_input_parser():
 
     #optional
     parser.add_argument('--guide_start_seq', type = str, help = "Guide starts after this sequence in R1", default = "GGAAAGGACGAAACACCG")
+    parser.add_argument('--guide_end_seq', type = str, help = "Guide starts after this sequence in R1", default = "")
     parser.add_argument('-r', '--count_reporter', help = "Count reporter edits.", action = 'store_true')
     parser.add_argument('-q','--min_average_read_quality', type=int, help='Minimum average quality score (phred33) to keep a read', default=30)
     parser.add_argument('-s','--min_single_bp_quality', type=int, help='Minimum single bp score (phred33) to keep a read', default=0)
@@ -134,6 +135,7 @@ def get_input_parser():
     parser.add_argument('--align_fasta', help = 'gRNA is aligned to this sequence to infer the offset. Can be used when the exact offset is not provided.', type = str, default = '')
     
     parser.add_argument('-a', '--count_allele', help = 'count gRNA alleles', action = "store_true")
+    parser.add_argument('-as', '--string_allele', help = 'Store allele as quality filtered string instead of Allele object', action = "store_true")
     parser.add_argument('-g', "--count_guide_edits", help = "count the self editing of guides", action = 'store_true')
     parser.add_argument('-m', "--count_guide_reporter_alleles", help = "count the matched allele of guide and reporter edit", action = 'store_true')
 

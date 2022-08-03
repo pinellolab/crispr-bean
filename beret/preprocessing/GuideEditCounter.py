@@ -258,7 +258,7 @@ class GuideEditCounter:
     def _get_guide_counts_bcmatch(self):
         NotImplemented
 
-    def _count_guide_edits(self, matched_guide_idx, R1_record: SeqIO.SeqRecord, single_base_qual_cutoff = 30):
+    def _count_guide_edits(self, matched_guide_idx, R1_record: SeqIO.SeqRecord, single_base_qual_cutoff = 30, objectify_allele = True):
         strand_str_to_int = {"neg": -1, "pos": 1}
         if self.guides_has_strands:
             try:
@@ -280,13 +280,15 @@ class GuideEditCounter:
             start_pos=0,
             end_pos=len(ref_guide_seq),
             positionwise_quality = np.array(read_guide_qual),
-            quality_thres = single_base_qual_cutoff
+            quality_thres = single_base_qual_cutoff,
+            objectify_allele = objectify_allele
         )
+
         return(guide_edit_allele)
         
 
     def _count_reporter_edits(self, matched_guide_idx: int, R1_seq, R2_record: SeqIO.SeqRecord, 
-    single_base_qual_cutoff=30, guide_allele = None,):
+    single_base_qual_cutoff=30, guide_allele = None, objectify_allele = True):
         '''
         Count edits in single read to save as allele.
         '''
@@ -322,26 +324,26 @@ class GuideEditCounter:
             offset=offset,
             strand=guide_strand,
             positionwise_quality = np.array(read_reporter_qual),
-            quality_thres = single_base_qual_cutoff
+            quality_thres = single_base_qual_cutoff,
+            objectify_allele = objectify_allele
         )
 
-        if allele.edits:
-            if self.count_edited_alleles:
-                if matched_guide_idx in self.guide_to_allele.keys():
-                    if allele in self.guide_to_allele[matched_guide_idx].keys():
-                        self.guide_to_allele[matched_guide_idx][allele] += 1
-                    else:
-                        self.guide_to_allele[matched_guide_idx][allele] = 1
+        if self.count_edited_alleles:
+            if matched_guide_idx in self.guide_to_allele.keys():
+                if allele in self.guide_to_allele[matched_guide_idx].keys():
+                    self.guide_to_allele[matched_guide_idx][allele] += 1
                 else:
-                    self.guide_to_allele[matched_guide_idx] = {allele: 1}
-            if self.count_guide_reporter_alleles and (not guide_allele is None):
-                if matched_guide_idx in self.guide_to_guide_reporter_allele.keys():
-                    if (allele, guide_allele) in self.guide_to_guide_reporter_allele[matched_guide_idx].keys():
-                        self.guide_to_guide_reporter_allele[matched_guide_idx][(allele, guide_allele)] += 1
-                    else:
-                        self.guide_to_guide_reporter_allele[matched_guide_idx][(allele, guide_allele)] = 1
+                    self.guide_to_allele[matched_guide_idx][allele] = 1
+            else:
+                self.guide_to_allele[matched_guide_idx] = {allele: 1}
+        if self.count_guide_reporter_alleles and (not guide_allele is None):
+            if matched_guide_idx in self.guide_to_guide_reporter_allele.keys():
+                if (allele, guide_allele) in self.guide_to_guide_reporter_allele[matched_guide_idx].keys():
+                    self.guide_to_guide_reporter_allele[matched_guide_idx][(allele, guide_allele)] += 1
                 else:
-                    self.guide_to_guide_reporter_allele[matched_guide_idx] = {(allele, guide_allele): 1}
+                    self.guide_to_guide_reporter_allele[matched_guide_idx][(allele, guide_allele)] = 1
+            else:
+                self.guide_to_guide_reporter_allele[matched_guide_idx] = {(allele, guide_allele): 1}
         
     def _get_guide_counts_bcmatch_semimatch(
         self, bcmatch_layer="X_bcmatch", semimatch_layer="X"
@@ -386,7 +388,6 @@ class GuideEditCounter:
                         self.screen.layers[semimatch_layer][matched_guide_idx, 0] += 1
                     except:
                         print(semimatch)
-
                     if self.count_guide_edits:
                         self._count_guide_edits(matched_guide_idx, r1)
                     self.semimatch += 1
@@ -403,7 +404,7 @@ class GuideEditCounter:
                 if self.count_guide_edits or self.count_guide_reporter_alleles:
                     guide_allele = self._count_guide_edits(matched_guide_idx, r1)
                 if self.count_reporter_edits or self.count_edited_alleles or self.count_guide_reporter_alleles:
-                    # TBD: what if reporter seq doesn't match barcode & guide?
+                    # TODO: what if reporter seq doesn't match barcode & guide?
                     if self.count_guide_reporter_alleles:
                         self._count_reporter_edits(matched_guide_idx, R1_seq, r2, guide_allele = guide_allele)
                     else: 

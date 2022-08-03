@@ -216,7 +216,7 @@ def _get_edited_allele_crispresso(
     aln_matrix = read_matrix(aln_mat_path)
     assert strand in [-1, +1]
     gap_incentive = np.zeros(len(ref_seq) + 1, dtype = np.int)
-    query_aligned, ref_aligned, _ = global_align(
+    query_aligned, ref_aligned, score = global_align(
         query_seq, 
         ref_seq, 
         aln_matrix, 
@@ -235,7 +235,7 @@ def _get_edited_allele_crispresso(
                 "ref_align {}, \nalt_align {}".format(ref_aligned, query_aligned)
     else:
         allele = _string_filter_basewise_quality(ref_aligned, query_aligned, positionwise_quality, quality_thres)
-    return(allele)
+    return(allele, score)
 
 def _string_filter_basewise_quality(ref_seq, query_seq, positionwise_quality, quality_thres):
     for i in range(len(positionwise_quality)):

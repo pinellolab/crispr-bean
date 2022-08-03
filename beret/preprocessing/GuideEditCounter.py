@@ -103,6 +103,7 @@ class GuideEditCounter:
         if self.count_reporter_edits:
             self.screen.uns["edit_counts"] = dict()
             self.gstart_reporter = kwargs["gstart_reporter"]
+        self.align_score_threshold = 60
 
         self.count_edited_alleles = kwargs["count_allele"]
         if self.count_edited_alleles:
@@ -271,7 +272,7 @@ class GuideEditCounter:
             guide_strand = 1
         ref_guide_seq = self.screen.guides.sequence[matched_guide_idx]
         read_guide_seq, read_guide_qual = self.get_guide_seq_qual(R1_record, len(ref_guide_seq))
-        guide_edit_allele = _get_edited_allele_crispresso(
+        guide_edit_allele, score = _get_edited_allele_crispresso(
             ref_seq=ref_guide_seq,
             query_seq=read_guide_seq,
             aln_mat_path = self.output_dir + "/.aln_mat.txt",
@@ -283,8 +284,7 @@ class GuideEditCounter:
             quality_thres = single_base_qual_cutoff,
             objectify_allele = objectify_allele
         )
-
-        return(guide_edit_allele)
+        return(guide_edit_allele, score)
         
 
     def _count_reporter_edits(self, matched_guide_idx: int, R1_seq, R2_record: SeqIO.SeqRecord, 
@@ -317,7 +317,7 @@ class GuideEditCounter:
             offset = -(self.screen.guides["Target base position in reporter"][matched_guide_idx] -1)
             # TODO: clean this up
         
-        allele = _get_edited_allele_crispresso(
+        allele, score = _get_edited_allele_crispresso(
             ref_seq=ref_reporter_seq,
             query_seq=read_reporter_seq,
             aln_mat_path = self.output_dir + "/.aln_mat.txt",
@@ -327,6 +327,11 @@ class GuideEditCounter:
             quality_thres = single_base_qual_cutoff,
             objectify_allele = objectify_allele
         )
+
+        if score < self.align_score_threshold:
+            self.semimatch += 1
+            self.bcmatch -= 1
+            return
 
         if self.count_edited_alleles:
             if matched_guide_idx in self.guide_to_allele.keys():
@@ -402,7 +407,7 @@ class GuideEditCounter:
                 self.screen.layers[bcmatch_layer][matched_guide_idx, 0] += 1
                 self.bcmatch += 1
                 if self.count_guide_edits or self.count_guide_reporter_alleles:
-                    guide_allele = self._count_guide_edits(matched_guide_idx, r1)
+                    guide_allele, _ = self._count_guide_edits(matched_guide_idx, r1)
                 if self.count_reporter_edits or self.count_edited_alleles or self.count_guide_reporter_alleles:
                     # TODO: what if reporter seq doesn't match barcode & guide?
                     if self.count_guide_reporter_alleles:

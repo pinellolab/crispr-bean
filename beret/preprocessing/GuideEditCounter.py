@@ -103,16 +103,11 @@ class GuideEditCounter:
         if self.count_reporter_edits:
             self.screen.uns["edit_counts"] = dict()
             self.gstart_reporter = kwargs["gstart_reporter"]
-        self.align_score_threshold = 60
+        self.align_score_threshold = 90
 
         self.count_edited_alleles = kwargs["count_allele"]
         if self.count_edited_alleles:
             self.screen.uns["allele_counts"] = dict()
-            # pd.DataFrame(
-            #     columns = ["guide_name", "allele_id", "count"]).set_index(
-            #     ["guide_name", "allele_id"], drop = True)
-            #self.screen.uns["alleles"] = pd.DataFrame(columns=["allele_id", "edit_id"])
-            # Dict[guide_name -> List[edit_ID]]
 
         self.count_guide_reporter_alleles = kwargs["count_guide_reporter_alleles"]
         if self.count_guide_reporter_alleles:
@@ -275,6 +270,8 @@ class GuideEditCounter:
         guide_edit_allele, score = _get_edited_allele_crispresso(
             ref_seq=ref_guide_seq,
             query_seq=read_guide_seq,
+            ref_base = self.base_edited_from,
+            alt_base = self.base_edited_to,
             aln_mat_path = self.output_dir + "/.aln_mat.txt",
             offset=0,
             strand=guide_strand,

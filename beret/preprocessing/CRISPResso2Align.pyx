@@ -64,18 +64,19 @@ def read_matrix(path):
 
 @cython.boundscheck(False)
 @cython.nonecheck(False)
-def global_align(str pystr_seqj, str pystr_seqi, np.ndarray[DTYPE_INT, ndim=2] matrix,
+def global_align_base_editor(str pystr_seqj, str pystr_seqi, str ref_base, str alt_base,
+          np.ndarray[DTYPE_INT, ndim=2] matrix,
           np.ndarray[DTYPE_INT,ndim=1] gap_incentive, int gap_open=-1,
-          int gap_extend=-1):
+          int gap_extend=-1, ):
     """
-    Global sequence alignment (needleman-wunsch) on seq i and j.
+    Global sequence alignment (needleman-wunsch) on seq i and j for base editors.
     Reference is seq_i, sequenced read is seq_j
     Match and mismatch values are read from matrix object
     where matrix is of the format provided in the ncbi/data directory.
     gap_incentive is the incentive for having a gap at each position in seqi -
       this allows for the preferential location of gaps to be at the predicted
       cut site in genome editing experiments.
-
+    Score is calculated only based on non-intended base edits.
     """
 
     byte_seqj = pystr_seqj.encode('UTF-8')
@@ -381,8 +382,8 @@ def global_align(str pystr_seqj, str pystr_seqi, np.ndarray[DTYPE_INT, ndim=2] m
             print('seqj: ' + str(seqj) + ' seqi: ' + str(seqi))
             raise Exception('wtf4!:pointer: %i', i)
 #          print('at end, currMatrix is ' + str(currMatrix))
-
-        align_counter += 1
+        if not (ci == ref_base and cj == alt_base): 
+            align_counter += 1
     try:
         align_j = tmp_align_j[:align_counter].decode('UTF-8', 'strict')
     finally:
@@ -394,5 +395,5 @@ def global_align(str pystr_seqj, str pystr_seqi, np.ndarray[DTYPE_INT, ndim=2] m
 
     # print(tounicode_with_length_and_free(alig))
 #    print(str(matchCount) + " aln: " + str(align_counter))
-    final_score = 100*matchCount/float(align_counter)
+    final_score = 100*matchCount/(float(align_counter) + 1e-6)
     return align_j[::-1], align_i[::-1], round(final_score, 3)

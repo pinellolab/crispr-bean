@@ -7,7 +7,7 @@ import gzip
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
-from beret.preprocessing.CRISPResso2Align import read_matrix, global_align
+from beret.preprocessing.CRISPResso2Align import read_matrix, global_align_base_editor
 from beret.framework.Edit import Allele, Edit
 
 class InputFileError(Exception):
@@ -204,6 +204,8 @@ def _get_allele_from_alignment(
 def _get_edited_allele_crispresso(
     ref_seq: str,
     query_seq: str,
+    ref_base: str,
+    alt_base: str,
     aln_mat_path: str,
     offset: int,
     strand: int = 1,
@@ -216,13 +218,15 @@ def _get_edited_allele_crispresso(
     aln_matrix = read_matrix(aln_mat_path)
     assert strand in [-1, +1]
     gap_incentive = np.zeros(len(ref_seq) + 1, dtype = np.int)
-    query_aligned, ref_aligned, score = global_align(
+    query_aligned, ref_aligned, score = global_align_base_editor(
         query_seq, 
         ref_seq, 
+        ref_base,
+        alt_base,
         aln_matrix, 
         gap_incentive,
         gap_open = -20,
-        gap_extend = -10
+        gap_extend = -10,
     )
     if objectify_allele:
         allele = _get_allele_from_alignment(ref_aligned, query_aligned, offset, strand, start_pos, end_pos, 

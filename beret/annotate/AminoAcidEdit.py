@@ -2,17 +2,13 @@ from typing import Iterable
 from enum import IntEnum
 import numpy as np
 from ..framework.Edit import Allele, Edit
+from ..utils.arithmetric import jaccard
 
 AA_SET = {'A', 'C', 'D', 'E', 'F', 
 'G', 'H', 'I', 'K', 'L', 
 'M', 'N', 'P', 'Q', 'R',
  'S', 'T', 'V', 'W', 'Y', '*', '/'}
 
-def jaccard(set1, set2):
-    intersection = len(set(set1).intersection(set2))
-    union = (len(set1) + len(set2)) - intersection
-    if union == 0: return np.nan
-    return float(intersection) / union
 
 class MutationType(IntEnum):
     NO_CHANGE = -1

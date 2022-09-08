@@ -1,6 +1,8 @@
 from enum import unique
 from typing import Iterable
+import numpy as np
 import re
+from ..utils.arithmetric import jaccard
 
 class Edit:
     reverse_map = {"A":"T", "C":"G", "T":"A", "G":"C", "-":"-"}
@@ -37,7 +39,8 @@ class Edit:
 
     @classmethod
     def match_str(cls, edit_str):
-        pattern= r"\d+;\d+;[+-];[A-Z*-]>[A-Z*-]"
+        if isinstance(edit_str, Edit): return True
+        pattern= r"-?\d+:-?\d+:[+-]:[A-Z*-]>[A-Z*-]"
         return(re.fullmatch(pattern, edit_str))
 
     def get_abs_edit(self):
@@ -112,10 +115,11 @@ class Allele:
 
     @classmethod
     def match_str(cls, allele_str):
-        try:
-            return all(map(Edit.match_str, allele_str.split(",")))
-        except:
-            return False
+        if isinstance(allele_str, Allele): return True
+        # try:
+        return all(map(Edit.match_str, allele_str.split(",")))
+        # except:
+        #     return False
     
     def has_edit(self, ref_base, alt_base, pos = None, rel_pos = None):
         if not (pos is None) + (rel_pos is None): 
@@ -142,6 +146,18 @@ class Allele:
                 elif e.rel_pos != rel_pos: return True
             else: return True
         return False
+
+    def get_jaccard(self, other):
+        return(jaccard(self.edits, other.edits))
+
+    def map_to_closest(self, allele_list):
+        if len(allele_list) == 0: return(Allele())
+        nt_jaccards = np.array(list(map(lambda o: self.get_jaccard(o), allele_list)))
+        if not np.isnan(np.nanmax(nt_jaccards)):
+            nt_max_idx = np.where(nt_jaccards == np.nanmax(nt_jaccards))[0]
+            if len(nt_max_idx) > 0:
+                return(allele_list[nt_max_idx[0].item()])
+        return(Allele())
 
     def __eq__(self, other):
         if self.__repr__() == other.__repr__():

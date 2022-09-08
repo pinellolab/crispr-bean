@@ -5,8 +5,8 @@ import numpy as np
 from scipy.stats import fisher_exact
 from tqdm.auto import tqdm
 import pandas as pd
-import mlcrate as mlc
 from beret.framework.Edit import Allele
+from beret.framework._supporting_fn import map_alleles_to_filtered
 
 def sum_column_groups(mat, column_index_list):
     cols = []
@@ -162,7 +162,7 @@ def _filter_alleles(allele_df, edit_significance_tbl, q_thres,
     '''
     if n_threads is None:
         n_threads = len(allele_df.columns)
-    allele_df = allele_df.set_index(['guide', 'allele']).copy()
+    allele_df = allele_df.set_index(['guide', 'allele']).copy().fillna(0)
     
     def child_initialize(_allele_df, _edit_significance_tbl, _filter_each_sample, _q_thres):
         #https://stackoverflow.com/questions/25825995/python-multiprocessing-only-one-process-is-running
@@ -202,9 +202,9 @@ def _filter_alleles(allele_df, edit_significance_tbl, q_thres,
         print(e)
         return(filtered_allele_dfs)
 
-def filter_alleles(sample_adata, ctrl_adata, q_thres = 0.05, OR_thres = 2, aggregate_cond = None, 
+def filter_alleles(sample_adata, ctrl_adata, allele_counts_key = "allele_counts", q_thres = 0.05, OR_thres = 2, aggregate_cond = None, 
                    filter_each_sample = False, edit_sig_tbl = None, n_threads = 30,
-                  run_parallel = False):
+                  run_parallel = False, map_to_filtered = True):
     if not aggregate_cond is None:
         sample_tested = sample_adata.condit.groupby(aggregate_cond).ngroups
     elif not filter_each_sample:
@@ -222,8 +222,10 @@ def filter_alleles(sample_adata, ctrl_adata, q_thres = 0.05, OR_thres = 2, aggre
         q_bonf_tbl = edit_sig_tbl
         print("Using provided edit significance table.\n")    
     print("Filtering alleles for those containing significant edits (q < {})...".format(q_thres))
-    filtered_alleles = _filter_alleles(sample_adata.uns['allele_counts'], q_bonf_tbl, q_thres,              
+    filtered_alleles = _filter_alleles(sample_adata.uns[allele_counts_key], q_bonf_tbl, q_thres,              
         filter_each_sample=filter_each_sample, n_threads = n_threads, run_parallel = run_parallel)
+    if map_to_filtered:
+        filtered_alleles = map_alleles_to_filtered(sample_adata.uns[allele_counts_key], filtered_alleles)
     print("Done!")
     return(q_bonf_tbl, filtered_alleles)
 

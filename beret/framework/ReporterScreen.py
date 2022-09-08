@@ -9,7 +9,7 @@ import anndata as ad
 from perturb_tools import Screen
 from beret.annotate.AminoAcidEdit import AminoAcidAllele, CodingNoncodingAllele
 from .Edit import Edit, Allele
-from ..framework._supporting_fn import get_aa_alleles, filter_allele_by_pos, filter_allele_by_base
+from ..framework._supporting_fn import get_aa_alleles, filter_allele_by_pos, filter_allele_by_base, map_alleles_to_filtered
 
 
 def _get_counts(filename_pattern, guides, reps, conditions):
@@ -62,9 +62,9 @@ class ReporterScreen(Screen):
         for k, df in self.uns.items():
             if "guide" in df.columns:
                 if len(df) > 0:
-                    if "allele" in df.columns and any(df["allele"].map(Allele.match_str)): 
+                    if "allele" in df.columns and (not isinstance(df['allele'].iloc[0], Allele)) and any(df["allele"].map(Allele.match_str)): 
                         self.uns[k].loc[:, "allele"] = self.uns[k].allele.map(lambda s: Allele.from_str(s))
-                    if "edit" in df.columns and any(df['edit'].map(Edit.match_str)):
+                    if "edit" in df.columns and (not isinstance(df['edit'].iloc[0], Edit)) and any(df['edit'].map(Edit.match_str)):
                         self.uns[k].loc[:, "edit"] = self.uns[k].edit.map(lambda s: Edit.from_str(s))
                     if 'reporter_allele' in df.columns and 'guide_allele' in df.columns:
                         self.uns[k].loc[:, "reporter_allele"] = self.uns[k].reporter_allele.map(lambda s: Allele.from_str(s))
@@ -186,7 +186,7 @@ class ReporterScreen(Screen):
         raise ValueError("Guides/sample description mismatch")
 
     def __getitem__(self, index):
-        ''' TODO: currently the condit names are in ['index'] column. Making it to be the idnex will 
+        ''' TODO: currently the condit names are in ['index'] column. Making it to be the index will 
         allow the subsetting by condition names.
         '''
         oidx, vidx = self._normalize_indices(index)
@@ -205,7 +205,7 @@ class ReporterScreen(Screen):
         self.obs=self.guides
         self.var=self.condit
         adata = super().__getitem__(index)
-        new_uns = deepcopy(adata.uns)
+        new_uns = deepcopy(self.uns)
         for k, df in adata.uns.items():
             if "guide" in df.columns:
                 if "allele" in df.columns: key_col = ["guide", "allele"]
@@ -225,7 +225,7 @@ class ReporterScreen(Screen):
         match_target_position=True,
         rel_pos_start = 0,
         rel_pos_end = np.Inf,
-        rel_pos_is_reporter = True,
+        rel_pos_is_reporter = False,
         target_pos_col = "target_pos"
         ):
         edits = self.uns["edit_counts"].copy()
@@ -262,7 +262,7 @@ class ReporterScreen(Screen):
         print("New edit matrix saved in .layers['edits']. Returning old edits.")
         return old_edits
 
-    def get_edit_rate(
+    def get_guide_edit_rate(
         self, 
         normalize_by_editable_base = False, 
         edited_base = None,
@@ -306,6 +306,49 @@ class ReporterScreen(Screen):
         else:
             raise ValueError("edits or barcode matched guide counts not available.")
 
+    def get_edit_rate(
+        self, 
+        normalize_by_editable_base = False, 
+        edited_base = None,
+        editable_base_start = 3,
+        editable_base_end = 8,
+        bcmatch_thres = 1,
+        prior_weight: float = None,
+        return_result = False,
+        count_layer = "X_bcmatch",
+        edit_layer = "edits"
+        ):
+        """
+        prior_weight: 
+        Considering the edit rate to have prior of beta distribution with mean 0.5,
+        prior weight to use when calculating posterior edit rate.
+        """
+        if self.layers[count_layer] is not None and self.layers[edit_layer] is not None:
+            num_targetable_sites = 1.0
+            if normalize_by_editable_base:
+                if not edited_base in ["A", "C", "T", "G"]: 
+                    raise ValueError("Specify the correct edited_base")
+                num_targetable_sites = self.guides.sequence.map(
+                    lambda s: s[editable_base_start:editable_base_end].count(edited_base))
+            bulk_idx = np.where(
+                self.condit.reset_index()["index"].map(lambda s: "bulk" in s)
+            )[0]
+
+            if prior_weight is None:
+                prior_weight = 1
+            n_edits = self.layers[edit_layer]
+            n_counts = self.layers[count_layer]
+            edit_rate = n_edits/n_counts
+            edit_rate[n_counts < bcmatch_thres] = np.nan
+            if normalize_by_editable_base:
+                edit_rate[num_targetable_sites == 0, :] = np.nan
+            if return_result:
+                return(edit_rate)
+            else:
+                self.layers["edit_rate"] = edit_rate
+        else:
+            raise ValueError("edits or barcode matched guide counts not available.")
+
     def get_edit_from_allele(self, allele_count_key = "allele_counts"):
         df = self.uns[allele_count_key].copy()
         df["edits"] = df.allele.map(lambda a: str(a).split(","))
@@ -331,17 +374,21 @@ class ReporterScreen(Screen):
         if allele_count_df is None:
             allele_count_df = self.uns["allele_counts"]
         alleles_norm = allele_count_df.copy()
-        count_columns = self.condit["index"]
+        count_columns = self.condit.index.tolist()
         norm_counts = self._get_allele_norm(allele_count_df = allele_count_df, thres = norm_thres)
         alleles_norm.loc[:,count_columns] = alleles_norm.loc[:,count_columns]/norm_counts
         return(alleles_norm)
 
     def filter_allele_counts_by_pos(self, 
         rel_pos_start = 0, rel_pos_end = 32,
-        allele_uns_key = "allele_counts", filter_rel_pos = True):
+        allele_uns_key = "allele_counts", filter_rel_pos = True,
+        map_to_filtered = True):
         '''
         Filter alleles based on barcode matched counts, allele counts, 
         or proportion
+        
+        Keyword arguments:
+        map_to_filtered -- Map allele to the closest filtered allele to preserve total allele count. Ignores the case where there is no alleles filtered.
         '''
         allele_count_df = self.uns[allele_uns_key].copy()
         filtered_allele, filtered_edits = \
@@ -354,13 +401,19 @@ class ReporterScreen(Screen):
         allele_count_df.insert(1, "allele", allele_count_df.str_allele.map(lambda s: Allele.from_str(s)))
         allele_count_df = allele_count_df.drop("str_allele", axis=1)
         print("{} edits filtered from {} alleles.".format(sum(filtered_edits), len(filtered_edits)))
+        if map_to_filtered:
+            allele_count_df = map_alleles_to_filtered(self.uns[allele_uns_key], allele_count_df)
         return(allele_count_df)
     
     def filter_allele_counts_by_base(self, 
         ref_base = "A", alt_base = "G",
-        allele_uns_key = "allele_counts"):
+        allele_uns_key = "allele_counts",
+        map_to_filtered = True):
         '''
-        Filter alleles based on base change
+        Filter alleles based on base change.
+
+        Keyword arguments:
+        map_to_filtered -- Map allele to the closest filtered allele to preserve total allele count. Ignores the case where there is no alleles filtered.
         '''
         allele_count_df = self.uns[allele_uns_key].copy()
         filtered_allele, filtered_edits = \
@@ -374,6 +427,8 @@ class ReporterScreen(Screen):
         allele_count_df.insert(1, "allele", allele_count_df.str_allele.map(lambda s: Allele.from_str(s)))
         allele_count_df = allele_count_df.drop("str_allele", axis=1)
         print("{} edits filtered from {} alleles.".format(sum(filtered_edits), len(filtered_edits)))
+        if map_to_filtered:
+            allele_count_df = map_alleles_to_filtered(self.uns[allele_uns_key], allele_count_df)
         return(allele_count_df)
 
     def collapse_allele_by_target(self, ref_base, alt_base, target_pos_column = "target_pos"):
@@ -406,8 +461,8 @@ class ReporterScreen(Screen):
             lambda s: get_aa_alleles(s)
         )
 
-    def log_norm(self):
-        super().log_norm()
+    def log_norm(self, **kwargs):
+        super().log_norm(**kwargs)
         super().log_norm(output_layer = "lognorm_edits", read_count_layer="edits")
 
     def log_fold_changes(self, cond1, cond2, return_result=False):

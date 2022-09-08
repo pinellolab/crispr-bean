@@ -1,6 +1,7 @@
 from copy import deepcopy
 from typing import List, Tuple
 from .Edit import Edit, Allele
+import pandas as pd
 from ..annotate.translate_allele import CDS, RefBaseMismatchException
 
 
@@ -8,7 +9,7 @@ def filter_allele_by_pos(
     allele: Allele,
     pos_start: int = None, 
     pos_end: int = None,
-    filter_rel_pos = True
+    filter_rel_pos = True,
     ):
     '''
     Filter alleles based on position and return the filtered allele and
@@ -27,6 +28,7 @@ def filter_allele_by_pos(
                 if not (edit.pos >= pos_start and edit.pos < pos_end): 
                     filtered_edits += 1
                     allele_filtered.edits.remove(edit)
+
     else:
         print("No threshold specified") # TODO: warn
     return(allele_filtered, filtered_edits)
@@ -72,3 +74,16 @@ def get_aa_alleles(allele_str, include_synonymous = True):
         print(e)
         return("ref mismatch")
     return ldlr_cds.get_aa_change(True)
+
+def map_alleles_to_filtered(raw_allele_counts:pd.DataFrame, filtered_allele_counts: pd.DataFrame):
+    mapped_allele_counts = []#pd.DataFrame(columns=raw_allele_counts.columns)
+    for guide, guide_raw_counts in raw_allele_counts.groupby('guide'):
+        guide_filtered_alleles = filtered_allele_counts.loc[filtered_allele_counts.guide == guide, "allele"]
+        if len(guide_filtered_alleles) == 0: pass
+        else:
+            guide_raw_counts['allele_mapped'] = guide_raw_counts.allele.map(lambda allele: allele.map_to_closest(guide_filtered_alleles))
+            guide_raw_counts = guide_raw_counts.drop("allele", axis=1).rename(columns={"allele_mapped":"allele"})
+            guide_raw_counts = guide_raw_counts.groupby(['guide', 'allele']).sum()
+            mapped_allele_counts.append(guide_raw_counts)
+    return(pd.concat(mapped_allele_counts))
+                

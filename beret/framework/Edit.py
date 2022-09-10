@@ -148,15 +148,18 @@ class Allele:
         return False
 
     def get_jaccard(self, other):
-        return(jaccard(self.edits, other.edits))
+        return(jaccard(set(map(str, self.edits)), set(map(str, other.edits))))
 
-    def map_to_closest(self, allele_list):
+    def map_to_closest(self, allele_list, jaccard_threshold = 0.5):
         if len(allele_list) == 0: return(Allele())
         nt_jaccards = np.array(list(map(lambda o: self.get_jaccard(o), allele_list)))
         if not np.isnan(np.nanmax(nt_jaccards)):
             nt_max_idx = np.where(nt_jaccards == np.nanmax(nt_jaccards))[0]
             if len(nt_max_idx) > 0:
-                return(allele_list[nt_max_idx[0].item()])
+                # if multiple max index, arbitrarily select the first one
+                nt_max_idx = nt_max_idx[0]
+                if nt_jaccards[nt_max_idx] > jaccard_threshold:
+                    return(allele_list[nt_max_idx.item()])
         return(Allele())
 
     def __eq__(self, other):

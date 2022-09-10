@@ -78,12 +78,12 @@ def get_aa_alleles(allele_str, include_synonymous = True):
 def map_alleles_to_filtered(raw_allele_counts:pd.DataFrame, filtered_allele_counts: pd.DataFrame):
     mapped_allele_counts = []#pd.DataFrame(columns=raw_allele_counts.columns)
     for guide, guide_raw_counts in raw_allele_counts.groupby('guide'):
-        guide_filtered_alleles = filtered_allele_counts.loc[filtered_allele_counts.guide == guide, "allele"]
+        guide_filtered_alleles = filtered_allele_counts.loc[filtered_allele_counts.guide == guide, "allele"].tolist()
         if len(guide_filtered_alleles) == 0: pass
         else:
             guide_raw_counts['allele_mapped'] = guide_raw_counts.allele.map(lambda allele: allele.map_to_closest(guide_filtered_alleles))
             guide_raw_counts = guide_raw_counts.drop("allele", axis=1).rename(columns={"allele_mapped":"allele"})
             guide_raw_counts = guide_raw_counts.groupby(['guide', 'allele']).sum()
             mapped_allele_counts.append(guide_raw_counts)
-    return(pd.concat(mapped_allele_counts))
+    return(pd.concat(mapped_allele_counts).reset_index())
                 

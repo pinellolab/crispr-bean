@@ -41,7 +41,7 @@ def fisher_test_single_sample(j, sample_edit, ctrl_edit, guide_count_sample, gui
         odds_ratio_series[i], p_value_series[i] = fisher_exact(fisher_tbl, alternative = "greater")
     return(odds_ratio_series, p_value_series)
 
-def get_edit_significance_to_ctrl(sample_adata, ctrl_adata, aggregate_cond = None, run_parallel = False):
+def get_edit_significance_to_ctrl(sample_adata, ctrl_adata, aggregate_cond = None, run_parallel = False, allele_counts_key = "allele_counts"):
     '''
     Calculate edit counts for all edits in sample_adata, regardless of the edit presence in the sample.
     '''
@@ -50,8 +50,8 @@ def get_edit_significance_to_ctrl(sample_adata, ctrl_adata, aggregate_cond = Non
     else:
         sample_columns = sample_adata.condit.index.tolist()
     n_samples = len(sample_columns)
-    sample_adata.uns['edit_counts'] = sample_adata.get_edit_from_allele()
-    ctrl_adata.uns['edit_counts'] = ctrl_adata.get_edit_from_allele()
+    sample_adata.uns['edit_counts'] = sample_adata.get_edit_from_allele(allele_count_key = allele_counts_key)
+    ctrl_adata.uns['edit_counts'] = ctrl_adata.get_edit_from_allele(allele_count_key = allele_counts_key)
     edit_counts_ctrl = ctrl_adata.uns['edit_counts']
 
     if not aggregate_cond is None:
@@ -216,7 +216,7 @@ def filter_alleles(sample_adata, ctrl_adata, allele_counts_key = "allele_counts"
     
     if edit_sig_tbl is None:
         odds_ratio_tbl, q_bonf_tbl = get_edit_significance_to_ctrl(
-            sample_adata, ctrl_adata, aggregate_cond, run_parallel=run_parallel)
+            sample_adata, ctrl_adata, aggregate_cond, run_parallel=run_parallel, allele_counts_key = allele_counts_key)
         print("Done calculating significance.\n\n")
     else:
         q_bonf_tbl = edit_sig_tbl

@@ -1,4 +1,4 @@
-# <img src="beret2.svg" alt="beret" width="300"/>
+# <img src="beret2.svg" alt="beret" width="150"/>
 **B**ase **E**diting with **Re**porter analysis **T**oolkit.  
 This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The reporter technique transfects cells with plasmid with not only sgRNA but with the **target sequence surrogate** which we call **reporter** or **sensor**.  
   

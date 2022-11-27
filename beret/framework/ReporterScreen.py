@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 from anndata import AnnData
 import anndata as ad
 from perturb_tools import Screen
-from beret.annotate.AminoAcidEdit import AminoAcidAllele, CodingNoncodingAllele
+from .AminoAcidEdit import AminoAcidAllele, CodingNoncodingAllele
 from .Edit import Edit, Allele
-from ..framework._supporting_fn import get_aa_alleles, filter_allele_by_pos, filter_allele_by_base, map_alleles_to_filtered
+from ._supporting_fn import get_aa_alleles, filter_allele_by_pos, filter_allele_by_base
+from .filter_alleles import _map_alleles_to_filtered, _distribute_alleles_to_filtered
 
 
 def _get_counts(filename_pattern, guides, reps, conditions):
@@ -207,6 +208,8 @@ class ReporterScreen(Screen):
         adata = super().__getitem__(index)
         new_uns = deepcopy(self.uns)
         for k, df in adata.uns.items():
+            if k.startswith("repguide_mask"):
+                new_uns[k] = df.loc[guides_include, adata.var.rep.unique()]
             if "guide" in df.columns:
                 if "allele" in df.columns: key_col = ["guide", "allele"]
                 elif "edit" in df.columns: key_col = ["guide", "edit"]
@@ -337,9 +340,9 @@ class ReporterScreen(Screen):
             if prior_weight is None:
                 prior_weight = 1
             n_edits = self.layers[edit_layer]
-            n_counts = self.layers[count_layer]
+            n_counts = self.layers[count_layer].astype(float)
+            n_counts[n_counts < bcmatch_thres] = np.nan
             edit_rate = n_edits/n_counts
-            edit_rate[n_counts < bcmatch_thres] = np.nan
             if normalize_by_editable_base:
                 edit_rate[num_targetable_sites == 0, :] = np.nan
             if return_result:
@@ -382,13 +385,16 @@ class ReporterScreen(Screen):
     def filter_allele_counts_by_pos(self, 
         rel_pos_start = 0, rel_pos_end = 32,
         allele_uns_key = "allele_counts", filter_rel_pos = True,
-        map_to_filtered = True):
+        map_to_filtered = True, distribute = False,
+        jaccard_threshold = 0.1):
         '''
         Filter alleles based on barcode matched counts, allele counts, 
         or proportion
         
         Keyword arguments:
-        map_to_filtered -- Map allele to the closest filtered allele to preserve total allele count. Ignores the case where there is no alleles filtered.
+        map_to_filtered (bool) -- Map allele to the closest filtered allele to preserve total allele count. Ignores the case where there is no alleles filtered.
+        rel_pos_start (int) -- rel_pos to start including (inclusive)
+        rel_pos_end (int) -- rel_pos to end including (exclusive)
         '''
         allele_count_df = self.uns[allele_uns_key].copy()
         filtered_allele, filtered_edits = \
@@ -402,7 +408,11 @@ class ReporterScreen(Screen):
         allele_count_df = allele_count_df.drop("str_allele", axis=1)
         print("{} edits filtered from {} alleles.".format(sum(filtered_edits), len(filtered_edits)))
         if map_to_filtered:
-            allele_count_df = map_alleles_to_filtered(self.uns[allele_uns_key], allele_count_df)
+            print("mapping filtered alleles ...")
+            if distribute:
+                allele_count_df = _distribute_alleles_to_filtered(self.uns[allele_uns_key], allele_count_df, jaccard_threshold=jaccard_threshold)
+            else:
+                allele_count_df = _map_alleles_to_filtered(self.uns[allele_uns_key], allele_count_df, jaccard_threshold=jaccard_threshold)
         return(allele_count_df)
     
     def filter_allele_counts_by_base(self, 
@@ -428,7 +438,7 @@ class ReporterScreen(Screen):
         allele_count_df = allele_count_df.drop("str_allele", axis=1)
         print("{} edits filtered from {} alleles.".format(sum(filtered_edits), len(filtered_edits)))
         if map_to_filtered:
-            allele_count_df = map_alleles_to_filtered(self.uns[allele_uns_key], allele_count_df)
+            allele_count_df = _map_alleles_to_filtered(self.uns[allele_uns_key], allele_count_df)
         return(allele_count_df)
 
     def collapse_allele_by_target(self, ref_base, alt_base, target_pos_column = "target_pos"):

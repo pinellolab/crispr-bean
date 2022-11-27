@@ -1,16 +1,15 @@
+import setuptools
 from Cython.Build import cythonize
 import numpy as np
-import setuptools
-
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
      name='berets',  
-     version='0.1.1',
+     version='0.1.2',
      author="Jayoung Ryu",
      author_email="jayoung_ryu@g.harvard.edu",
-     description="Tools for analyzing CRISPR data with REPorter edits",
+     description="Base Editor with or without REporter data analysis Toolkit",
      long_description=long_description,
      long_description_content_type="text/markdown",
      url="https://github.com/pinellolab/beret",

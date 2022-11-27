@@ -1,8 +1,13 @@
-from typing import List
+from contextlib import suppress
+import os
+from typing import List, Iterable
+from copy import deepcopy
 import numpy as np
+import pandas as pd
 from Bio import SeqIO
+import beret as be
 from beret.framework.Edit import Edit, Allele
-from beret.annotate.AminoAcidEdit import AminoAcidEdit, AminoAcidAllele, CodingNoncodingAllele
+from beret.framework.AminoAcidEdit import AminoAcidEdit, AminoAcidAllele, CodingNoncodingAllele
 import logging
 import sys
 
@@ -114,8 +119,16 @@ def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
     
 
 class CDS():  
-    def __init__(self, fasta_file_name="ldlr_exons.fa"):
-        type(self).set_exon_fasta_name(fasta_file_name)
+    def __init__(self, fasta_file_name=None, suppressMessage = True):
+        if fasta_file_name is None: 
+            if not suppressMessage:
+                print("No fasta file provided as reference: using LDLR")
+            fasta_file_name=os.path.dirname(be.__file__) + "/annotate/ldlr_exons.fa"
+        try:
+            type  (self).set_exon_fasta_name(fasta_file_name)
+        except FileNotFoundError as e:
+            print(os.getcwd())
+            raise e
         self.edited_nt = type(self).nt.copy()
         self.edited_aa_pos = set()
         self.edits_noncoding = set()
@@ -155,7 +168,8 @@ class CDS():
         if rel_pos == -1 : # position outside CDS
             self.edits_noncoding.add(edit)
         elif type(self).nt[rel_pos] != ref_base:
-            raise RefBaseMismatchException("ref:{} at pos {}, got edit {}".format(type(self).nt[rel_pos], rel_pos, edit))
+            if ref_base != "-":
+                raise RefBaseMismatchException("ref:{} at pos {}, got edit {}".format(type(self).nt[rel_pos], rel_pos, edit))
         else:
             self.edited_nt[rel_pos] = alt_base
         if alt_base == '-': #frameshift
@@ -185,4 +199,59 @@ class CDS():
                 edited_aa_pos + 1, ref_aa, mt_aa))
         
         return(mutations)
-   
+
+def get_allele_aa_change(allele_str, include_synonymous = True, fasta_file=None):
+    """
+    Obtain amino acid changes
+    """
+    cds = CDS(fasta_file_name=fasta_file)
+    cds.edit_allele(allele_str)
+    return(cds.get_aa_change(include_synonymous))
+
+def translate_allele(allele: Allele, include_synonymouns = True, allow_ref_mismatch = True):
+    try:
+        return(get_allele_aa_change(allele, include_synonymous=include_synonymouns))
+    except RefBaseMismatchException as e:
+        if allow_ref_mismatch:
+            print(e)
+            return("ref mismatch")
+        else:
+            raise e
+
+def translate_allele_df(allele_df, include_synonymouns = True, allow_ref_mismatch = True):
+    allele_df = allele_df.copy()
+    translated_alleles = allele_df.allele.map(lambda a: be.translate_allele(a, include_synonymouns=include_synonymouns, allow_ref_mismatch=allow_ref_mismatch))
+    allele_df.insert(2, "cn_allele", translated_alleles)
+    allele_df['cn_allele'] = allele_df.cn_allele.map(str)
+    allele_df= allele_df.loc[~allele_df.cn_allele.map(str).isin(["ref mismatch", "|", "", "translation error"]), :]
+    allele_df = allele_df.drop('allele', axis=1).groupby(['guide', 'cn_allele']).sum()
+    allele_df = allele_df.reset_index().rename(columns={"cn_allele":"aa_allele"})
+    allele_df.aa_allele = allele_df.aa_allele.map(lambda s:be.CodingNoncodingAllele.from_str(s))
+    return(allele_df)
+
+
+def filter_nt_allele(cn_allele: CodingNoncodingAllele, pos_include: Iterable[int]):
+    """
+    For CodingNoncodingAllele object, retain all amino acid mutation while filtering the nt_allele based on edit position.
+    """
+    cn_allele = deepcopy(cn_allele)
+    edit_list = []
+    for e in cn_allele.nt_allele.edits:
+        if e.pos in pos_include: 
+            edit_list.append(e)
+    cn_allele.nt_allele = be.Allele(edit_list)
+    return cn_allele
+
+def filter_nt_alleles(cn_allele_df: pd.DataFrame, pos_include: Iterable[int]):
+    """
+    For CodingNoncodingAllele object, retain all amino acid mutation while filtering the nt_allele based on edit position.
+    Arguments
+    -- cn_allele_df (pd.DataFrame): Allele dataframe that has 'guide', 'aa_allele' as columns.
+    """
+    splice_only = cn_allele_df.aa_allele.map(lambda a: be.an.translate_allele.filter_nt_allele(a, pos_include))
+    alleles = cn_allele_df.copy()
+    alleles = alleles.drop('aa_allele', axis=1, inplace = False)
+    alleles.insert(1, "aa_allele", splice_only)
+    alleles = alleles.groupby(['guide', 'aa_allele']).sum().reset_index()
+    alleles = alleles.loc[alleles.aa_allele.map(bool),:]
+    return(alleles)

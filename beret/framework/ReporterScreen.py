@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from anndata import AnnData
 import anndata as ad
 from perturb_tools import Screen
-from .AminoAcidEdit import AminoAcidAllele, CodingNoncodingAllele
+from .AminoAcidEdit import AminoAcidEdit, AminoAcidAllele, CodingNoncodingAllele
 from .Edit import Edit, Allele
 from ._supporting_fn import get_aa_alleles, filter_allele_by_pos, filter_allele_by_base
 from .filter_alleles import _map_alleles_to_filtered, _distribute_alleles_to_filtered
@@ -431,12 +431,21 @@ class ReporterScreen(Screen):
         else:
             raise ValueError("edits or barcode matched guide counts not available.")
 
-    def get_edit_from_allele(self, allele_count_key="allele_counts"):
+    def get_edit_from_allele(
+        self, allele_count_key="allele_counts", allele_key="allele"
+    ):
         df = self.uns[allele_count_key].copy()
-        df["edits"] = df.allele.map(lambda a: str(a).split(","))
+        df["edits"] = df[allele_key].map(lambda a: str(a).split(","))
         df = df.explode("edits").groupby(["guide", "edits"]).sum()
         df = df.reset_index().rename(columns={"edits": "edit"})
-        df["edit"] = df.edit.map(lambda s: Edit.from_str(s))
+
+        def try_objectify(s):
+            try:
+                return Edit.from_str(s)
+            except:
+                return AminoAcidEdit.from_str(s)
+
+        df["edit"] = df.edit.map(try_objectify)
         return df
 
     def _get_allele_norm(self, allele_count_df=None, thres=10):
@@ -448,7 +457,7 @@ class ReporterScreen(Screen):
             allele_count_df = self.uns["allele_counts"]
         guide_to_idx = self.guides.reset_index().reset_index().set_index("name")
         guide_idx = guide_to_idx.loc[allele_count_df.guide, "index"]
-        norm_counts = self.layers["X_bcmatch"][guide_idx.values.astype(int), :]
+        norm_counts = self.layers["X_bcmatch"][guide_idx.values.astype(int), :].copy()
         norm_counts[norm_counts < thres] = np.nan
         return norm_counts
 

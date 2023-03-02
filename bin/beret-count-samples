@@ -1,5 +1,7 @@
+"""Count guides, optionally with reporter and alleles for multiple samples that share the same guide library."""
 #!/usr/bin/env python
 
+import argparse
 import logging
 import os
 import sys
@@ -7,7 +9,7 @@ from multiprocessing import Pool
 
 import beret
 import pandas as pd
-from utils import InputFileError, _get_input_parser
+from utils import InputFileError, _check_arguments, _get_input_parser
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,7 +55,8 @@ def get_input_parser():
     return parser
 
 
-def count_sample(R1, R2, sample_id, args):
+def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
+    """Count single sample given R1 and R2 paths."""
     args_dict = vars(args)
     args_dict["R1"] = R1
     args_dict["R2"] = R2
@@ -93,7 +96,9 @@ def count_sample(R1, R2, sample_id, args):
     return screen
 
 
-def check_arguments(args):
+def check_arguments(args: argparse.Namespace) -> argparse.Namespace:
+    """Checks the validity of the argument."""
+    args = _check_arguments(args, info, warn, error)
     sample_tbl = pd.read_csv(args.input, header=None)
     if len(sample_tbl[2].unique()) != len(sample_tbl[2]):
         raise InputFileError(
@@ -126,7 +131,6 @@ def main():
     parser = get_input_parser()
     args = parser.parse_args()
     args = check_arguments(args)
-
     sample_tbl = pd.read_csv(args.input, header=None)
 
     with Pool(processes=args.threads) as p:

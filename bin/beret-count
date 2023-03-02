@@ -1,3 +1,4 @@
+"""Count guides, optionally with reporter and alleles of a single sequencing sample."""
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -6,7 +7,7 @@ import os
 import sys
 
 import beret
-from utils import _get_input_parser, check_arguments
+from utils import _check_arguments, _get_input_parser
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,7 +48,9 @@ def main():
     parser = get_input_parser()
     args = parser.parse_args()
 
-    args = check_arguments(args, info_logger=info, warn_logger=warn, error_logger=error)
+    args = _check_arguments(
+        args, info_logger=info, warn_logger=warn, error_logger=error
+    )
     args_dict = vars(args)
 
     edited_from = args_dict["edited_base"]

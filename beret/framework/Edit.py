@@ -1,5 +1,4 @@
 from __future__ import annotations
-from enum import unique
 from typing import Iterable
 import numpy as np
 import re
@@ -20,20 +19,17 @@ class Edit:
         unique_identifier=None,
     ):
         assert strand in [+1, -1]
-        strand_to_symbol = {1: "+", -1: "-"}
         self.rel_pos = rel_pos
         self.ref_base = ref_base  # TODO make it ref / alt instead of ref_base and alt_base for AAEdit comp. or make abstract class
         self.alt_base = alt_base
         self.uid = unique_identifier
         if type(strand) == int:
+            strand_to_symbol = {1: "+", -1: "-"}
             self.strand = strand_to_symbol[strand]
         else:
-            assert strand in ["+", "-"]
+            assert strand in {"+", "-"}
             self.strand = strand
-        if not offset is None:
-            self.pos = offset + self.rel_pos * strand
-        else:
-            self.pos = self.rel_pos
+        self.pos = self.rel_pos if offset is None else offset + self.rel_pos * strand
 
     @classmethod
     def from_str(cls, edit_str):  # pos:strand:start>end
@@ -79,9 +75,9 @@ class Edit:
         else:
             ref_base = self.ref_base
             alt_base = self.alt_base
-        if not self.uid is None:
-            return "{}!{}:{}>{}".format(self.uid, int(self.rel_pos), ref_base, alt_base)
-        return "{}:{}>{}".format(int(self.pos), ref_base, alt_base)
+        if self.uid is not None:
+            return f"{self.uid}!{int(self.rel_pos)}:{ref_base}>{alt_base}"
+        return f"{int(self.pos)}:{ref_base}>{alt_base}"
 
     def set_uid(self, uid):
         if "!" in uid:
@@ -104,52 +100,13 @@ class Edit:
         return f"{ref_base}>{alt_base}"
 
     def __eq__(self, other):
-        if self.__repr__() == other.__repr__():
-            return True
-        return False
-
-    def __lt__(self, other):
-        if isinstance(other, Edit):
-            if self.pos != other.pos:
-                return self.pos < other.pos
-        return self.__repr__() < str(other)
-
-    def __gt__(self, other):
-        if isinstance(other, Edit):
-            if self.pos != other.pos:
-                return self.pos > other.pos
-        return self.__repr__() > str(other)
-
-    def __hash__(self):
-        return hash(self.__repr__())
-
-    def __repr__(self):
-        if self.uid is None:
-            return "{}:{}:{}:{}>{}".format(
-                int(self.pos),
-                int(self.rel_pos),
-                self.strand,
-                self.ref_base,
-                self.alt_base,
-            )
-
-        return "{}!{}:{}:{}:{}>{}".format(
-            self.uid,
-            int(self.pos),
-            int(self.rel_pos),
-            self.strand,
-            self.ref_base,
-            self.alt_base,
-        )
+        return self.__repr__() == other.__repr__()
 
 
 class Allele:
     # pos, ref, alt
     def __init__(self, edits: Iterable[Edit] = None):
-        if edits is None:
-            self.edits = set()
-        else:
-            self.edits = set(edits)
+        self.edits = set() if edits is None else set(edits)
 
     @classmethod
     def from_str(cls, allele_str):  # pos:strand:start>end
@@ -177,14 +134,14 @@ class Allele:
         if not (pos is None) + (rel_pos is None):
             raise ValueError("Either pos or rel_pos should be specified")
 
-        for e in self.edits:
-            if e.ref_base == ref_base and e.alt_base == alt_base:
-                if not pos is None:
-                    if e.pos == pos:
-                        return True
-                elif e.rel_pos == rel_pos:
-                    return True
-        return False
+        return any(
+            e.ref_base == ref_base
+            and e.alt_base == alt_base
+            and (
+                pos is not None and e.pos == pos or pos is None and e.rel_pos == rel_pos
+            )
+            for e in self.edits
+        )
 
     def has_other_edit(self, ref_base, alt_base, pos=None, rel_pos=None):
         """
@@ -196,10 +153,12 @@ class Allele:
             raise ValueError("Either pos or rel_pos should be specified")
         for e in self.edits:
             if e.ref_base == ref_base and e.alt_base == alt_base:
-                if not pos is None:
-                    if e.pos != pos:
-                        return True
-                elif e.rel_pos != rel_pos:
+                if (
+                    pos is not None
+                    and e.pos != pos
+                    or pos is None
+                    and e.rel_pos != rel_pos
+                ):
                     return True
             else:
                 return True
@@ -224,12 +183,10 @@ class Allele:
         if not np.isnan(np.nanmax(nt_jaccards)):
             nt_max_idx = np.where(nt_jaccards == np.nanmax(nt_jaccards))[0]
             if len(nt_max_idx) > 0:
-                if len(nt_max_idx) > 1 and not merge_priority is None:
-                    if not len(merge_priority) == len(allele_list):
+                if len(nt_max_idx) > 1 and merge_priority is not None:
+                    if len(merge_priority) != len(allele_list):
                         raise ValueError(
-                            "merge_priority length {} is not the same as allele_list length {}".format(
-                                len(merge_priority), len(allele_list)
-                            )
+                            f"merge_priority length {len(merge_priority)} is not the same as allele_list length {len(allele_list)}"
                         )
                     nt_max_idx = nt_max_idx[np.argmax(merge_priority[nt_max_idx])]
                 else:
@@ -245,9 +202,7 @@ class Allele:
         return len(self.edits)
 
     def __eq__(self, other):
-        if self.__repr__() == other.__repr__():
-            return True
-        return False
+        return self.__repr__() == other.__repr__()
 
     def __lt__(self, other):  # Implemented for pandas compatibility
         return len(self.edits) < len(other.edits)

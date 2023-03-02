@@ -17,7 +17,8 @@ pip install berets
 ```
 
 ## Count reporter screen data  
-Aligns guide with matched reporter allele counts in multiple samples.  
+`beret-count-samples` or `beret-count` maps guide into guide counts, **allowing for base transition in spacer sequence**. When the matched reporter information is provided, it can count the **target site edits** and **alleles produced by each guide**. Mapping is efficiently done based on [CRISPResso2](https://github.com/pinellolab/CRISPResso2).
+
 
 <img src="imgs/reporter_screen.svg" alt="reporter screen" width="700"/>  
 
@@ -27,15 +28,21 @@ beret-count-samples         \
   -b A                      \ # base that is being edited (A/G)
   -f gRNA_library.csv       \ # sgRNA information 
   -o .                      \ # output directory    
-  -a                        \ # read allele information  
-  -r                        \ # read reporter edit information
-  -m                        \ # read matched guide and reporter edit information  
+  -r                        \ # read edit/allele information from reporter  
   -t 12                     \ # number of threads  
   --name LDLvar_fullsort    \ # name of this sample run  
 ```
 
 This produces `.h5ad` and `.xlsx` file with guide and per-guide allele counts.  
-`.h5ad` file follows annotated matrix format compatible with `AnnData` and is based on `Screen` object in [purturb_tools](https://github.com/pinellolab/perturb-tools) and contains the per-guide allele counts.    
+* `.h5ad`: This output file follows annotated matrix format compatible with `AnnData` and is based on `Screen` object in [purturb_tools](https://github.com/pinellolab/perturb-tools). The object contains the per-guide allele counts.
+  * `.guides`: guide information provided in input (`gRNA_library.csv` in above example)
+  * `.condit`: sample information provided in input (`sample_list.csv` in above example)
+  * `.X`: Main guide count matrix, where row corresponds to each guide in `.guides` and columns correspond to samples in `.condit`.
+Following attributes are included if matched reporter is provided and you chose to read edit/allele information from the reporter using `-r` option.
+  * `.X_bcmatch` (Optional): Contains information about number of barcode-matched reads. Information about R2 barcode should be specified as `barcode` column in your `gRNA_library.csv` file.
+  * `.X_edits` (Optional): If target position of each guide is specified as `target_pos` in input `gRNA_library.csv` file and `--match-target-position` option is provided, the result has the matrix with the number of target edit at the specified positions.
+  * `.allele_tables` (Optional): Dictionary with a single allele count table that counts per guide and allele combination, what is the count per sample. 
+* `.xlsx`: This output file contains `.guides`, `.condit`, `.X[_bcmatch,_edits]`. (`allele_tables` are often too large to write into an Excel!)
 <img src="imgs/screendata.svg" alt="screendata" width="700"/>
 
 ## Using as python module

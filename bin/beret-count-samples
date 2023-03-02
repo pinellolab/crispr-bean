@@ -1,5 +1,6 @@
-"""Count guides, optionally with reporter and alleles for multiple samples that share the same guide library."""
 #!/usr/bin/env python
+"""Count guides, optionally with reporter and alleles for multiple samples that share the same guide library."""
+
 
 import argparse
 import logging
@@ -9,7 +10,13 @@ from multiprocessing import Pool
 
 import beret
 import pandas as pd
-from utils import InputFileError, _check_arguments, _get_input_parser
+from beret.mapping.utils import (
+    InputFileError,
+    _check_arguments,
+    _get_input_parser,
+    _get_first_read_length,
+    _check_read_length,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -106,6 +113,11 @@ def check_arguments(args: argparse.Namespace) -> argparse.Namespace:
         raise InputFileError(
             f"Sample ID not unique. Please check your input file {args.input}."
         )
+    first_read_lengths = [
+        _get_first_read_length(fastq_R1) for fastq_R1 in sample_tbl[0]
+    ]
+    for read_length in first_read_lengths:
+        _check_read_length(args, read_length, warn)
 
     def _check_return_guide_seqs_tbl(guide_seqs_file, sample_tbl):
         """Check if the provided `guide_[start,end]_seqs_file` contains information about all samples in `sample_tbl`."""
@@ -151,6 +163,7 @@ def main():
     screen.guides = result[0].guides.loc[screen.guides.index, :]
     screen.condit = screen.condit
     screen.write(f"{output_path}.h5ad")
+    screen.to_Excel(f"{output_path}.xlsx")
 
     info("All Done!")
     print(

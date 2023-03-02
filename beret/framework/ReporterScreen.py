@@ -1,33 +1,51 @@
 from copy import deepcopy
-from functools import reduce
 from typing import Collection, Iterable, List, Optional, Union
 
 import anndata as ad
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 from perturb_tools import Screen
 
 from ._supporting_fn import filter_allele_by_base, filter_allele_by_pos, get_aa_alleles
-from .AminoAcidEdit import AminoAcidAllele, AminoAcidEdit, CodingNoncodingAllele
+from .AminoAcidEdit import AminoAcidEdit, CodingNoncodingAllele
 from .Edit import Allele, Edit
 from .filter_alleles import _distribute_alleles_to_filtered, _map_alleles_to_filtered
 
 
-def _get_counts(filename_pattern, guides, reps, conditions):
+def _get_counts(
+    filename_pattern: str,
+    guides: pd.DataFrame,
+    reps: Iterable[str],
+    conditions: Iterable[str],
+) -> pd.DataFrame:
+    """Read multiple .csv file with "guide_name,read_counts" columns across replicates and conditions.
+    File names are dictated by filename_pattern and reps, condiitons argument provided.
+
+    Args
+    --
+    filename_pattern: format string with 'r' as replicate and 'c' as condition. Will be formatted as filename_pattern.format(r=replicate, c=condition).
+    guides: Guide information that will be used as reference
+    reps: List of replicate string to be used for formatting
+    conditions: List of condition strings to be used for formatting
+    """
     for rep in reps:
         for cond in conditions:
             res = pd.read_csv(filename_pattern.format(r=rep, c=cond), delimiter="\t")
             res = res.set_index("guide_name")[["read_counts"]]
-            res.columns = res.columns.map(lambda x: "{r}_{c}".format(r=rep, c=cond))
+            res.columns = res.columns.map(lambda x: "{rep}_{cond}")
             guides = guides.join(res, how="left")
-        else:
-            guides = guides.fillna(0)
-            return guides
+        guides = guides.fillna(0)
+        return guides
 
 
-def _get_edits(filename_pattern, guide_info, reps, conditions, count_exact=True):
+def _get_edits(
+    filename_pattern: str,
+    guide_info: pd.DataFrame,
+    reps: Iterable[str],
+    conditions: Iterable[str],
+    count_exact: bool = True,
+) -> pd.DataFrame:
+    """ """
     edits = pd.DataFrame(index=(guide_info.index))
     for rep in reps:
         for cond in conditions:
@@ -50,62 +68,64 @@ def _get_edits(filename_pattern, guide_info, reps, conditions, count_exact=True)
                 )
             this_edit.name = "{r}_{c}".format(r=rep, c=cond)
             edits = edits.join(this_edit, how="left")
-        else:
-            edits = edits.fillna(0)
-            return edits
+        edits = edits.fillna(0)
+        return edits
 
 
 class ReporterScreen(Screen):
     def __init__(self, X=None, X_edit=None, X_bcmatch=None, *args, **kwargs):
         (super().__init__)(X, *args, **kwargs)
-        if not X_edit is None:
+        if X_edit is not None:
             self.layers["edits"] = X_edit
-        if not X_bcmatch is None:
+        if X_bcmatch is not None:
             self.layers["X_bcmatch"] = X_bcmatch
         for k, df in self.uns.items():
-            if "guide" in df.columns:
-                if len(df) > 0:
-                    if (
-                        "allele" in df.columns
-                        and (not isinstance(df["allele"].iloc[0], Allele))
-                        and any(df["allele"].map(Allele.match_str))
-                    ):
-                        self.uns[k].loc[:, "allele"] = self.uns[k].allele.map(
-                            lambda s: Allele.from_str(s)
-                        )
-                    if (
-                        "edit" in df.columns
-                        and (not isinstance(df["edit"].iloc[0], Edit))
-                        and any(df["edit"].map(Edit.match_str))
-                    ):
-                        self.uns[k].loc[:, "edit"] = self.uns[k].edit.map(
-                            lambda s: Edit.from_str(s)
-                        )
-                    if "reporter_allele" in df.columns and "guide_allele" in df.columns:
-                        self.uns[k].loc[:, "reporter_allele"] = self.uns[
-                            k
-                        ].reporter_allele.map(lambda s: Allele.from_str(s))
-                        self.uns[k].loc[:, "guide_allele"] = self.uns[
-                            k
-                        ].guide_allele.map(lambda s: Allele.from_str(s))
-                    if "aa_allele" in df.columns and any(
-                        df["aa_allele"].map(CodingNoncodingAllele.match_str)
-                    ):
-                        self.uns[k].loc[:, "aa_allele"] = self.uns[k].aa_allele.map(
-                            lambda s: CodingNoncodingAllele.from_str(s)
-                        )
+            if "guide" in df.columns and len(df) > 0:
+                if (
+                    "allele" in df.columns
+                    and (not isinstance(df["allele"].iloc[0], Allele))
+                    and any(df["allele"].map(Allele.match_str))
+                ):
+                    self.uns[k].loc[:, "allele"] = self.uns[k].allele.map(
+                        lambda s: Allele.from_str(s)
+                    )
+                if (
+                    "edit" in df.columns
+                    and (not isinstance(df["edit"].iloc[0], Edit))
+                    and any(df["edit"].map(Edit.match_str))
+                ):
+                    self.uns[k].loc[:, "edit"] = self.uns[k].edit.map(
+                        lambda s: Edit.from_str(s)
+                    )
+                if "reporter_allele" in df.columns and "guide_allele" in df.columns:
+                    self.uns[k].loc[:, "reporter_allele"] = self.uns[
+                        k
+                    ].reporter_allele.map(lambda s: Allele.from_str(s))
+                    self.uns[k].loc[:, "guide_allele"] = self.uns[k].guide_allele.map(
+                        lambda s: Allele.from_str(s)
+                    )
+                if "aa_allele" in df.columns and any(
+                    df["aa_allele"].map(CodingNoncodingAllele.match_str)
+                ):
+                    self.uns[k].loc[:, "aa_allele"] = self.uns[k].aa_allele.map(
+                        lambda s: CodingNoncodingAllele.from_str(s)
+                    )
 
-        # if "edit_counts" in self.uns.keys():
-        #     if "edit" in self.uns["edit_counts"].columns:
-        #         self.uns["edit_counts"].edit = self.uns["edit_counts"].edit.map(lambda s: Edit.from_str(s))
-        # if "allele_counts" in self.uns.keys():
-        #     if "allele" in self.uns["allele_counts"].columns:
-        #         self.uns["allele_counts"].allele = self.uns["allele_counts"].allele.map(lambda s: Allele.from_str(s))
-        # if "guide_reporter_allele_counts" in self.uns.keys():
-        #     self.uns["guide_reporter_allele_counts"].reporter_allele = \
-        #         self.uns["guide_reporter_allele_counts"].reporter_allele.map(lambda s: Allele.from_str(s))
-        #     self.uns["guide_reporter_allele_counts"].guide_allele = \
-        #         self.uns["guide_reporter_allele_counts"].guide_allele.map(lambda s: Allele.from_str(s))
+    @property
+    def X_edits(self):
+        return self.layers["edits"]
+
+    @property
+    def X_bcmatch(self):
+        return self.layers["X_bcmatch"]
+
+    @property
+    def edit_tables(self):
+        return {k: self.uns[k] for k in self.uns.keys() if "edit" in k}
+
+    @property
+    def allele_tables(self):
+        return {k: self.uns[k] for k in self.uns.keys() if "allele" in k}
 
     @classmethod
     def from_file_paths(
@@ -142,15 +162,9 @@ class ReporterScreen(Screen):
 
     @classmethod
     def from_adata(cls, adata):
-        if "X_bcmatch" in adata.layers:
-            X_bcmatch = adata.layers["X_bcmatch"]
-        else:
-            X_bcmatch = None
-        if "edits" in adata.layers:
-            edits = adata.layers["edits"]
-        else:
-            edits = None
-        repscreen = cls(
+        X_bcmatch = adata.layers["X_bcmatch"] if "X_bcmatch" in adata.layers else None
+        edits = adata.layers["edits"] if "edits" in adata.layers else None
+        return cls(
             (adata.X),
             X_edit=edits,
             X_bcmatch=X_bcmatch,
@@ -159,55 +173,52 @@ class ReporterScreen(Screen):
             uns=(adata.uns),
             layers=(adata.layers),
         )
-        return repscreen
 
     def copy(self):
         adata = super().copy()
         return type(self).from_adata(adata)
 
     def __add__(self, other):
-        if all(self.guides.index == other.guides.index):
-            if all(self.condit.index == other.condit.index):
-                added_uns = dict()
-                for k in self.uns.keys():
-                    if k not in other.uns.keys():
-                        continue
-                    if k == "guide_edit_counts":
-                        index_pair = ["guide", "edit"]
-                    elif k == "edit_counts":
-                        index_pair = ["guide", "edit"]
-                    elif k == "allele_counts":
-                        index_pair = ["guide", "allele"]
-                    elif k == "guide_reporter_allele_counts":
-                        index_pair = ["guide", "reporter_allele", "guide_allele"]
-                    else:
-                        continue
-                    self_df = self.uns[k].set_index(index_pair, drop=True)
-                    add_df = other.uns[k].set_index(index_pair, drop=True)
-                    add_df = add_df.loc[:, self_df.columns]
-                    added_uns[k] = (
-                        self_df.add(add_df, fill_value=0).astype(int).reset_index()
-                    )
-
-                if "X_bcmatch" in self.layers and "X_bcmatch" in other.layers:
-
-                    added = ReporterScreen(
-                        (self.X + other.X),
-                        (self.layers["edits"] + other.layers["edits"]),
-                        (self.layers["X_bcmatch"] + other.layers["X_bcmatch"]),
-                        guides=(self.guides),
-                        condit=(self.condit),
-                        uns=added_uns,
-                    )
+        if all(self.guides.index == other.guides.index) and all(
+            self.condit.index == other.condit.index
+        ):
+            added_uns = {}
+            for k in self.uns.keys():
+                if k not in other.uns.keys():
+                    continue
+                if k == "allele_counts":
+                    index_pair = ["guide", "allele"]
+                elif k in ["guide_edit_counts", "edit_counts"]:
+                    index_pair = ["guide", "edit"]
+                elif k == "guide_reporter_allele_counts":
+                    index_pair = ["guide", "reporter_allele", "guide_allele"]
                 else:
-                    added = ReporterScreen(
-                        (self.X + other.X),
-                        (self.layers["edits"] + self.layers["edits"]),
-                        guides=(self.guides),
-                        condit=(self.condit),
-                        uns=added_uns,
-                    )
-                return added
+                    continue
+                self_df = self.uns[k].set_index(index_pair, drop=True)
+                add_df = other.uns[k].set_index(index_pair, drop=True)
+                add_df = add_df.loc[:, self_df.columns]
+                added_uns[k] = (
+                    self_df.add(add_df, fill_value=0).astype(int).reset_index()
+                )
+
+            return (
+                ReporterScreen(
+                    (self.X + other.X),
+                    (self.layers["edits"] + other.layers["edits"]),
+                    (self.layers["X_bcmatch"] + other.layers["X_bcmatch"]),
+                    guides=(self.guides),
+                    condit=(self.condit),
+                    uns=added_uns,
+                )
+                if "X_bcmatch" in self.layers and "X_bcmatch" in other.layers
+                else ReporterScreen(
+                    (self.X + other.X),
+                    (self.layers["edits"] + self.layers["edits"]),
+                    guides=(self.guides),
+                    condit=(self.condit),
+                    uns=added_uns,
+                )
+            )
         raise ValueError("Guides/sample description mismatch")
 
     def __getitem__(self, index):
@@ -254,23 +265,13 @@ class ReporterScreen(Screen):
 
         def _remove_zero_count(key):
             df = self.uns[key]
-            if "guide" in df.columns:
-                if "allele" in df.columns:
-                    key_col = ["guide", "allele"]
-                elif "edit" in df.columns:
-                    key_col = ["guide", "edit"]
-                elif "aa_allele" in df.columns:
-                    key_col = ["guide", "aa_allele"]
             df = df.loc[df.loc[:, condit_include].sum(axis=1) > 0, :]
             self.uns[key] = df
 
         if key is None:
             for k in self.uns.keys():
                 if "count" in k:
-                    try:
-                        _remove_zero_count(k)
-                    except:
-                        print(f"Skipping {k} from removing zero count rows.")
+                    _remove_zero_count(k)
         elif isinstance(key, str):
             _remove_zero_count(key)
         elif isinstance(key, Iterable):
@@ -288,7 +289,7 @@ class ReporterScreen(Screen):
         target_pos_col="target_pos",
     ):
         edits = self.uns["edit_counts"].copy()
-        if not self.layers["edits"] is None:
+        if self.layers["edits"] is not None:
             old_edits = self.layers["edits"].copy()
             self.layers["edits"] = np.zeros_like(
                 self.X,
@@ -327,13 +328,10 @@ class ReporterScreen(Screen):
             ]
 
         good_guide_idx = guide_name_to_idx.loc[good_edits.guide, "index"].astype(int)
-        try:
-            for gidx, eidx in zip(good_guide_idx, good_edits.index):
-                self.layers["edits"][gidx, :] += good_edits.loc[
-                    eidx, self.condit.index.tolist()
-                ].astype(int)
-        except:
-            return (good_guide_idx, good_edits)
+        for gidx, eidx in zip(good_guide_idx, good_edits.index):
+            self.layers["edits"][gidx, :] += good_edits.loc[
+                eidx, self.condit.index.tolist()
+            ].astype(int)
         print("New edit matrix saved in .layers['edits']. Returning old edits.")
         return old_edits
 
@@ -354,36 +352,33 @@ class ReporterScreen(Screen):
         Considering the edit rate to have prior of beta distribution with mean 0.5,
         prior weight to use when calculating posterior edit rate.
         """
-        if self.layers[count_layer] is not None and self.layers[edit_layer] is not None:
-            num_targetable_sites = 1.0
-            if normalize_by_editable_base:
-                if not edited_base in ["A", "C", "T", "G"]:
-                    raise ValueError("Specify the correct edited_base")
-                num_targetable_sites = self.guides.sequence.map(
-                    lambda s: s[editable_base_start:editable_base_end].count(
-                        edited_base
-                    )
-                )
-            bulk_idx = np.where(
-                self.condit.reset_index()["index"].map(lambda s: "bulk" in s)
-            )[0]
-
-            if prior_weight is None:
-                prior_weight = 1
-            n_edits = self.layers[edit_layer][:, bulk_idx].sum(axis=1)
-            n_counts = self.layers[count_layer][:, bulk_idx].sum(axis=1)
-            edit_rate = (n_edits + prior_weight / 2) / (
-                (n_counts * num_targetable_sites) + prior_weight / 2
-            )
-            edit_rate[n_counts < bcmatch_thres] = np.nan
-            if normalize_by_editable_base:
-                edit_rate[num_targetable_sites == 0] = np.nan
-            if return_result:
-                return edit_rate
-            else:
-                self.guides["edit_rate"] = edit_rate
-        else:
+        if self.layers[count_layer] is None or self.layers[edit_layer] is None:
             raise ValueError("edits or barcode matched guide counts not available.")
+        num_targetable_sites = 1.0
+        if normalize_by_editable_base:
+            if edited_base not in ["A", "C", "T", "G"]:
+                raise ValueError("Specify the correct edited_base")
+            num_targetable_sites = self.guides.sequence.map(
+                lambda s: s[editable_base_start:editable_base_end].count(edited_base)
+            )
+        bulk_idx = np.where(
+            self.condit.reset_index()["index"].map(lambda s: "bulk" in s)
+        )[0]
+
+        if prior_weight is None:
+            prior_weight = 1
+        n_edits = self.layers[edit_layer][:, bulk_idx].sum(axis=1)
+        n_counts = self.layers[count_layer][:, bulk_idx].sum(axis=1)
+        edit_rate = (n_edits + prior_weight / 2) / (
+            (n_counts * num_targetable_sites) + prior_weight / 2
+        )
+        edit_rate[n_counts < bcmatch_thres] = np.nan
+        if normalize_by_editable_base:
+            edit_rate[num_targetable_sites == 0] = np.nan
+        if return_result:
+            return edit_rate
+        else:
+            self.guides["edit_rate"] = edit_rate
 
     def get_edit_rate(
         self,
@@ -402,34 +397,27 @@ class ReporterScreen(Screen):
         Considering the edit rate to have prior of beta distribution with mean 0.5,
         prior weight to use when calculating posterior edit rate.
         """
-        if self.layers[count_layer] is not None and self.layers[edit_layer] is not None:
-            num_targetable_sites = 1.0
-            if normalize_by_editable_base:
-                if not edited_base in ["A", "C", "T", "G"]:
-                    raise ValueError("Specify the correct edited_base")
-                num_targetable_sites = self.guides.sequence.map(
-                    lambda s: s[editable_base_start:editable_base_end].count(
-                        edited_base
-                    )
-                )
-            bulk_idx = np.where(
-                self.condit.reset_index()["index"].map(lambda s: "bulk" in s)
-            )[0]
-
-            if prior_weight is None:
-                prior_weight = 1
-            n_edits = self.layers[edit_layer]
-            n_counts = self.layers[count_layer].astype(float)
-            n_counts[n_counts < bcmatch_thres] = np.nan
-            edit_rate = n_edits / n_counts
-            if normalize_by_editable_base:
-                edit_rate[num_targetable_sites == 0, :] = np.nan
-            if return_result:
-                return edit_rate
-            else:
-                self.layers["edit_rate"] = edit_rate
-        else:
+        if self.layers[count_layer] is None or self.layers[edit_layer] is None:
             raise ValueError("edits or barcode matched guide counts not available.")
+        num_targetable_sites = 1.0
+        if normalize_by_editable_base:
+            if edited_base not in ["A", "C", "T", "G"]:
+                raise ValueError("Specify the correct edited_base")
+            num_targetable_sites = self.guides.sequence.map(
+                lambda s: s[editable_base_start:editable_base_end].count(edited_base)
+            )
+        if prior_weight is None:
+            prior_weight = 1
+        n_edits = self.layers[edit_layer]
+        n_counts = self.layers[count_layer].astype(float)
+        n_counts[n_counts < bcmatch_thres] = np.nan
+        edit_rate = n_edits / n_counts
+        if normalize_by_editable_base:
+            edit_rate[num_targetable_sites == 0, :] = np.nan
+        if return_result:
+            return edit_rate
+        else:
+            self.layers["edit_rate"] = edit_rate
 
     def get_edit_from_allele(
         self, allele_count_key="allele_counts", allele_key="allele"
@@ -442,7 +430,7 @@ class ReporterScreen(Screen):
         def try_objectify(s):
             try:
                 return Edit.from_str(s)
-            except:
+            except ValueError:
                 return AminoAcidEdit.from_str(s)
 
         df["edit"] = df.edit.map(try_objectify)
@@ -512,9 +500,7 @@ class ReporterScreen(Screen):
         )
         allele_count_df = allele_count_df.drop("str_allele", axis=1)
         print(
-            "{} edits filtered from {} alleles.".format(
-                sum(filtered_edits), len(filtered_edits)
-            )
+            f"{sum(filtered_edits)} edits filtered from {len(filtered_edits)} alleles."
         )
         if map_to_filtered:
             print("mapping filtered alleles ...")
@@ -564,9 +550,7 @@ class ReporterScreen(Screen):
         )
         allele_count_df = allele_count_df.drop("str_allele", axis=1)
         print(
-            "{} edits filtered from {} alleles.".format(
-                sum(filtered_edits), len(filtered_edits)
-            )
+            f"{sum(filtered_edits)} edits filtered from {len(filtered_edits)} alleles."
         )
         if map_to_filtered:
             allele_count_df = _map_alleles_to_filtered(
@@ -577,11 +561,9 @@ class ReporterScreen(Screen):
     def collapse_allele_by_target(
         self, ref_base, alt_base, target_pos_column="target_pos"
     ):
-        if not target_pos_column in self.guides.columns:
+        if target_pos_column not in self.guides.columns:
             raise ValueError(
-                "The .guides have to have '{}' specifying the relative position of target edit.".format(
-                    target_pos_column
-                )
+                f"The .guides have to have '{target_pos_column}' specifying the relative position of target edit."
             )
         df = self.uns["allele_counts"].copy().reset_index(drop=True)
         df["target_pos"] = self.guides.loc[df.guide, target_pos_column].reset_index(
@@ -598,27 +580,23 @@ class ReporterScreen(Screen):
             axis=1,
         )
         df = df.drop("target_pos", axis=1)
-        res = df.groupby(["guide", "has_target", "has_nontarget"]).sum()
-        return res
+        return df.groupby(["guide", "has_target", "has_nontarget"]).sum()
 
     def collapse_allele_by_nedit(self, ref_base, alt_base):
         df = self.uns["allele_counts"].copy().reset_index(drop=True)
         df["n_edits"] = df.allele.map(
             lambda a: sum(
-                [
-                    (
-                        e.ref_base == ref_base
-                        and e.alt_base == alt_base
-                        and e.rel_pos >= 6
-                        and e.rel_pos < 6 + 20
-                    )
-                    for e in a.edits
-                ]
+                (
+                    e.ref_base == ref_base
+                    and e.alt_base == alt_base
+                    and e.rel_pos >= 6
+                    and e.rel_pos < 6 + 20
+                )
+                for e in a.edits
             )
         )
         df.loc[df.n_edits > 4, "n_edits"] = 4
-        res = df.groupby(["guide", "n_edits"]).sum()
-        return res
+        return df.groupby(["guide", "n_edits"]).sum()
 
     def translate_alleles(self):
         if self.uns["allele_counts"] is None:
@@ -628,11 +606,13 @@ class ReporterScreen(Screen):
             lambda s: get_aa_alleles(s)
         )
 
-    def log_norm(self, **kwargs):
+    def log_norms(self, **kwargs):
+        """Calculate log normalized guide counts and log normalized edit counts"""
         super().log_norm(**kwargs)
         super().log_norm(output_layer="lognorm_edits", read_count_layer="edits")
 
     def log_fold_changes(self, cond1, cond2, return_result=False):
+        """Calculate log fold changes in normalized guide and edit counts."""
         guide_fc = super().log_fold_change(cond1, cond2, return_result=return_result)
         edit_fc = super().log_fold_change(
             cond1,
@@ -705,15 +685,15 @@ class ReporterScreen(Screen):
                 for c in [
                     colname for colname in adata.uns[k].columns if "allele" in colname
                 ]:
-                    if isinstance(adata.uns[k][c].iloc[0], Allele) or isinstance(
-                        adata.uns[k][c].iloc[0], CodingNoncodingAllele
+                    if isinstance(
+                        adata.uns[k][c].iloc[0], (Allele, CodingNoncodingAllele)
                     ):
                         adata.uns[k].loc[:, c] = adata.uns[k][c].map(str)
         super(ReporterScreen, adata).write(out_path)
 
 
 def _convert_obj_column_to_str(df, obj_column):
-    if not obj_column in df.columns:
+    if obj_column not in df.columns:
         return df
     df = df.rename(columns={obj_column: "obj_col"})
     df[obj_column] = df["obj_col"].map(str)
@@ -722,106 +702,54 @@ def _convert_obj_column_to_str(df, obj_column):
 
 
 def concat(screens: Collection[ReporterScreen], *args, axis=1, **kwargs):
+    """Concatenate multiple Screen objects."""
     # TODO: var/obs info not concated if doesn't overlap
     # TODO: concat 2 times: allele_counts merging doesn't work?
-    if axis == 1:
-        if not all(
-            screen.guides.index.equals(screens[0].guides.index) for screen in screens
-        ):
-            raise ValueError("Guide index doesn't match.")
-        for screen in screens:
-            if screen.var.index.name != "index":
-                if "index" in screen.var.columns:
-                    screen.var = screen.var.set_index("index")
+    if axis == 1 and not all(
+        screen.guides.index.equals(screens[0].guides.index) for screen in screens
+    ):
+        raise ValueError("Guide index doesn't match.")
 
     adata = ad.concat(screens, *args, axis=axis, **kwargs)
     adata.obs = screens[0].guides
-    keys = set()
+    keys = screens[0].uns.keys()
+    for screen in screens:
+        keys.intersection(screen.uns.keys())
 
-    # Merging uns
-    if axis == 1:
-        for screen in screens:
-            keys.update(screen.uns.keys())
-
+    if axis == 0:
         for k in keys:
-            if k == "guide_edit_counts":
-                merge_on = ["guide", "edit"]
-            elif k == "edit_counts":
-                merge_on = ["guide", "edit"]
-            elif k == "guide_reporter_allele_counts":
-                merge_on = ["guide", "reporter_allele", "guide_allele"]
-            elif k.endswith("allele_counts"):
-                merge_on = ["guide", "allele"]
-            else:
-                print("uns '{}' ignored during concat.".format(k))
+            if "edit" not in k and "allele" not in k:
                 continue
-            try:
-                screen_uns_dfs = [screen.uns[k] for screen in screens]
-            except KeyError:
-                print(
-                    "Not all ReporterScreen object has .uns['{}']. Ignoring the DataFrame.".format(
-                        k
-                    )
-                )
+            adata.uns[k] = pd.concat([screen.uns[k] for screen in screens])
+
+    if axis == 1:
+        # If combining multiple samples, edit/allele tables should be merged.
+        for k in keys:
+            if "edit" not in k and "allele" not in k:
                 continue
-            empty_df = [len(df) == 0 for df in screen_uns_dfs]
-            if any(empty_df):
-                print(
-                    "One of the ReporterScreen object has empty .uns['{}']. Ignoring the DataFrame.".format(
-                        k
-                    )
-                )
-                continue
-            if "edit" in merge_on:
-                screen_uns_dfs = [
-                    _convert_obj_column_to_str(df, "edit") for df in screen_uns_dfs
-                ]
-            if "allele" in merge_on:
-                screen_uns_dfs = [
-                    _convert_obj_column_to_str(df, "allele") for df in screen_uns_dfs
-                ]
+            merge_on = screen[0].uns[k].columns[:2].tolist()
+            edit_cls = type(screen[0].uns[k][merge_on[1]][0])
+            screen_uns_dfs = [screen.uns[k] for screen in screens]
+            screen_uns_dfs = [
+                _convert_obj_column_to_str(df, merge_on[1]) for df in screen_uns_dfs
+            ]
 
             for i, screen in enumerate(screens):
                 if screen.uns[k][merge_on].duplicated().any():
                     raise ValueError(
-                        "{}-th ReporterScreen .uns['{}'] has duplicated row.".format(
-                            i, k
-                        )
+                        f"{i}-th ReporterScreen .uns['{k}'] has duplicated row. Aborting."
                     )
                 if i == 0:
                     adata.uns[k] = screen.uns[k]
                 else:
-                    try:
-                        adata.uns[k] = pd.merge(
-                            adata.uns[k], screen.uns[k], on=merge_on, how="outer"
-                        )
-                    except:
-                        print(
-                            "Error occurred concatenating '{}' for {}:".format(
-                                k, screen
-                            )
-                        )
-                        if not k in screen.uns.keys():
-                            print(
-                                "Warning: '{}' not in this screen. Skipping...".format(
-                                    k
-                                )
-                            )
-                        else:
-                            print(k)
-                            print(screen.uns[k])
+                    adata.uns[k] = pd.merge(
+                        adata.uns[k], screen.uns[k], on=merge_on, how="outer"
+                    )
             adata.uns[k] = adata.uns[k].fillna(0)
-            if "edit" in merge_on:
-                df = adata.uns[k].rename(columns={"edit": "edit_str"})
-                df.insert(1, "edit", df["edit_str"].map(lambda s: Edit.from_str(s)))
-                adata.uns[k] = df.drop("edit_str", axis=1)
 
-            if "allele" in merge_on:
-                df = adata.uns[k].rename(columns={"allele": "allele_str"})
-                df.insert(
-                    1, "allele", df["allele_str"].map(lambda s: Allele.from_str(s))
-                )
-                adata.uns[k] = df.drop("allele_str", axis=1)
+            df = adata.uns[k].rename(columns={merge_on[1]: "_str"})
+            df.insert(1, merge_on[1], df["_str"].map(lambda s: edit_cls.from_str(s)))
+            adata.uns[k] = df.drop("_str", axis=1)
 
             float_col = adata.uns[k].select_dtypes(include=["float64"])
             for col in float_col.columns.values:

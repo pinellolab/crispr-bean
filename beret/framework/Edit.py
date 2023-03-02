@@ -39,6 +39,8 @@ class Edit:
     def from_str(cls, edit_str):  # pos:strand:start>end
         if type(edit_str) is Edit:
             return edit_str
+        if not cls.match_str(edit_str):
+            raise ValueError(f"{edit_str} doesn't match with Edit string format.")
         uid = None
         if "!" in edit_str:
             uid, edit_str = edit_str.split("!")
@@ -94,12 +96,12 @@ class Edit:
         else:
             ref_base = self.ref_base
             alt_base = self.alt_base
-        return(f"{ref_base}>{alt_base}")
+        return f"{ref_base}>{alt_base}"
 
     def get_base_change(self):
         ref_base = self.ref_base
         alt_base = self.alt_base
-        return(f"{ref_base}>{alt_base}")
+        return f"{ref_base}>{alt_base}"
 
     def __eq__(self, other):
         if self.__repr__() == other.__repr__():

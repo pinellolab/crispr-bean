@@ -32,8 +32,20 @@ beret-count-samples         \
   -t 12                     \ # number of threads  
   --name LDLvar_fullsort    \ # name of this sample run  
 ```
+### Input file format
+#### gRNA_library.csv
+File should contain following columns.
+* `name`: gRNA ID column
+* `sequence`: gRNA sequence
+* `barcode`: R2 barcode to help match reporter to gRNA  
 
-This produces `.h5ad` and `.xlsx` file with guide and per-guide allele counts.  
+Optional: 
+* `Strand/strand`: Specifies gRNA strand information relative to reference genome. 
+* `start_pos`: gRNA starting position in the genome. Required when you provide `Strand/strand` column. Should specify the smaller coordinate value among start and end position regardless of gRNA strandedness.
+* `offset`: Specifies absolute positional offset to be added to edited position. Useful when you need amino acid translation results for ex. coding sequence tiling screens.
+  
+### Output file format
+`count` or `count-samples` produces `.h5ad` and `.xlsx` file with guide and per-guide allele counts.  
 * `.h5ad`: This output file follows annotated matrix format compatible with `AnnData` and is based on `Screen` object in [purturb_tools](https://github.com/pinellolab/perturb-tools). The object contains the per-guide allele counts.
   * `.guides`: guide information provided in input (`gRNA_library.csv` in above example)
   * `.condit`: sample information provided in input (`sample_list.csv` in above example)

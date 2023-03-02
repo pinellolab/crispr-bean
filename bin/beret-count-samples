@@ -99,26 +99,26 @@ def check_arguments(args):
         raise InputFileError(
             f"Sample ID not unique. Please check your input file {args.input}."
         )
+
+    def _check_return_guide_seqs_tbl(guide_seqs_file, sample_tbl):
+        """Check if the provided `guide_[start,end]_seqs_file` contains information about all samples in `sample_tbl`."""
+        guide_seqs_tbl = pd.read_csv(guide_seqs_file, header=None)
+        sample_has_seq = sample_tbl[2].isin(guide_seqs_tbl[0])
+        if not sample_has_seq.all():
+            raise InputFileError(
+                f"Sample ID(s) {sample_tbl[2][~sample_has_seq]} not in guides_seqs_file {guide_seqs_tbl}"
+            )
+        guide_seqs_tbl.columns = ["sample", "seq"]
+        return guide_seqs_tbl.set_index("sample")["seq"]
+
     if args.guide_start_seqs_file is not None:
-        guides_start_seqs_tbl = pd.read_csv(
-            args.guide_start_seqs_file, header=None
+        args.guide_start_seqs_tbl = _check_return_guide_seqs_tbl(
+            args.guide_start_seqs_file, sample_tbl
         )
-        sample_has_start_seq = sample_tbl[2].isin(guides_start_seqs_tbl[0])
-        if not sample_has_start_seq.all():
-            raise InputFileError(
-                f"Sample ID(s) {sample_tbl[2][~sample_has_start_seq]} not in guides_start_seqs_file {args.guide_start_seqs_tbl}"
-            )
-        guides_start_seqs_tbl.columns = ["sample", "seq"]
-        args.guides_start_seqs_tbl = guides_start_seqs_tbl.set_index("sample")["seq"]
     if args.guide_end_seqs_file is not None:
-        guides_end_seqs_tbl = pd.read_csv(args.guide_end_seqs_file, header=None)
-        sample_has_end_seq = sample_tbl[2].isin(guides_end_seqs_tbl[0])
-        if not sample_has_end_seq.all():
-            raise InputFileError(
-                f"Sample ID(s) {sample_tbl[2][~sample_has_end_seq]} not in guides_end_seqs_file {args.guide_end_seqs_tbl}"
-            )
-        guides_end_seqs_tbl.columns = ["sample", "seq"]
-        args.guides_end_seqs_tbl = guides_end_seqs_tbl.set_index("sample")["seq"]
+        args.guide_end_seqs_tbl = _check_return_guide_seqs_tbl(
+            args.guide_end_seqs_file, sample_tbl
+        )
     return args
 
 
@@ -129,13 +129,12 @@ def main():
 
     sample_tbl = pd.read_csv(args.input, header=None)
 
-    p = Pool(processes=args.threads)
-    result = p.starmap(
-        count_sample,
-        [list(tup) + [args] for tup in list(sample_tbl.to_records(index=False))],
-    )
-    # result = p.starmap(count_sample, sample_tbl[0], sample_tbl[1], sample_tbl[2])
-    p.close()
+    with Pool(processes=args.threads) as p:
+        result = p.starmap(
+            count_sample,
+            [list(tup) + [args] for tup in list(sample_tbl.to_records(index=False))],
+        )
+        # result = p.starmap(count_sample, sample_tbl[0], sample_tbl[1], sample_tbl[2])
 
     screen = beret.concat(result, axis=1)
     database_id = args.name or args.input.split(".")[0]

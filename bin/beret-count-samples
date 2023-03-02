@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import argparse
 import logging
 import os
 import sys
@@ -8,6 +7,7 @@ from multiprocessing import Pool
 
 import beret
 import pandas as pd
+from utils import InputFileError, _get_input_parser
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,24 +23,7 @@ info = logging.info
 
 
 def get_input_parser():
-    """Get the input data"""
-    print("  \n~~~beretCount~~~")
-    print("-Utility to perform sgRNA and reporter count from CRISPR base editors-")
-    print(
-        r"""
-          )                                             )
-         (           ________________________          (
-        __)__       | __   __            ___ |        __)__
-     C\|     \      |/  ` /  \ |  | |\ |  |  |     C\|     \
-       \     /      |\__, \__/ \__/ | \|  |  |       \     /
-        \___/       |________________________|        \___/
-    """
-    )
-
-    parser = argparse.ArgumentParser(
-        description="CRISPRessoCount parameters",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
+    parser = _get_input_parser()
     parser.add_argument(
         "-i",
         "--input",
@@ -50,34 +33,6 @@ def get_input_parser():
     )
     parser.add_argument(
         "-t", "--threads", type=int, help="Number of threads", default=10
-    )
-    parser.add_argument(
-        "-b",
-        "--edited_base",
-        type=str,
-        required=True,
-        help="For base editors, the base that should be ignored when matching the gRNA sequence",
-    )
-    parser.add_argument(
-        "-f",
-        "--sgRNA_filename",
-        type=str,
-        required=True,
-        help="""sgRNA description file. The format requires three columns: gRNA, Reporter, gRNA_barcode.""",
-    )
-
-    # optional
-    parser.add_argument(
-        "--guide_start_seq",
-        type=str,
-        help="Guide starts after this sequence in R1",
-        default="GGAAAGGACGAAACACCG",
-    )
-    parser.add_argument(
-        "--guide_end_seq",
-        type=str,
-        help="Guide starts after this sequence in R1",
-        default="",
     )
     parser.add_argument(
         "--guide_start_seqs_file",
@@ -92,101 +47,6 @@ def get_input_parser():
         help="CSV file path with per-sample `guide_end_seq` to be used."
         + "Formatted as `sample_id,guide_end_seq`",
         default=None,
-    )
-    parser.add_argument(
-        "-r", "--count_reporter", help="Count reporter edits.", action="store_true"
-    )
-    parser.add_argument(
-        "-q",
-        "--min_average_read_quality",
-        type=int,
-        help="Minimum average quality score (phred33) to keep a read",
-        default=30,
-    )
-    parser.add_argument(
-        "-s",
-        "--min_single_bp_quality",
-        type=int,
-        help="Minimum single bp score (phred33) to keep a read",
-        default=0,
-    )
-    parser.add_argument("-n", "--name", help="Output name", default="")
-    parser.add_argument("-o", "--output_folder", help="", default="")
-    parser.add_argument(
-        "-l", "--reporter_length", type=int, help="length of the reporter", default=32
-    )
-    parser.add_argument(
-        "--keep_intermediate",
-        help="Keep all the  intermediate files",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--qstart_R1",
-        help="Start position of the read when filtering for quality score of the read 1",
-        type=int,
-        default=0,
-    )
-    parser.add_argument(
-        "--qend_R1",
-        help="End position of the read when filtering for quality score of the read 1",
-        type=int,
-        default=47,
-    )
-    parser.add_argument(
-        "--qstart_R2", help="Same as qstart_R1, for read 2 fastq file", default=0
-    )
-    parser.add_argument(
-        "--qend_R2", help="Same as qstart_R2, for read 2 fastq file", default=36
-    )
-    parser.add_argument(
-        "--gstart_reporter",
-        help="Start position of the guide sequence in the reporter",
-        type=int,
-        default=6,
-    )
-    parser.add_argument(
-        "--match_target_pos",
-        help="Only count the edit in the exact target position.",
-        action="store_true",
-    )
-    parser.add_argument("--guide_bc", help="Construct has guide barcode", default=True)
-    parser.add_argument(
-        "--guide_bc_len",
-        help="Guide barcode sequence length at the beginning of the R2",
-        type=str,
-        default=4,
-    )
-    parser.add_argument(
-        "--offset",
-        help="Guide file has offest column that will be added to the relative position of reporters.",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--align_fasta",
-        help="gRNA is aligned to this sequence to infer the offset. Can be used when the exact offset is not provided.",
-        type=str,
-        default="",
-    )
-    parser.add_argument(
-        "-a", "--count_allele", help="count gRNA alleles", action="store_true"
-    )
-    parser.add_argument(
-        "-as",
-        "--string_allele",
-        help="Store allele as quality filtered string instead of Allele object",
-        action="store_true",
-    )
-    parser.add_argument(
-        "-g",
-        "--count_guide_edits",
-        help="count the self editing of guides",
-        action="store_true",
-    )
-    parser.add_argument(
-        "-m",
-        "--count_guide_reporter_alleles",
-        help="count the matched allele of guide and reporter edit",
-        action="store_true",
     )
     parser.add_argument("--rerun", help="Recount each sample", action="store_true")
 
@@ -230,15 +90,37 @@ def count_sample(R1, R2, sample_id, args):
     return screen
 
 
+def check_arguments(args):
+    sample_tbl = pd.read_csv(args.input, header=None)
+    if len(sample_tbl[2].unique()) != len(sample_tbl[2]):
+        raise InputFileError(
+            f"Sample ID not unique. Please check your input file {args.input}."
+        )
+    if args.guide_start_seqs_file is not None:
+        guides_start_seqs_tbl = pd.read_csv(
+            args.args.guide_start_seqs_file, header=None
+        )
+        sample_has_start_seq = sample_tbl[2].isin(guides_start_seqs_tbl[0])
+        if not sample_has_start_seq.all():
+            raise InputFileError(
+                f"Sample ID(s) {sample_tbl[2][~sample_has_start_seq]} not in guides_start_seqs_file {args.guide_start_seqs_tbl}"
+            )
+    if args.guide_end_seqs_file is not None:
+        guides_end_seqs_tbl = pd.read_csv(args.args.guide_end_seqs_file, header=None)
+        sample_has_end_seq = sample_tbl[2].isin(guides_end_seqs_tbl[0])
+        if not sample_has_end_seq.all():
+            raise InputFileError(
+                f"Sample ID(s) {sample_tbl[2][~sample_has_end_seq]} not in guides_end_seqs_file {args.guide_end_seqs_tbl}"
+            )
+    return args
+
+
 def main():
     parser = get_input_parser()
     args = parser.parse_args()
-    # args = check_arguments(args)
+    args = check_arguments(args)
 
     sample_tbl = pd.read_csv(args.input, header=None)
-    if len(sample_tbl[2].unique()) != len(sample_tbl[2]):
-        print("Sample ID not unique. Please check your input file. Exiting.")
-        exit(1)
 
     p = Pool(processes=args.threads)
     result = p.starmap(

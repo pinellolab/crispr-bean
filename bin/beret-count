@@ -5,19 +5,12 @@ import argparse
 import gzip
 import logging
 import os
-import re
 import sys
-import unicodedata
-from collections import defaultdict
-from os import path
-from typing import Dict, List, Tuple, Union
 
 import beret
-import numpy as np
 import pandas as pd
 from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqIO.QualityIO import FastqGeneralIterator
+from slugify import slugify
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,54 +32,21 @@ class InputFileError(Exception):
     pass
 
 
-####Support functions###
-
-
 def check_file(filename):
     try:
-        with open(filename):
+        with open(filename, "r"):  # pylint: disable=unspecified-encoding
             pass
-    except IOError:
-        raise Exception("I cannot open the file: " + filename)
+    except IOError as exc:
+        raise InputFileError("I cannot open the file: " + filename) from exc
 
 
 def check_library(library_name):
     try:
         return __import__(library_name)
-    except:
-        error("You need to install %s module to use CRISPRessoCount!" % library_name)
-        sys.exit(1)
-
-
-def slugify(value):  # adapted from the Django project
-
-    value = unicodedata.normalize("NFKD", unicode(value)).encode("ascii", "ignore")
-    value = unicode(re.sub("[^\w\s-]", "_", value).strip())
-    value = unicode(re.sub("[-\s]+", "-", value))
-
-    return str(value)
-
-
-def read_is_good_quality(
-    record: SeqIO.SeqRecord, min_bp_quality=0, min_single_bp_quality=0, qend=-1
-):
-    mean_quality_pass = (
-        np.array(record.letter_annotations["phred_quality"])[:qend].mean()
-        >= min_bp_quality
-    )
-    min_quality_pass = (
-        np.array(record.letter_annotations["phred_quality"])[:qend].min()
-        >= min_single_bp_quality
-    )
-    return mean_quality_pass and min_quality_pass
-
-
-def find_wrong_nt(sequence):
-    return list(set(sequence.upper()).difference(set(["A", "T", "C", "G", "N"])))
-
-
-def mask_sequence_positions(seq: str, pos: np.array) -> str:
-    return "".join([seq[i] if i in pos else "N" for i in range(len(seq))])
+    except ImportError as exc:
+        raise ImportError(
+            f"You need to install {library_name} module to use CRISPRessoCount!"
+        ) from exc
 
 
 def get_input_parser():
@@ -266,57 +226,43 @@ def check_arguments(args):
     # Edited base should be one of A/C/T/G
     if args.edited_base.upper() not in ["A", "C", "T", "G"]:
         raise ValueError(
-            "The edited base should be one of A/C/T/G, {} provided.".format(
-                args.edited_base
-            )
+            f"The edited base should be one of A/C/T/G, {args.edited_base} provided."
         )
-    else:
-        edited_base = args.edited_base.upper()
-    info("Using specified edited base: %s" % edited_base)
+
+    edited_base = args.edited_base.upper()
+    info(f"Using specified edited base: {edited_base}")
 
     read_length = get_first_read_length(args.R1)
 
-    # Check if positions of guide and quality control is valid
-    NotImplemented
-
-    if not (args.qstart_R1 < read_length and args.qstart_R2 < read_length):
+    if args.qstart_R1 >= read_length or args.qstart_R2 >= read_length:
         raise ValueError(
-            "The start position of base quality filter is not nonnegative ({} for R1, {} for R2 provided)".format(
-                args.qstart_R1, args.qstart_R2
-            )
+            f"The start position of base quality filter is not nonnegative ({args.qstart_R1} for R1, {args.qstart_R2} for R2 provided)"
         )
 
-    if not (args.qend_R1 < read_length and args.qend_R2 < read_length):
+    if args.qend_R1 >= read_length or args.qend_R2 >= read_length:
         raise ValueError(
-            "The start position of base quality filter is not nonnegative ({} for R1, {} for R2 provided)".format(
-                args.qstart_R1, args.qstart_R2
-            )
+            f"The start position of base quality filter is not nonnegative ({args.qstart_R1} for R1, {args.qstart_R2} for R2 provided)"
         )
 
     if args.qend_R2 != args.guide_bc_len + args.reporter_length:
         warn(
-            "Quality of R2 checked up until {}bp, while the length of guide barcode and reporter combined is {}bp.".format(
-                args.qend_R2, args.guide_bc_len + args.reporter_length
-            )
+            f"Quality of R2 checked up until {args.qend_R2}bp, while the length of guide barcode and reporter combined is {args.guide_bc_len + args.reporter_length}bp."
         )
     info(
-        "Using guide barcode length {}, guide start '{}'".format(
-            args.guide_bc_len, args.guide_start_seq
-        )
+        f"Using guide barcode length {args.guide_bc_len}, guide start '{args.guide_start_seq}'"
     )
     # normalize name and remove not allowed characters
     if args.name:
         clean_name = slugify(args.name)
         if args.name != clean_name:
             warn(
-                "The specified name %s contained characters not allowed and was changed to: %s"
-                % (args.name, clean_name)
+                f"The specified name {args.name} contained characters not allowed and was changed to: {clean_name}"
             )
             args.name = clean_name
 
     if args.offset:
-        df = pd.read_csv(args.sgRNA_filename)
-        if not "offset" in df.columns:
+        sgRNA_info_tbl = pd.read_csv(args.sgRNA_filename)
+        if "offset" not in sgRNA_info_tbl.columns:
             raise InputFileError(
                 "Offset option is set but the input file doesn't contain the offset column."
             )
@@ -329,6 +275,7 @@ def check_arguments(args):
 
 
 def get_first_read_length(fastq_filename):
+    """Obtain length of first read entry of fastq file"""
     if fastq_filename.split(".")[-1] == "gz":
         handle = gzip.open(fastq_filename, "rt")
     else:
@@ -339,32 +286,26 @@ def get_first_read_length(fastq_filename):
     raise InputFileError("Provided R1 file doesn't have any read to parse")
 
 
-if __name__ == "__main__":
+def main():
     parser = get_input_parser()
     args = parser.parse_args()
 
     args = check_arguments(args)
-
     args_dict = vars(args)
-    base_editing_map = {"A": "G", "C": "T"}
+
     edited_from = args_dict["edited_base"]
-    edited_to = base_editing_map[edited_from]
     match_target_pos = args_dict["match_target_pos"]
 
     counter = beret.mp.GuideEditCounter(**args_dict)
     counter.check_filter_fastq()
 
     counter.get_counts()
-    if counter.count_reporter_edits:
-        pass
-        # counter.screen.get_edit_mat_from_uns(edited_from, edited_to, match_target_pos)
-    counter.screen.write("{}.h5ad".format(counter.output_dir))
-    # counter.screen.to_Excel("{}.xlsx".format(counter.output_dir))
-    info(
-        "Output written at:\n {}.h5ad,\n {}.xlsx".format(
-            counter.output_dir, counter.output_dir
-        )
-    )
+    if counter.count_reporter_edits and match_target_pos:
+        base_editing_map = {"A": "G", "C": "T"}
+        edited_to = base_editing_map[edited_from]
+        counter.screen.get_edit_mat_from_uns(edited_from, edited_to, match_target_pos)
+    counter.screen.write(f"{counter.output_dir}.h5ad")
+    info(f"Output written at:\n {counter.output_dir}.h5ad,\n {counter.output_dir}.xlsx")
     info("All Done!")
     print(
         r"""
@@ -376,4 +317,7 @@ if __name__ == "__main__":
         \___/       |________________________|        \___/
     """
     )
-    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

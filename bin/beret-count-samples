@@ -63,7 +63,10 @@ def count_sample(R1, R2, sample_id, args):
     edited_from = args_dict["edited_base"]
     edited_to = base_editing_map[edited_from]
     match_target_pos = args_dict["match_target_pos"]
-
+    if "guide_start_seqs_tbl" in args_dict:
+        args_dict["guide_start_seq"] = args_dict["guide_start_seqs_tbl"][sample_id]
+    if "guide_end_seqs_tbl" in args_dict:
+        args_dict["guide_end_seq"] = args_dict["guide_end_seqs_tbl"][sample_id]
     counter = beret.mp.GuideEditCounter(**args_dict)
     if os.path.exists(f"{counter.output_dir}.h5ad") and not args_dict["rerun"]:
         screen = beret.read_h5ad(f"{counter.output_dir}.h5ad")
@@ -105,6 +108,8 @@ def check_arguments(args):
             raise InputFileError(
                 f"Sample ID(s) {sample_tbl[2][~sample_has_start_seq]} not in guides_start_seqs_file {args.guide_start_seqs_tbl}"
             )
+        guides_start_seqs_tbl.columns = ["sample", "seq"]
+        args.guides_start_seqs_tbl = guides_start_seqs_tbl.set_index("sample")["seq"]
     if args.guide_end_seqs_file is not None:
         guides_end_seqs_tbl = pd.read_csv(args.args.guide_end_seqs_file, header=None)
         sample_has_end_seq = sample_tbl[2].isin(guides_end_seqs_tbl[0])
@@ -112,6 +117,8 @@ def check_arguments(args):
             raise InputFileError(
                 f"Sample ID(s) {sample_tbl[2][~sample_has_end_seq]} not in guides_end_seqs_file {args.guide_end_seqs_tbl}"
             )
+        guides_end_seqs_tbl.columns = ["sample", "seq"]
+        args.guides_end_seqs_tbl = guides_end_seqs_tbl.set_index("sample")["seq"]
     return args
 
 

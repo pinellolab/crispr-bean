@@ -1,7 +1,9 @@
 # <img src="imgs/beret2.svg" alt="beret" width="150"/>
 **B**ase **E**diting with **Re**porter analysis **T**oolkit.  
 This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The reporter technique transfects cells with plasmid with not only sgRNA but with the **target sequence surrogate** which we call **reporter** or **sensor**.  
-  
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/berets)](https://pypi.org/project/berets/)
+[![PyPI version](https://img.shields.io/pypi/v/berets)](https://pypi.org/project/berets/)
+
 <img src="imgs/anbe.svg" alt="anbe" width="500"/>
 
 ## Installation 

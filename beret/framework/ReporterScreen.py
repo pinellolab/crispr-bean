@@ -1,16 +1,18 @@
-from typing import List, Union, Collection, Optional, Iterable
-from functools import reduce
 from copy import deepcopy
+from functools import reduce
+from typing import Collection, Iterable, List, Optional, Union
+
+import anndata as ad
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from anndata import AnnData
-import anndata as ad
 from perturb_tools import Screen
-from .AminoAcidEdit import AminoAcidEdit, AminoAcidAllele, CodingNoncodingAllele
-from .Edit import Edit, Allele
-from ._supporting_fn import get_aa_alleles, filter_allele_by_pos, filter_allele_by_base
-from .filter_alleles import _map_alleles_to_filtered, _distribute_alleles_to_filtered
+
+from ._supporting_fn import filter_allele_by_base, filter_allele_by_pos, get_aa_alleles
+from .AminoAcidEdit import AminoAcidAllele, AminoAcidEdit, CodingNoncodingAllele
+from .Edit import Allele, Edit
+from .filter_alleles import _distribute_alleles_to_filtered, _map_alleles_to_filtered
 
 
 def _get_counts(filename_pattern, guides, reps, conditions):
@@ -225,8 +227,6 @@ class ReporterScreen(Screen):
             vidx = slice(vidx, vidx + 1, 1)
         guides_include = self.guides.iloc[oidx].index.tolist()
         condit_include = self.condit.iloc[vidx].index.tolist()
-        self.obs = self.guides
-        self.var = self.condit
         adata = super().__getitem__(index)
         new_uns = deepcopy(self.uns)
         for k, df in adata.uns.items():

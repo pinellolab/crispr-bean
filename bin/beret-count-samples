@@ -101,7 +101,7 @@ def check_arguments(args):
         )
     if args.guide_start_seqs_file is not None:
         guides_start_seqs_tbl = pd.read_csv(
-            args.args.guide_start_seqs_file, header=None
+            args.guide_start_seqs_file, header=None
         )
         sample_has_start_seq = sample_tbl[2].isin(guides_start_seqs_tbl[0])
         if not sample_has_start_seq.all():
@@ -111,7 +111,7 @@ def check_arguments(args):
         guides_start_seqs_tbl.columns = ["sample", "seq"]
         args.guides_start_seqs_tbl = guides_start_seqs_tbl.set_index("sample")["seq"]
     if args.guide_end_seqs_file is not None:
-        guides_end_seqs_tbl = pd.read_csv(args.args.guide_end_seqs_file, header=None)
+        guides_end_seqs_tbl = pd.read_csv(args.guide_end_seqs_file, header=None)
         sample_has_end_seq = sample_tbl[2].isin(guides_end_seqs_tbl[0])
         if not sample_has_end_seq.all():
             raise InputFileError(

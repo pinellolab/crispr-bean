@@ -1,8 +1,13 @@
-# <img src="beret2.svg" alt="beret" width="150"/>
+# <img src="imgs/beret2.svg" alt="beret" width="150"/>
+
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/berets)](https://pypi.org/project/berets/)
+[![PyPI version](https://img.shields.io/pypi/v/berets)](https://pypi.org/project/berets/)
+
 **B**ase **E**diting with **Re**porter analysis **T**oolkit.  
 This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The reporter technique transfects cells with plasmid with not only sgRNA but with the **target sequence surrogate** which we call **reporter** or **sensor**.  
-  
-<img src="anbe.svg" alt="anbe" width="500"/>
+
+
+<img src="imgs/anbe.svg" alt="anbe" width="500"/>
 
 ## Installation 
 Downloading from PyPI:
@@ -13,7 +18,7 @@ pip install berets
 ## Count reporter screen data  
 Aligns guide with matched reporter allele counts in multiple samples.  
 
-<img src="reporter_screen.svg" alt="reporter screen" width="700"/>  
+<img src="imgs/reporter_screen.svg" alt="reporter screen" width="700"/>  
 
 ```python
 beret-count-samples         \
@@ -30,7 +35,7 @@ beret-count-samples         \
 
 This produces `.h5ad` and `.xlsx` file with guide and per-guide allele counts.  
 `.h5ad` file follows annotated matrix format compatible with `AnnData` and is based on `Screen` object in [purturb_tools](https://github.com/pinellolab/perturb-tools) and contains the per-guide allele counts.    
-<img src="screendata.svg" alt="screendata" width="700"/>
+<img src="imgs/screendata.svg" alt="screendata" width="700"/>
 
 ## Using as python module
 ```
@@ -38,4 +43,4 @@ import beret as br
 cdata = br.read_h5ad("beret_counts_sample.h5ad")
 ```
 
-See the [**tutorial**](beret_test.ipynb) for more detail.
+See the [**tutorial**](docs/beret_test.ipynb) for more detail.

@@ -45,7 +45,7 @@ def get_input_parser():
         "-i",
         "--input",
         type=str,
-        help="List of fastq and sample ids. Formatted as R1_filepath, R2_filepath, sample_id",
+        help="List of fastq and sample ids. Formatted as `R1_filepath,R2_filepath,sample_id`",
         required=True,
     )
     parser.add_argument(
@@ -78,6 +78,20 @@ def get_input_parser():
         type=str,
         help="Guide starts after this sequence in R1",
         default="",
+    )
+    parser.add_argument(
+        "--guide_start_seqs_file",
+        type=str,
+        help="CSV file path with per-sample `guide_start_seq` to be used."
+        + "Formatted as `sample_id, guide_start_seq`",
+        default=None,
+    )
+    parser.add_argument(
+        "--guide_end_seqs_file",
+        type=str,
+        help="CSV file path with per-sample `guide_end_seq` to be used."
+        + "Formatted as `sample_id,guide_end_seq`",
+        default=None,
     )
     parser.add_argument(
         "-r", "--count_reporter", help="Count reporter edits.", action="store_true"

@@ -1195,7 +1195,7 @@ LFC calculation & Addition
     sns.pairplot(lfcs)
 
 
-.. image:: output_20_2.png
+.. image:: ../imgs/output_20_2.png
 
 
 LFC can be aggregated for biological replicates.
@@ -1599,7 +1599,7 @@ Getting edit rates from allele counts
     plt.show()
 
 
-.. image:: output_34_1.png
+.. image:: ../imgs/output_34_1.png
 
 
 

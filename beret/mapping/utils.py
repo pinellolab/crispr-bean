@@ -165,9 +165,6 @@ def _get_input_parser():
     )
 
     parser.add_argument(
-        "-a", "--count_allele", help="count gRNA alleles", action="store_true"
-    )
-    parser.add_argument(
         "-as",
         "--string_allele",
         help="Store allele as quality filtered string instead of Allele object",
@@ -235,13 +232,13 @@ def _check_arguments(args, info_logger, warn_logger, error_logger):
         f"Using guide barcode length {args.guide_bc_len}, guide start '{args.guide_start_seq}'"
     )
     # normalize name and remove not allowed characters
-    if args.name:
-        clean_name = slugify(args.name)
-        if args.name != clean_name:
-            warn_logger(
-                f"The specified name {args.name} contained characters not allowed and was changed to: {clean_name}"
-            )
-            args.name = clean_name
+    # if args.name:
+    #     clean_name = slugify(args.name)
+    #     if args.name != clean_name:
+    #         warn_logger(
+    #             f"The specified name {args.name} contained characters not allowed and was changed to: {clean_name}"
+    #         )
+    #         args.name = clean_name
     sgRNA_info_tbl = pd.read_csv(args.sgRNA_filename)
 
     def _check_sgrna_info_table(args, sgRNA_info_tbl):
@@ -253,7 +250,8 @@ def _check_arguments(args, info_logger, warn_logger, error_logger):
             if len(args.align_fasta) > 0:
                 error_logger("Can't have --offset and --align_fasta option together.")
         if (
-            args.target_pos_col is not None
+            args.match_target_pos
+            and args.target_pos_col is not None
             and args.target_pos_col not in sgRNA_info_tbl.columns
         ):
             raise InputFileError(

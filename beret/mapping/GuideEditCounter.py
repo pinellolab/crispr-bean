@@ -102,22 +102,25 @@ class GuideEditCounter:
         self.count_guide_edits = kwargs["count_guide_edits"]
         if self.count_guide_edits:
             self.screen.uns["guide_edit_counts"] = {}
-        self.count_reporter_edits = kwargs["count_reporter"]
+        self.count_reporter_edits = (
+            kwargs["count_reporter"] or kwargs["count_guide_reporter_alleles"]
+        )
         if self.count_reporter_edits:
             self.screen.uns["edit_counts"] = {}
             self.gstart_reporter = kwargs["gstart_reporter"]
-        self.align_score_threshold = 80
-        self.target_pos_col = kwargs["target_pos_col"]
-        self.count_edited_alleles = kwargs["count_allele"]
-        if self.count_edited_alleles:
             self.screen.uns["allele_counts"] = {}
-
         self.count_guide_reporter_alleles = kwargs["count_guide_reporter_alleles"]
         if self.count_guide_reporter_alleles:
             self.guide_to_guide_reporter_allele = {}
+        self.align_score_threshold = 80
+        self.target_pos_col = kwargs["target_pos_col"]
 
         self.guide_start_seq = kwargs["guide_start_seq"]
         self.guide_end_seq = kwargs["guide_end_seq"]
+        if not self.guide_start_seq == "":
+            info(
+                f"{self.name}: Using guide_start_seq={self.guide_start_seq} for {self.output_dir}"
+            )
         assert (
             self.guide_start_seq == "" or self.guide_end_seq == ""
         ), "Doesn't support both start & end seq matching"
@@ -126,18 +129,14 @@ class GuideEditCounter:
             self.guide_bc_len = kwargs["guide_bc_len"]
 
         self.offset = kwargs["offset"]
-        if (
-            self.count_reporter_edits
-            or self.count_edited_alleles
-            or self.count_guide_reporter_alleles
-        ):
+        if self.count_reporter_edits:
             self.reporter_length = kwargs["reporter_length"]
         self.guide_to_allele = {}
         self.n_total_reads = _read_count_match(self.R1_filename, self.R2_filename)
 
         self.objectify_allele = not kwargs["string_allele"]
         if not self.objectify_allele:
-            print("Storing allele as strings.")
+            info(f"{self.name}: Storing allele as strings.")
         self.keep_intermediate = kwargs["keep_intermediate"]
         self.semimatch = 0
         self.bcmatch = 0
@@ -203,7 +202,7 @@ class GuideEditCounter:
         self.semimatch_R2_filename = self.R2_filename.replace(
             ".fastq", "_semimatch.fastq"
         )
-        if self.count_edited_alleles or self.count_guide_reporter_alleles:
+        if self.count_reporter_edits:
             _write_alignment_matrix(
                 self.base_edited_from,
                 self.base_edited_to,
@@ -229,10 +228,10 @@ class GuideEditCounter:
                 self.screen.uns["edit_counts"]
             )
 
-        if self.count_edited_alleles:
-            self._extracted_from_get_counts_40()
+        if self.count_reporter_edits:
+            self._write_reporter_alleles()
         if self.count_guide_reporter_alleles:
-            self._extracted_from_get_counts_66()
+            self._write_guide_reporter_alleles()
         count_stat_path = self._jp("mapping_stats.txt")
         count_stat_file = open(count_stat_path, "w")
         count_stat_file.write("Read count with \n")
@@ -248,8 +247,7 @@ class GuideEditCounter:
             f"No match with barcode & Duplicate match w/o barcode:\t{self.duplicate_match_wo_barcode}\n"
         )
 
-    # TODO Rename this here and in `get_counts`
-    def _extracted_from_get_counts_66(self):
+    def _write_guide_reporter_alleles(self):
         guides = []
         guide_alleles = []
         reporter_alleles = []
@@ -285,8 +283,7 @@ class GuideEditCounter:
                 self.screen.uns["guide_reporter_allele_counts"].guide
             ]
 
-    # TODO Rename this here and in `get_counts`
-    def _extracted_from_get_counts_40(self):
+    def _write_reporter_alleles(self):
         guides = []
         alleles = []
         counts = []
@@ -436,7 +433,7 @@ class GuideEditCounter:
             self.bcmatch -= 1
             return
 
-        if self.count_edited_alleles:
+        if self.count_reporter_edits:
             self._update_counted_allele(matched_guide_idx, allele)
 
         if self.count_guide_reporter_alleles and (guide_allele is not None):
@@ -459,7 +456,9 @@ class GuideEditCounter:
         outfile_R1_dup, outfile_R2_dup = self._get_fastq_handle("duplicate")
 
         for i, (r1, r2) in tqdm(
-            enumerate(zip(R1_iter, R2_iter)), total=self.n_reads_after_filtering
+            enumerate(zip(R1_iter, R2_iter)),
+            total=self.n_reads_after_filtering,
+            postfix=(self.bcmatch, self.semimatch),
         ):
             R1_seq = str(r1.seq)
             R2_seq = str(r2.seq)
@@ -469,7 +468,9 @@ class GuideEditCounter:
             )
 
             if len(bc_match) == 0:
-                if len(semimatch) == 0:  # no guide match
+                if (
+                    len(semimatch) == 0
+                ):  # no guide matchsplit string by period pythonpan
                     if self.keep_intermediate:
                         _write_paired_end_reads(
                             r1, r2, outfile_R1_nomatch, outfile_R2_nomatch
@@ -499,11 +500,7 @@ class GuideEditCounter:
                 self.bcmatch += 1
                 if self.count_guide_edits or self.count_guide_reporter_alleles:
                     guide_allele, _ = self._count_guide_edits(matched_guide_idx, r1)
-                if (
-                    self.count_reporter_edits
-                    or self.count_edited_alleles
-                    or self.count_guide_reporter_alleles
-                ):
+                if self.count_reporter_edits:
                     # TODO: what if reporter seq doesn't match barcode & guide?
                     if self.count_guide_reporter_alleles:
                         self._count_reporter_edits(
@@ -743,9 +740,9 @@ class GuideEditCounter:
     def _write_start_log(self):
         try:
             os.makedirs(self.output_dir)
-            print(f"Creating Folder {self.output_dir}")
+            info(f"Creating Folder {self.output_dir}")
         except OSError:
-            print(f"Folder {self.output_dir} already exists.")
+            info(f"Folder {self.output_dir} already exists.")
         self.log_filename = self._jp("beretCount_RUNNING_LOG.txt")
         logging.getLogger().addHandler(logging.FileHandler(self.log_filename))
         with open(self.log_filename, "w+") as outfile:

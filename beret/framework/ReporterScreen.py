@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Collection, Iterable, List, Optional, Union
+from typing import Collection, Iterable, List, Optional, Union, Sequence, Literal
 
 import anndata as ad
 import numpy as np
@@ -178,6 +178,40 @@ class ReporterScreen(Screen):
         adata = super().copy()
         return type(self).from_adata(adata)
 
+    def rename(self, new_index: Sequence[str], axis: Literal[0, 1], keep_old=False):
+        """Rename index"""
+        if axis == 0:
+            if len(new_index) != len(self.guides):
+                raise ValueError(
+                    f"New index of length {len(new_index)} doesn't match original index length of {len(self.guides)}."
+                )
+            index_subs_map = {
+                self.guides.index[i]: new_index[i] for i in range(len(new_index))
+            }
+            if keep_old:
+                self.guides["old_index"] = self.guides.index
+            self.guides.index = new_index
+            for k in self.uns.keys():
+                if "guide" in self.uns[k].columns:
+                    self.uns[k].guide = self.uns[k].guide.map(index_subs_map)
+        else:
+            if len(new_index) != len(self.condit):
+                raise ValueError(
+                    f"New index of length {len(new_index)} doesn't match original index length of {len(self.condit)}."
+                )
+            if keep_old:
+                self.condit["old_index"] = self.condit.index
+            self.condit.index = new_index
+            for k in self.uns.keys():
+                if "guide" in self.uns[k].columns and (
+                    "edit" in self.uns[k].columns[1]
+                    or "allele" in self.uns[k].columns[1]
+                ):
+                    self.uns[k].columns = (
+                        self.uns[k].columns[:2].tolist()
+                        + self.uns[k].columns[2:].map(index_subs_map).tolist()
+                    )
+
     def __add__(self, other):
         if all(self.guides.index == other.guides.index) and all(
             self.condit.index == other.condit.index
@@ -287,8 +321,14 @@ class ReporterScreen(Screen):
         rel_pos_end=np.Inf,
         rel_pos_is_reporter=False,
         target_pos_col="target_pos",
+        edit_count_key="edit_counts",
     ):
-        edits = self.uns["edit_counts"].copy()
+        if edit_count_key not in self.uns or len(self.uns[edit_count_key]) == 0:
+            raise ValueError(
+                "Edit count isn't calculated. "
+                + "Call .get_edit_from_allele(allele_count_key, allele_key)"
+            )
+        edits = self.uns[edit_count_key].copy()
         if self.layers["edits"] is not None:
             old_edits = self.layers["edits"].copy()
             self.layers["edits"] = np.zeros_like(
@@ -420,8 +460,10 @@ class ReporterScreen(Screen):
             self.layers["edit_rate"] = edit_rate
 
     def get_edit_from_allele(
-        self, allele_count_key="allele_counts", allele_key="allele"
+        self, allele_count_key="allele_counts", allele_key="allele", return_result=False
     ):
+        if allele_count_key not in self.uns or len(self.uns[allele_count_key]) == 0:
+            raise ValueError(f"No allele information stored: {self.uns}")
         df = self.uns[allele_count_key].copy()
         df["edits"] = df[allele_key].map(lambda a: str(a).split(","))
         df = df.explode("edits").groupby(["guide", "edits"]).sum()
@@ -434,7 +476,9 @@ class ReporterScreen(Screen):
                 return AminoAcidEdit.from_str(s)
 
         df["edit"] = df.edit.map(try_objectify)
-        return df
+        if return_result:
+            return df
+        self.uns["edit_counts"] = df
 
     def _get_allele_norm(self, allele_count_df=None, thres=10):
         """
@@ -712,7 +756,7 @@ def concat(screens: Collection[ReporterScreen], *args, axis=1, **kwargs):
 
     adata = ad.concat(screens, *args, axis=axis, **kwargs)
     adata.obs = screens[0].guides
-    keys = screens[0].uns.keys()
+    keys = set(screens[0].uns.keys())
     for screen in screens:
         keys.intersection(screen.uns.keys())
 
@@ -727,9 +771,17 @@ def concat(screens: Collection[ReporterScreen], *args, axis=1, **kwargs):
         for k in keys:
             if "edit" not in k and "allele" not in k:
                 continue
-            merge_on = screen[0].uns[k].columns[:2].tolist()
-            edit_cls = type(screen[0].uns[k][merge_on[1]][0])
             screen_uns_dfs = [screen.uns[k] for screen in screens]
+
+            if max(len(screen_uns_df) for screen_uns_df in screen_uns_dfs) == 0:
+                continue
+            merge_on = screen[0].uns[k].columns[:2].tolist()
+            try:
+                edit_cls = type(screen[0].uns[k][merge_on[1]][0])
+            except IndexError:
+                print(merge_on)
+                print(screen[0].uns[k])
+                exit(1)
             screen_uns_dfs = [
                 _convert_obj_column_to_str(df, merge_on[1]) for df in screen_uns_dfs
             ]

@@ -102,6 +102,25 @@ class Edit:
     def __eq__(self, other):
         return self.__repr__() == other.__repr__()
 
+    def __lt__(self, other):
+        if isinstance(other, Edit) and self.pos != other.pos:
+            return self.pos < other.pos
+        return self.__repr__() < str(other)
+
+    def __gt__(self, other):
+        if isinstance(other, Edit) and self.pos != other.pos:
+            return self.pos > other.pos
+        return self.__repr__() > str(other)
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
+    def __repr__(self):
+        if self.uid is None:
+            return f"{int(self.pos)}:{int(self.rel_pos)}:{self.strand}:{self.ref_base}>{self.alt_base}"
+
+        return f"{self.uid}!{int(self.pos)}:{int(self.rel_pos)}:{self.strand}:{self.ref_base}>{self.alt_base}"
+
 
 class Allele:
     # pos, ref, alt

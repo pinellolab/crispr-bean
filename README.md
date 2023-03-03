@@ -40,9 +40,10 @@ File should contain following columns.
 * `barcode`: R2 barcode to help match reporter to gRNA  
 
 Optional: 
-* `Strand/strand`: Specifies gRNA strand information relative to reference genome. 
-* `start_pos`: gRNA starting position in the genome. Required when you provide `Strand/strand` column. Should specify the smaller coordinate value among start and end position regardless of gRNA strandedness.
+* `strand`: Specifies gRNA strand information relative to reference genome. 
+* `start_pos`: gRNA starting position in the genome. Required when you provide `strand` column. Should specify the smaller coordinate value among start and end position regardless of gRNA strandedness.
 * `offset`: Specifies absolute positional offset to be added to edited position. Useful when you need amino acid translation results for ex. coding sequence tiling screens.
+* `target_pos`: If `--match_target_pos` flag is used, input file needs `target_pos` which specifies 0-based relative position of targeted base within Reporter sequence.
   
 ### Output file format
 `count` or `count-samples` produces `.h5ad` and `.xlsx` file with guide and per-guide allele counts.  

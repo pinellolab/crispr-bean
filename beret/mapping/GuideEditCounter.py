@@ -454,60 +454,62 @@ class GuideEditCounter:
             "duplicate_wo_barcode"
         )
         outfile_R1_dup, outfile_R2_dup = self._get_fastq_handle("duplicate")
-
-        for i, (r1, r2) in tqdm(
+        with tqdm(
             enumerate(zip(R1_iter, R2_iter)),
             total=self.n_reads_after_filtering,
-            postfix=(self.bcmatch, self.semimatch),
-        ):
-            R1_seq = str(r1.seq)
-            R2_seq = str(r2.seq)
+            postfix=f", n_read={self.bcmatch}",
+        ) as tqdm_reads:
+            for i, (r1, r2) in tqdm_reads:
+                R1_seq = str(r1.seq)
+                R2_seq = str(r2.seq)
 
-            bc_match, semimatch = self._match_read_to_sgRNA_bcmatch_semimatch(
-                R1_seq, R2_seq
-            )
+                bc_match, semimatch = self._match_read_to_sgRNA_bcmatch_semimatch(
+                    R1_seq, R2_seq
+                )
 
-            if len(bc_match) == 0:
-                if (
-                    len(semimatch) == 0
-                ):  # no guide matchsplit string by period pythonpan
+                if len(bc_match) == 0:
+                    if (
+                        len(semimatch) == 0
+                    ):  # no guide matchsplit string by period pythonpan
+                        if self.keep_intermediate:
+                            _write_paired_end_reads(
+                                r1, r2, outfile_R1_nomatch, outfile_R2_nomatch
+                            )
+                        self.nomatch += 1
+                    elif len(semimatch) >= 2:  # Duplicate match if w/o barcode
+                        if self.keep_intermediate:
+                            _write_paired_end_reads(
+                                r1, r2, outfile_R1_dup_wo_bc, outfile_R2_dup_wo_bc
+                            )
+                        self.duplicate_match_wo_barcode += 1
+                    else:  # guide match with no barcode match
+                        matched_guide_idx = semimatch[0]
+                        self.screen.layers[semimatch_layer][matched_guide_idx, 0] += 1
+                        if self.count_guide_edits:
+                            self._count_guide_edits(matched_guide_idx, r1)
+                        self.semimatch += 1
+
+                elif len(bc_match) >= 2:  # duplicate mapping
                     if self.keep_intermediate:
-                        _write_paired_end_reads(
-                            r1, r2, outfile_R1_nomatch, outfile_R2_nomatch
-                        )
-                    self.nomatch += 1
-                elif len(semimatch) >= 2:  # Duplicate match if w/o barcode
-                    if self.keep_intermediate:
-                        _write_paired_end_reads(
-                            r1, r2, outfile_R1_dup_wo_bc, outfile_R2_dup_wo_bc
-                        )
-                    self.duplicate_match_wo_barcode += 1
-                else:  # guide match with no barcode match
-                    matched_guide_idx = semimatch[0]
-                    self.screen.layers[semimatch_layer][matched_guide_idx, 0] += 1
-                    if self.count_guide_edits:
-                        self._count_guide_edits(matched_guide_idx, r1)
-                    self.semimatch += 1
+                        _write_paired_end_reads(r1, r2, outfile_R1_dup, outfile_R2_dup)
+                    self.duplicate_match += 1
 
-            elif len(bc_match) >= 2:  # duplicate mapping
-                if self.keep_intermediate:
-                    _write_paired_end_reads(r1, r2, outfile_R1_dup, outfile_R2_dup)
-                self.duplicate_match += 1
-
-            else:  # unique barcode match
-                matched_guide_idx = bc_match[0]
-                self.screen.layers[bcmatch_layer][matched_guide_idx, 0] += 1
-                self.bcmatch += 1
-                if self.count_guide_edits or self.count_guide_reporter_alleles:
-                    guide_allele, _ = self._count_guide_edits(matched_guide_idx, r1)
-                if self.count_reporter_edits:
-                    # TODO: what if reporter seq doesn't match barcode & guide?
-                    if self.count_guide_reporter_alleles:
-                        self._count_reporter_edits(
-                            matched_guide_idx, R1_seq, r2, guide_allele=guide_allele
-                        )
-                    else:
-                        self._count_reporter_edits(matched_guide_idx, R1_seq, r2)
+                else:  # unique barcode match
+                    matched_guide_idx = bc_match[0]
+                    self.screen.layers[bcmatch_layer][matched_guide_idx, 0] += 1
+                    self.bcmatch += 1
+                    if self.count_guide_edits or self.count_guide_reporter_alleles:
+                        guide_allele, _ = self._count_guide_edits(matched_guide_idx, r1)
+                    if self.count_reporter_edits:
+                        # TODO: what if reporter seq doesn't match barcode & guide?
+                        if self.count_guide_reporter_alleles:
+                            self._count_reporter_edits(
+                                matched_guide_idx, R1_seq, r2, guide_allele=guide_allele
+                            )
+                        else:
+                            self._count_reporter_edits(matched_guide_idx, R1_seq, r2)
+                tqdm_reads.postfix = f", n_read={self.bcmatch}"
+                tqdm_reads.update()
 
         self.screen.X = (
             self.screen.layers[semimatch_layer] + self.screen.layers[bcmatch_layer]

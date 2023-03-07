@@ -14,7 +14,7 @@ setuptools.setup(
     description="Base Editor screen analysis [Bayesian Estimation of variant effect] with guide Activity Normalization",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/pinellolab/CRISPRbean",
+    url="https://github.com/pinellolab/crispr-bean",
     packages=setuptools.find_packages(),
     ext_modules=cythonize(["bean/mapping/CRISPResso2Align.pyx"]),
     include_dirs=np.get_include(),
@@ -27,7 +27,15 @@ setuptools.setup(
     install_requires=[
         "numpy",
         "perturb-tools>=0.0.16",
+        "anndata>=0.8.0",
+        "Bio>=1.5",
+        "matplotlib",
+        "pandas",
+        "scipy",
+        "seaborn",
+        "tqdm",
     ],
+    extras_require={"model": ["pyBigWig", "pyro", "statsmodels", "torch"]},
     include_package_data=True,
     package_data={
         "": [

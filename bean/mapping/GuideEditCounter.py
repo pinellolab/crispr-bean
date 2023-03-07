@@ -98,7 +98,7 @@ class GuideEditCounter:
             X_bcmatch=np.zeros((len(self.guides_info_df), 1)),
             guides=self.guides_info_df,
             condit=pd.DataFrame(index=[self.database_id]),
-            target_base_change=f"{self.guide_edited_from}>{self.guide_edited_to}",
+            target_base_change=f"{self.base_edited_from}>{self.base_edited_to}",
         )
         self.count_guide_edits = kwargs["count_guide_edits"]
         if self.count_guide_edits:

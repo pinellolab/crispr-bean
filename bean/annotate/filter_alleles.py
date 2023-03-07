@@ -72,14 +72,14 @@ def get_edit_significance_to_ctrl(
         sample_columns = sample_adata.condit.index.tolist()
     n_samples = len(sample_columns)
     sample_adata.uns["edit_counts"] = sample_adata.get_edit_from_allele(
-        allele_count_key=allele_counts_key
+        allele_count_key=allele_counts_key, return_result=True
     )
     ctrl_adata.uns["edit_counts"] = ctrl_adata.get_edit_from_allele(
-        allele_count_key=allele_counts_key
+        allele_count_key=allele_counts_key, return_result=True
     )
     edit_counts_ctrl = ctrl_adata.uns["edit_counts"]
 
-    if not aggregate_cond is None:
+    if aggregate_cond is not None:
         conds = sample_adata.condit.reset_index().groupby(aggregate_cond).groups
         edit_counts_raw = sample_adata.uns["edit_counts"][
             ["guide", "edit"] + sample_columns
@@ -176,7 +176,9 @@ def _filter_allele_sample(sample_allele_tbl, sample_guide_to_sig_edit_dict):
         lambda row: _row_filter_allele(row, sample_guide_to_sig_edit_dict), axis=1
     ).map(str)
     sample_filtered_allele_tbl = (
-        sample_allele_tbl.groupby(["guide", "filtered_allele_str"]).sum().reset_index()
+        sample_allele_tbl.groupby(["guide", "filtered_allele_str"], numeric_only=True)
+        .sum()
+        .reset_index()
     )
     sample_filtered_allele_tbl = sample_filtered_allele_tbl.loc[
         sample_filtered_allele_tbl.filtered_allele_str != "", :
@@ -303,7 +305,7 @@ def filter_alleles(
     run_parallel=False,
     map_to_filtered=True,
 ):
-    if not aggregate_cond is None:
+    if aggregate_cond is not None:
         sample_tested = sample_adata.condit.groupby(aggregate_cond).ngroups
     elif not filter_each_sample:
         sample_tested = len(sample_adata.condit)

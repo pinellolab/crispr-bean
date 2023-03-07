@@ -72,7 +72,7 @@ def parse_args():
 def main():
     args = parse_args()
     pm.execute_notebook(
-        f"{os.path.dirname(be.__file__)}/notebooks/sample_quality_report.ipynb",
+        f"{os.path.dirname(be.__file__)}/../notebooks/sample_quality_report.ipynb",
         f"{args.out_report_prefix}.ipynb",
         parameters=dict(
             bdata_path=args.bdata_path,

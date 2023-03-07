@@ -3,8 +3,6 @@ import gzip
 
 import pandas as pd
 from Bio import SeqIO
-from slugify import slugify
-
 
 class InputFileError(Exception):
     """Raised when the input file is not valid."""
@@ -158,7 +156,6 @@ def _get_input_parser():
     )
 
     parser.add_argument(
-        "-as",
         "--string-allele",
         help="Store allele as quality filtered string instead of Allele object",
         action="store_true",

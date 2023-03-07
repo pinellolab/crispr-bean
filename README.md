@@ -10,11 +10,26 @@ This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The r
 
 <img src="imgs/reporter_construct.svg" alt="Reporter construct" width="500"/>
 
+## Overview
+`crispr-bean` supports the following functionalities.
+* `bean-count`, `bean-count-sample`: Base-editing-aware mapping of guide, optionally with reporter from `.fastq` files.  
+* `bean-qc`: Quality control report and filtering out / masking of aberrant sample and guides  
+* `bean-filter`: Filter reporter alleles
+* `bean-run`: Quantify targeted variants' effect sizes from screen data.
+
+
 ## Installation 
-Downloading from PyPI:
+### Full installation
+First install [pytorch](https://pytorch.org/).
+Then download from PyPI:
+```
+pip install crispr-bean[model]
+```
+### Mapping and data wrangling, without variant effect quantification
 ```
 pip install crispr-bean
 ```
+This wouldn't have variant effect size quantification (`bean-run`) functionality.  
 
 ## Count reporter screen data  
 `beret-count-samples` or `beret-count` maps guide into guide counts, **allowing for base transition in spacer sequence**. When the matched reporter information is provided, it can count the **target site edits** and **alleles produced by each guide**. Mapping is efficiently done based on [CRISPResso2](https://github.com/pinellolab/CRISPResso2).

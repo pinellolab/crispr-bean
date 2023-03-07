@@ -7,8 +7,6 @@ import matplotlib.pyplot as plt
 
 def parse_args():
     """Get the input arguments"""
-    print("  \n~~~BEANFilter~~~")
-    print("-Check guide/sample level quality and mask / discard-")
     print(
         r"""
     _ _         
@@ -18,6 +16,7 @@ def parse_args():
     `.__|/    |_| |_|_|\__\___|_|  
     """
     )
+    print("bean-filter: check guide/sample level quality and mask / discard")
     parser = argparse.ArgumentParser(
         prog="allele_filter",
         description="Filter alleles based on edit position in spacer and frequency across samples.",
@@ -89,7 +88,14 @@ if __name__ == "__main__":
     allele_df_keys = ["allele_counts"]
     if args.plasmid_path is not None:
         plasmid_adata = be.read_h5ad(args.plasmid_path)
-        q_val_each, bdata.uns["sig_allele_counts"] = be.filter_alleles(
+        plasmid_adata.uns[allele_df_keys[-1]] = plasmid_adata.uns[
+            allele_df_keys[-1]
+        ].loc[plasmid_adata.uns[allele_df_keys[-1]].allele.map(str) != "", :]
+        
+        (
+            q_val_each,
+            bdata.uns["sig_allele_counts"],
+        ) = be.an.filter_alleles.filter_alleles(
             bdata, plasmid_adata, filter_each_sample=True, run_parallel=True
         )
         allele_df_keys.append("sig_allele_counts")

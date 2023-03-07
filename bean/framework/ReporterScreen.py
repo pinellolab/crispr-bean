@@ -129,7 +129,7 @@ class ReporterScreen(Screen):
                         lambda s: CodingNoncodingAllele.from_str(s)
                     )
         if target_base_change is not None:
-            if re.fullmatch(r"[ACTG]>[ACTG]", target_base_change):
+            if not re.fullmatch(r"[ACTG]>[ACTG]", target_base_change):
                 raise ValueError(
                     f"target_base_change {target_base_change} doesn't match the allowed base change. Feed in valid base change string ex) 'A>G', 'C>T'"
                 )

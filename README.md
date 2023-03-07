@@ -60,8 +60,8 @@ Following attributes are included if matched reporter is provided and you chose 
 
 ## Using as python module
 ```
-import beret as br
-cdata = br.read_h5ad("beret_counts_sample.h5ad")
+import crispr_bean as be
+cdata = be.read_h5ad("bean_counts_sample.h5ad")
 ```
 
 See the [**ReporterScreen API tutorial**](docs/ReporterScreen_api.ipynb) for more detail.

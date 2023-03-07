@@ -8,7 +8,7 @@
 This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The reporter technique transfects cells with plasmid with not only sgRNA but with the **target sequence surrogate** which we call **reporter** or **sensor**.  
 
 
-<img src="imgs/anbe.svg" alt="anbe" width="500"/>
+<img src="imgs/reporter_construct.svg" alt="Reporter construct" width="500"/>
 
 ## Installation 
 Downloading from PyPI:

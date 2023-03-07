@@ -32,10 +32,9 @@ pip install crispr-bean
 This wouldn't have variant effect size quantification (`bean-run`) functionality.  
 
 ## Count reporter screen data  
-`beret-count-samples` or `beret-count` maps guide into guide counts, **allowing for base transition in spacer sequence**. When the matched reporter information is provided, it can count the **target site edits** and **alleles produced by each guide**. Mapping is efficiently done based on [CRISPResso2](https://github.com/pinellolab/CRISPResso2).
+`beret-count-samples` or `beret-count` maps guide into guide counts, **allowing for base transition in spacer sequence**. When the matched reporter information is provided, it can count the **target site edits** and **alleles produced by each guide**. Mapping is efficiently done based on [CRISPResso2](https://github.com/pinellolab/CRISPResso2) modified for base-edit-aware mapping.
 
 
-<img src="imgs/reporter_screen.svg" alt="reporter screen" width="700"/>  
 
 ```python
 beret-count-samples         \

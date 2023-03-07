@@ -64,4 +64,4 @@ import beret as br
 cdata = br.read_h5ad("beret_counts_sample.h5ad")
 ```
 
-See the [**tutorial**](docs/beret_test.ipynb) for more detail.
+See the [**ReporterScreen API tutorial**](docs/ReporterScreen_api.ipynb) for more detail.

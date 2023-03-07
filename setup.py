@@ -6,19 +6,24 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="berets",
+    name="crispr-bean",
     version="0.1.3",
     python_requires=">=3.8.0",
     author="Jayoung Ryu",
     author_email="jayoung_ryu@g.harvard.edu",
-    description="Base Editor with or without REporter data analysis Toolkit",
+    description="Base Editor screen analysis [Bayesian Estimation of variant effect] with guide Activity Normalization",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/pinellolab/beret",
+    url="https://github.com/pinellolab/CRISPRbean",
     packages=setuptools.find_packages(),
-    ext_modules=cythonize(["beret/mapping/CRISPResso2Align.pyx"]),
+    ext_modules=cythonize(["bean/mapping/CRISPResso2Align.pyx"]),
     include_dirs=np.get_include(),
-    scripts=["bin/beret-count", "bin/beret-count-samples", "bin/beret-qc"],
+    scripts=[
+        "bin/bean-count",
+        "bin/bean-count-samples",
+        "bin/bean-qc",
+        "bin/bean-filter",
+    ],
     install_requires=[
         "numpy",
         "perturb-tools>=0.0.16",
@@ -26,8 +31,8 @@ setuptools.setup(
     include_package_data=True,
     package_data={
         "": [
-            "beret/annotate/ldlr_exons.fa",
-            "beret/notebooks/sample_quality_report.ipynb",
+            "bean/annotate/ldlr_exons.fa",
+            "notebooks/sample_quality_report.ipynb",
         ]
     },
     classifiers=[

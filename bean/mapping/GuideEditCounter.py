@@ -7,7 +7,7 @@ from os import path
 
 import numpy as np
 import pandas as pd
-from beret import Allele, ReporterScreen
+from bean import Allele, ReporterScreen
 from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqPhredIterator
 from tqdm import tqdm
@@ -88,7 +88,7 @@ class GuideEditCounter:
         self.database_id = self._get_database_name()
         self.output_dir = os.path.join(
             os.path.abspath(kwargs["output_folder"]),
-            f"beret_count_{self.database_id}",
+            f"bean_count_{self.database_id}",
         )
         self._write_start_log()
 
@@ -746,7 +746,7 @@ class GuideEditCounter:
             info(f"Creating Folder {self.output_dir}")
         except OSError:
             info(f"Folder {self.output_dir} already exists.")
-        self.log_filename = self._jp("beretCount_RUNNING_LOG.txt")
+        self.log_filename = self._jp("beanCount_RUNNING_LOG.txt")
         logging.getLogger().addHandler(logging.FileHandler(self.log_filename))
         with open(self.log_filename, "w+") as outfile:
             outfile.write(

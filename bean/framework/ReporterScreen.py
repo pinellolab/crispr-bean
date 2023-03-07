@@ -468,7 +468,7 @@ class ReporterScreen(Screen):
 
     def get_edit_rate(
         self,
-        normalize_by_editable_base=False,
+        normalize_by_editable_base=None,
         edited_base=None,
         editable_base_start=3,
         editable_base_end=8,
@@ -483,6 +483,10 @@ class ReporterScreen(Screen):
         Considering the edit rate to have prior of beta distribution with mean 0.5,
         prior weight to use when calculating posterior edit rate.
         """
+        if normalize_by_editable_base is None:
+            normalize_by_editable_base = self.tiling
+        if edited_base is None:
+            edited_base = self.base_edited_from
         if self.layers[count_layer] is None or self.layers[edit_layer] is None:
             raise ValueError("edits or barcode matched guide counts not available.")
         num_targetable_sites = 1.0
@@ -561,6 +565,7 @@ class ReporterScreen(Screen):
         self,
         rel_pos_start: int = 0,
         rel_pos_end: int = 32,
+        rel_pos_is_reporter: bool = True,
         allele_uns_key: str = "allele_counts",
         filter_rel_pos: bool = True,
         map_to_filtered: bool = True,
@@ -571,20 +576,38 @@ class ReporterScreen(Screen):
         Filter alleles based on barcode matched counts, allele counts,
         or proportion
 
-        Keyword arguments:
-        map_to_filtered (bool) -- Map allele to the closest filtered allele to preserve total allele count. Ignores the case where there is no alleles filtered.
-        rel_pos_start (int) -- rel_pos to start including (inclusive)
-        rel_pos_end (int) -- rel_pos to end including (exclusive)
+        Args
+        --
+        map_to_filtered: Map allele to the closest filtered allele to preserve total allele count. Ignores the case where there is no alleles filtered.
+        rel_pos_start: rel_pos to start including (inclusive)
+        rel_pos_end: rel_pos to end including (exclusive)
+        rel_pos_is_reporter: rel_pos_start and rel_pos_end is 0-based relative to reporter sequence start.
         jaccard_threshold (float) --
         """
         allele_count_df = self.uns[allele_uns_key].copy()
-        filtered_allele, filtered_edits = zip(
-            *allele_count_df.allele.map(
-                lambda a: filter_allele_by_pos(
-                    a, rel_pos_start, rel_pos_end, filter_rel_pos
+        if rel_pos_is_reporter:
+            filtered_allele, filtered_edits = zip(
+                *allele_count_df.allele.map(
+                    lambda a: filter_allele_by_pos(
+                        a, rel_pos_start, rel_pos_end, filter_rel_pos
+                    )
                 )
             )
-        )
+        else:
+            guide_start_pos = (
+                32 - 6 - self.guides.loc[allele_count_df.guide, "guide_len"].values
+            )
+            filtered_allele, filtered_edits = zip(
+                *[
+                    filter_allele_by_pos(
+                        allele_count_df.allele[i],
+                        guide_start_pos[i] + rel_pos_start,
+                        guide_start_pos[i] + rel_pos_end,
+                        filter_rel_pos,
+                    )
+                    for i in range(len(allele_count_df))
+                ]
+            )
         allele_count_df.loc[:, "allele"] = filtered_allele
         # Hashing on Allele object messes up the order. Converting it to str and back to allele for groupby.
         allele_count_df["str_allele"] = allele_count_df.allele.map(str)

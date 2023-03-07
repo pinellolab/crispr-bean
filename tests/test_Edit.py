@@ -1,4 +1,4 @@
-from beret import Edit
+from bean import Edit
 
 
 def test_hash():

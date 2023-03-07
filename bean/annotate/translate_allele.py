@@ -5,9 +5,9 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 from Bio import SeqIO
-import beret as be
-from beret.framework.Edit import Edit, Allele
-from beret.framework.AminoAcidEdit import (
+import bean as be
+from bean.framework.Edit import Edit, Allele
+from bean.framework.AminoAcidEdit import (
     AminoAcidEdit,
     AminoAcidAllele,
     CodingNoncodingAllele,

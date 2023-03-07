@@ -6,8 +6,8 @@ import logging
 import os
 import sys
 
-import beret
-from beret.mapping.utils import (
+import bean
+from bean.mapping.utils import (
     _check_arguments,
     _get_input_parser,
     _check_file,
@@ -72,7 +72,7 @@ def main():
     edited_from = args_dict["edited_base"]
     match_target_pos = args_dict["match_target_pos"]
 
-    counter = beret.mp.GuideEditCounter(**args_dict)
+    counter = bean.mp.GuideEditCounter(**args_dict)
     counter.check_filter_fastq()
 
     counter.get_counts()
@@ -86,12 +86,11 @@ def main():
     info("All Done!")
     print(
         r"""
-          )                                             )
-         (           ________________________          (
-        __)__       | __   __            ___ |        __)__
-     C\|     \      |/  ` /  \ |  | |\ |  |  |     C\|     \
-       \     /      |\__, \__/ \__/ | \|  |  |       \     /
-        \___/       |________________________|        \___/
+    _ _       
+  /  \ '\                       _   
+  |   \  \      __ ___ _  _ _ _| |_ 
+   \   \  |    / _/ _ \ || | ' \  _|
+    `.__|/     \__\___/\_,_|_||_\__|
     """
     )
 

@@ -2,10 +2,21 @@
 import os
 import papermill as pm
 import argparse
-import beret as be
+import bean as be
 
 
 def parse_args():
+    print("  \n~~~BEANQC~~~")
+    print("-Check guide/sample level quality and mask / discard-")
+    print(
+        r"""
+    _ _       
+  /  \ '\        ___   ___ 
+  |   \  \      / _ \ / __|
+   \   \  |    | (_) | (__ 
+    `.__|/      \__\_\\___|
+    """
+    )
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "bdata_path", help="Path to the ReporterScreen object to run QC on", type=str
@@ -31,6 +42,24 @@ def parse_args():
         "--edit_end_pos",
         help="Edit end position to quantify editing rate on, 0-based exclusive relative to spacer start position",
         default=7,
+    )
+    parser.add_argument(
+        "--count_correlation_thres",
+        help="Correlation threshold to mask out.",
+        type=float,
+        default=0.7,
+    )
+    parser.add_argument(
+        "--edit_rate_thres",
+        help="Editing rate threshold per sample to mask out.",
+        type=float,
+        default=0.1,
+    )
+    parser.add_argument(
+        "--lfc_thres",
+        help="Positive guides' correlation threshold to filter out.",
+        type=float,
+        default=0.7,
     )
     args = parser.parse_args()
     if args.out_screen_path is None:

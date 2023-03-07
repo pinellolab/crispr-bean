@@ -1,10 +1,10 @@
-# <img src="imgs/beret2.svg" alt="beret" width="150"/>
+# <img src="imgs/bean_title.png" alt="beret" width="150"/>
 
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/berets)](https://pypi.org/project/berets/)
 [![PyPI version](https://img.shields.io/pypi/v/berets)](https://pypi.org/project/berets/)
 [![Code style](https://img.shields.io/badge/code%20style-black-black)](https://github.com/psf/black)
 
-**B**ase **E**diting with **Re**porter analysis **T**oolkit.  
+CRISPR **B**ayesian **E**stimation of variant effect (from **B**ase **E**diting reporter screens) with guide **A**ctivity **N**ormalization  
 This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The reporter technique transfects cells with plasmid with not only sgRNA but with the **target sequence surrogate** which we call **reporter** or **sensor**.  
 
 
@@ -13,7 +13,7 @@ This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The r
 ## Installation 
 Downloading from PyPI:
 ```
-pip install berets
+pip install crispr-bean
 ```
 
 ## Count reporter screen data  

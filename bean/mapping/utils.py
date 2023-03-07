@@ -33,16 +33,15 @@ def _check_library(library_name):
 
 def _get_input_parser():
     """Get the input data"""
-    print("  \n~~~beretCount~~~")
+    print("  \n~~~beanCount~~~")
     print("-Utility to perform sgRNA and reporter count from CRISPR base editors-")
     print(
         r"""
-          )                                             )
-         (           ________________________          (
-        __)__       | __   __            ___ |        __)__
-     C\|     \      |/  ` /  \ |  | |\ |  |  |     C\|     \
-       \     /      |\__, \__/ \__/ | \|  |  |       \     /
-        \___/       |________________________|        \___/
+    _ _       
+  /  \ '\                       _   
+  |   \  \      __ ___ _  _ _ _| |_ 
+   \   \  |    / _/ _ \ || | ' \  _|
+    `.__|/     \__\___/\_,_|_||_\__|
     """
     )
 

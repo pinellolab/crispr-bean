@@ -18,13 +18,18 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     ext_modules=cythonize(["beret/mapping/CRISPResso2Align.pyx"]),
     include_dirs=np.get_include(),
-    scripts=["bin/beret-count", "bin/beret-count-samples"],
+    scripts=["bin/beret-count", "bin/beret-count-samples", "bin/beret-qc"],
     install_requires=[
         "numpy",
         "perturb-tools>=0.0.16",
     ],
     include_package_data=True,
-    package_data={"": ["beret/annotate/ldlr_exons.fa"]},
+    package_data={
+        "": [
+            "beret/annotate/ldlr_exons.fa",
+            "beret/notebooks/sample_quality_report.ipynb",
+        ]
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",

@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+import os
+import papermill as pm
+import argparse
+import beret as be
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "bdata_path", help="Path to the ReporterScreen object to run QC on", type=str
+    )
+    parser.add_argument(
+        "-o",
+        "--out-screen-path",
+        help="Path where quality-filtered ReporterScreen object to be written to",
+        type=str,
+    )
+    parser.add_argument(
+        "-r",
+        "--out-report-prefix",
+        help="Output prefix of qc report (prefix.html, prefix.ipynb)",
+        type=str,
+    )
+    parser.add_argument(
+        "--edit_start_pos",
+        help="Edit start position to quantify editing rate on, 0-based inclusive relative to spacer start position",
+        default=2,
+    )
+    parser.add_argument(
+        "--edit_end_pos",
+        help="Edit end position to quantify editing rate on, 0-based exclusive relative to spacer start position",
+        default=7,
+    )
+    args = parser.parse_args()
+    if args.out_screen_path is None:
+        args.out_screen_path = f"{args.bdata_path.rsplit('.h5ad', 1)[0]}.filtered.h5ad"
+    if args.out_report_prefix is None:
+        args.out_report_prefix = f"{args.bdata_prefix.rsplit('.h5ad', 1)[0]}.qc_report"
+    return args
+
+
+def main():
+    args = parse_args()
+    pm.execute_notebook(
+        f"{os.path.dirname(be.__file__)}/notebooks/sample_quality_report.ipynb",
+        f"{args.out_report_prefix}.ipynb",
+        parameters=dict(
+            bdata_path=args.bdata_path,
+            out_bdata_path=args.out_screen_path,
+            edit_quantification_start_pos=args.edit_start_pos,
+            edit_quantification_end_pos=args.edit_end_pos,
+        ),
+        kernel_name="jy_anbe_py38",  # TODO needs to be specified? how do i know the name of kernel installed in current conda env?
+    )
+    os.system(f"jupyter nbconvert --to html {args.out_report_prefix}.ipynb")
+
+
+if __name__ == "__main__":
+    main()

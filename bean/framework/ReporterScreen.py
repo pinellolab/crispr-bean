@@ -6,10 +6,17 @@ import numpy as np
 import pandas as pd
 from perturb_tools import Screen
 
-from ._supporting_fn import filter_allele_by_base, filter_allele_by_pos, get_aa_alleles
+from ..annotate._supporting_fn import (
+    filter_allele_by_base,
+    filter_allele_by_pos,
+    get_aa_alleles,
+)
 from .AminoAcidEdit import AminoAcidEdit, CodingNoncodingAllele
 from .Edit import Allele, Edit
-from .filter_alleles import _distribute_alleles_to_filtered, _map_alleles_to_filtered
+from ..annotate.filter_alleles import (
+    _distribute_alleles_to_filtered,
+    _map_alleles_to_filtered,
+)
 
 
 def _get_counts(

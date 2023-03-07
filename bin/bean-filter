@@ -75,16 +75,10 @@ def parse_args():
     )
     parser.add_argument(
         "--filter-sample-proportion",
-        "-ap",
+        "-sp",
         type=float,
         default=0.2,
         help="If `filter_allele_proportion` is provided, alleles that exceed `filter_allele_proportion` in `filter-sample-proportion` will be retained.",
-    )
-    parser.add_argument(
-        "--jaccard-threshold",
-        "-j",
-        help="Jaccard Index threshold when the alleles are mapped to the most similar alleles. In each filtering step, allele counts of filtered out alleles will be mapped to the most similar allele only if they have Jaccard Index of shared edit higher than this threshold.",
-        default=0.5,
     )
     return parser.parse_args()
 

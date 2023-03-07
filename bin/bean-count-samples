@@ -45,14 +45,14 @@ def get_input_parser() -> argparse.Namespace:
         "-t", "--threads", type=int, help="Number of threads", default=10
     )
     parser.add_argument(
-        "--guide_start_seqs_file",
+        "--guide-start-seqs-file",
         type=str,
         help="CSV file path with per-sample `guide_start_seq` to be used."
         + "Formatted as `sample_id, guide_start_seq`",
         default=None,
     )
     parser.add_argument(
-        "--guide_end_seqs_file",
+        "--guide-end-seqs-file",
         type=str,
         help="CSV file path with per-sample `guide_end_seq` to be used."
         + "Formatted as `sample_id,guide_end_seq`",

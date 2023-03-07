@@ -33,8 +33,6 @@ def _check_library(library_name):
 
 def _get_input_parser():
     """Get the input data"""
-    print("  \n~~~beanCount~~~")
-    print("-Utility to perform sgRNA and reporter count from CRISPR base editors-")
     print(
         r"""
     _ _       
@@ -45,10 +43,6 @@ def _get_input_parser():
     """
     )
 
-    print(
-        "\n[Luca Pinello 2017, Jayoung Ryu 2021, send bugs, suggestions or *green coffee* to jayoung_ryu AT g DOT harvard DOT edu]\n\n"
-    )
-
     parser = argparse.ArgumentParser(
         description="CRISPRessoCount parameters",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -56,14 +50,14 @@ def _get_input_parser():
 
     parser.add_argument(
         "-b",
-        "--edited_base",
+        "--edited-base",
         type=str,
         required=True,
         help="For base editors, the base that should be ignored when matching the gRNA sequence",
     )
     parser.add_argument(
         "-f",
-        "--sgRNA_filename",
+        "--sgRNA-filename",
         type=str,
         required=True,
         help="""sgRNA description file. The format requires three columns: gRNA, Reporter, gRNA_barcode.""",
@@ -71,19 +65,19 @@ def _get_input_parser():
 
     # optional
     parser.add_argument(
-        "--guide_start_seq",
+        "--guide-start-seq",
         type=str,
         help="Guide starts after this sequence in R1",
         default="",
     )
     parser.add_argument(
-        "--guide_end_seq",
+        "--guide-end-seq",
         type=str,
         help="Guide starts after this sequence in R1",
         default="",
     )
     parser.add_argument(
-        "-r", "--count_reporter", help="Count reporter edits.", action="store_true"
+        "-r", "--count-reporter", help="Count reporter edits.", action="store_true"
     )
     parser.add_argument(
         "-q",
@@ -94,59 +88,59 @@ def _get_input_parser():
     )
     parser.add_argument(
         "-s",
-        "--min_single_bp_quality",
+        "--min-single-bp-quality",
         type=int,
         help="Minimum single bp score (phred33) to keep a read",
         default=0,
     )
     parser.add_argument("-n", "--name", help="Output name", default="")
-    parser.add_argument("-o", "--output_folder", help="", default="")
+    parser.add_argument("-o", "--output-folder", help="", default="")
     parser.add_argument(
-        "-l", "--reporter_length", type=int, help="length of the reporter", default=32
+        "-l", "--reporter-length", type=int, help="length of the reporter", default=32
     )
     parser.add_argument(
-        "--keep_intermediate",
+        "--keep-intermediate",
         help="Keep all the  intermediate files",
         action="store_true",
     )
     parser.add_argument(
-        "--qstart_R1",
+        "--qstart-R1",
         help="Start position of the read when filtering for quality score of the read 1",
         type=int,
         default=0,
     )
     parser.add_argument(
-        "--qend_R1",
+        "--qend-R1",
         help="End position of the read when filtering for quality score of the read 1",
         type=int,
         default=47,
     )
     parser.add_argument(
-        "--qstart_R2", help="Same as qstart_R1, for read 2 fastq file", default=0
+        "--qstart-R2", help="Same as qstart_R1, for read 2 fastq file", default=0
     )
     parser.add_argument(
-        "--qend_R2", help="Same as qstart_R2, for read 2 fastq file", default=36
+        "--qend-R2", help="Same as qstart_R2, for read 2 fastq file", default=36
     )
     parser.add_argument(
-        "--gstart_reporter",
+        "--gstart-reporter",
         help="Start position of the guide sequence in the reporter",
         type=int,
         default=6,
     )
     parser.add_argument(
-        "--match_target_pos",
+        "--match-target-pos",
         help="Count the edit in the exact target position.",
         action="store_true",
     )
     parser.add_argument(
-        "--target_pos_col",
+        "--target-pos-col",
         help="Column name specifying the relative target position within reporter sequence.",
         default="target_pos",
     )
 
-    parser.add_argument("--guide_bc", help="Construct has guide barcode", default=True)
+    parser.add_argument("--guide-bc", help="Construct has guide barcode", default=True)
     parser.add_argument(
-        "--guide_bc_len",
+        "--guide-bc-len",
         help="Guide barcode sequence length at the beginning of the R2",
         type=str,
         default=4,
@@ -157,7 +151,7 @@ def _get_input_parser():
         action="store_true",
     )
     parser.add_argument(
-        "--align_fasta",
+        "--align-fasta",
         help="gRNA is aligned to this sequence to infer the offset. Can be used when the exact offset is not provided.",
         type=str,
         default="",
@@ -165,19 +159,19 @@ def _get_input_parser():
 
     parser.add_argument(
         "-as",
-        "--string_allele",
+        "--string-allele",
         help="Store allele as quality filtered string instead of Allele object",
         action="store_true",
     )
     parser.add_argument(
         "-g",
-        "--count_guide_edits",
+        "--count-guide-edits",
         help="count the self editing of guides",
         action="store_true",
     )
     parser.add_argument(
         "-m",
-        "--count_guide_reporter_alleles",
+        "--count-guide-reporter-alleles",
         help="count the matched allele of guide and reporter edit",
         action="store_true",
     )

@@ -6,8 +6,8 @@ from scipy.stats import fisher_exact
 from tqdm.auto import tqdm
 import pandas as pd
 from scipy.special import softmax
-from .Edit import Allele
-from .AminoAcidEdit import CodingNoncodingAllele
+from ..framework.Edit import Allele
+from ..framework.AminoAcidEdit import CodingNoncodingAllele
 from ._supporting_fn import map_alleles_to_filtered
 
 

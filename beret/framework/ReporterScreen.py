@@ -1,6 +1,6 @@
 from copy import deepcopy
-from typing import Collection, Iterable, List, Optional, Union, Sequence, Literal
-
+from typing import Collection, Iterable, List, Optional, Union, Sequence, Literal, Tuple
+import re
 import anndata as ad
 import numpy as np
 import pandas as pd
@@ -73,13 +73,24 @@ def _get_edits(
 
 
 class ReporterScreen(Screen):
-    def __init__(self, X=None, X_edit=None, X_bcmatch=None, *args, **kwargs):
+    def __init__(
+        self,
+        X=None,
+        X_edit=None,
+        X_bcmatch=None,
+        target_base_change: Optional[str] = None,
+        tiling: Optional[bool] = None,
+        *args,
+        **kwargs,
+    ):
         (super().__init__)(X, *args, **kwargs)
         if X_edit is not None:
             self.layers["edits"] = X_edit
         if X_bcmatch is not None:
             self.layers["X_bcmatch"] = X_bcmatch
         for k, df in self.uns.items():
+            if not isinstance(df, pd.DataFrame):
+                continue
             if "guide" in df.columns and len(df) > 0:
                 if (
                     "allele" in df.columns
@@ -110,6 +121,14 @@ class ReporterScreen(Screen):
                     self.uns[k].loc[:, "aa_allele"] = self.uns[k].aa_allele.map(
                         lambda s: CodingNoncodingAllele.from_str(s)
                     )
+        if target_base_change is not None:
+            if re.fullmatch(r"[ACTG]>[ACTG]", target_base_change):
+                raise ValueError(
+                    f"target_base_change {target_base_change} doesn't match the allowed base change. Feed in valid base change string ex) 'A>G', 'C>T'"
+                )
+            self.uns["target_base_change"] = target_base_change
+        if tiling is not None:
+            self.uns["tiling"] = tiling
 
     @property
     def X_edits(self):
@@ -126,6 +145,18 @@ class ReporterScreen(Screen):
     @property
     def allele_tables(self):
         return {k: self.uns[k] for k in self.uns.keys() if "allele" in k}
+
+    @property
+    def base_edited_from(self):
+        return self.uns["target_base_change"][0]
+
+    @property
+    def base_edited_to(self):
+        return self.uns["target_base_change"][-1]
+
+    @property
+    def tiling(self):
+        return self.uns["tiling"]
 
     @classmethod
     def from_file_paths(
@@ -199,6 +230,9 @@ class ReporterScreen(Screen):
                 raise ValueError(
                     f"New index of length {len(new_index)} doesn't match original index length of {len(self.condit)}."
                 )
+            index_subs_map = {
+                self.condit.index[i]: new_index[i] for i in range(len(new_index))
+            }
             if keep_old:
                 self.condit["old_index"] = self.condit.index
             self.condit.index = new_index
@@ -277,6 +311,8 @@ class ReporterScreen(Screen):
         for k, df in adata.uns.items():
             if k.startswith("repguide_mask"):
                 new_uns[k] = df.loc[guides_include, adata.var.rep.unique()]
+            if not isinstance(df, pd.DataFrame):
+                continue
             if "guide" in df.columns:
                 if "allele" in df.columns:
                     key_col = ["guide", "allele"]
@@ -314,15 +350,21 @@ class ReporterScreen(Screen):
 
     def get_edit_mat_from_uns(
         self,
-        ref_base,
-        alt_base,
-        match_target_position=True,
+        ref_base: Optional[str] = None,
+        alt_base: Optional[str] = None,
+        match_target_position: Optional[bool] = None,
         rel_pos_start=0,
         rel_pos_end=np.Inf,
         rel_pos_is_reporter=False,
         target_pos_col="target_pos",
         edit_count_key="edit_counts",
     ):
+        if ref_base is None:
+            ref_base = self.base_edited_from
+        if alt_base is None:
+            alt_base = self.base_edited_to
+        if match_target_position is None:
+            match_target_position = not self.tiling
         if edit_count_key not in self.uns or len(self.uns[edit_count_key]) == 0:
             raise ValueError(
                 "Edit count isn't calculated. "
@@ -377,8 +419,8 @@ class ReporterScreen(Screen):
 
     def get_guide_edit_rate(
         self,
-        normalize_by_editable_base=False,
-        edited_base=None,
+        normalize_by_editable_base: Optional[bool] = None,
+        edited_base: Optional[str] = None,
         editable_base_start=3,
         editable_base_end=8,
         bcmatch_thres=1,
@@ -392,6 +434,10 @@ class ReporterScreen(Screen):
         Considering the edit rate to have prior of beta distribution with mean 0.5,
         prior weight to use when calculating posterior edit rate.
         """
+        if edited_base is None:
+            edited_base = self.base_edited_from
+        if normalize_by_editable_base is None:
+            normalize_by_editable_base = self.tiling
         if self.layers[count_layer] is None or self.layers[edit_layer] is None:
             raise ValueError("edits or barcode matched guide counts not available.")
         num_targetable_sites = 1.0
@@ -466,7 +512,12 @@ class ReporterScreen(Screen):
             raise ValueError(f"No allele information stored: {self.uns}")
         df = self.uns[allele_count_key].copy()
         df["edits"] = df[allele_key].map(lambda a: str(a).split(","))
-        df = df.explode("edits").groupby(["guide", "edits"]).sum()
+        df = (
+            df[["guide", "edits"] + self.condit.index.tolist()]
+            .explode("edits")
+            .groupby(["guide", "edits"])
+            .sum()
+        )
         df = df.reset_index().rename(columns={"edits": "edit"})
 
         def try_objectify(s):
@@ -508,13 +559,13 @@ class ReporterScreen(Screen):
 
     def filter_allele_counts_by_pos(
         self,
-        rel_pos_start=0,
-        rel_pos_end=32,
-        allele_uns_key="allele_counts",
-        filter_rel_pos=True,
-        map_to_filtered=True,
-        distribute=False,
-        jaccard_threshold=0.1,
+        rel_pos_start: int = 0,
+        rel_pos_end: int = 32,
+        allele_uns_key: str = "allele_counts",
+        filter_rel_pos: bool = True,
+        map_to_filtered: bool = True,
+        distribute: bool = False,
+        jaccard_threshold: float = 0.1,
     ):
         """
         Filter alleles based on barcode matched counts, allele counts,
@@ -524,6 +575,7 @@ class ReporterScreen(Screen):
         map_to_filtered (bool) -- Map allele to the closest filtered allele to preserve total allele count. Ignores the case where there is no alleles filtered.
         rel_pos_start (int) -- rel_pos to start including (inclusive)
         rel_pos_end (int) -- rel_pos to end including (exclusive)
+        jaccard_threshold (float) --
         """
         allele_count_df = self.uns[allele_uns_key].copy()
         filtered_allele, filtered_edits = zip(
@@ -720,18 +772,14 @@ class ReporterScreen(Screen):
         Write .h5ad
         """
         adata = self.copy()
-        for k in adata.uns.keys():
-            if len(adata.uns[k]) > 0:
-                if "edit" in adata.uns[k].columns and isinstance(
+        for k, v in adata.uns.items():
+            if isinstance(v, pd.DataFrame) and len(v) > 0:
+                if "edit" in v.columns and isinstance(
                     adata.uns[k]["edit"].iloc[0], Edit
                 ):
                     adata.uns[k].edit = adata.uns[k].edit.map(str)
-                for c in [
-                    colname for colname in adata.uns[k].columns if "allele" in colname
-                ]:
-                    if isinstance(
-                        adata.uns[k][c].iloc[0], (Allele, CodingNoncodingAllele)
-                    ):
+                for c in [colname for colname in v.columns if "allele" in colname]:
+                    if isinstance(v[c].iloc[0], (Allele, CodingNoncodingAllele)):
                         adata.uns[k].loc[:, c] = adata.uns[k][c].map(str)
         super(ReporterScreen, adata).write(out_path)
 

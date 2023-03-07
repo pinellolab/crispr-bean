@@ -1,4 +1,4 @@
-# <img src="imgs/bean_title.png" alt="beret" width="150"/>
+# <img src="imgs/bean_title.svg" alt="crispr-bean" width="400"/>
 
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/berets)](https://pypi.org/project/berets/)
 [![PyPI version](https://img.shields.io/pypi/v/berets)](https://pypi.org/project/berets/)

@@ -458,7 +458,7 @@ class GuideEditCounter:
         with tqdm(
             enumerate(zip(R1_iter, R2_iter)),
             total=self.n_reads_after_filtering,
-            postfix=f", n_read={self.bcmatch}",
+            postfix=f"n_read={self.bcmatch}",
         ) as tqdm_reads:
             for i, (r1, r2) in tqdm_reads:
                 R1_seq = str(r1.seq)
@@ -509,7 +509,7 @@ class GuideEditCounter:
                             )
                         else:
                             self._count_reporter_edits(matched_guide_idx, R1_seq, r2)
-                tqdm_reads.postfix = f", n_read={self.bcmatch}"
+                tqdm_reads.postfix = f"n_read={self.bcmatch}"
                 tqdm_reads.update()
 
         self.screen.X = (

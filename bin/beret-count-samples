@@ -92,6 +92,9 @@ def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
     if os.path.exists(f"{counter.output_dir}.h5ad") and not args_dict["rerun"]:
         screen = beret.read_h5ad(f"{counter.output_dir}.h5ad")
         if counter.count_reporter_edits and match_target_pos:
+            screen.uns["allele_counts"] = screen.uns["allele_counts"].loc[
+                screen.uns["allele_counts"].allele.map(str) != "", :
+            ]
             try:
                 screen.get_edit_from_allele("allele_counts", "allele")
             except ValueError as exc:
@@ -112,8 +115,11 @@ def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
         screen = counter.screen
         if screen.X.max() == 0:
             raise ValueError(f"Nothing counted for {sample_id}. Check your input.")
-            exit(1)
         if counter.count_reporter_edits and match_target_pos:
+            screen.uns["allele_counts"] = screen.uns["allele_counts"].loc[
+                screen.uns["allele_counts"].allele.map(str) != "", :
+            ]
+            screen.get_edit_from_allele("allele_counts", "allele")
             screen.get_edit_mat_from_uns(edited_from, edited_to, match_target_pos)
         info(
             f"Done for {sample_id}. \n\

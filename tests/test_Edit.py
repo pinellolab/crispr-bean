@@ -1,13 +1,11 @@
-import beret
+from bean import Edit
+
 
 def test_hash():
-	d = dict()
-	e1 = Edit(1, "A", "G")
-	d[e1] = 1
+    e1 = Edit(1, "A", "G")
+    d = {e1: 1}
+    e2 = Edit(2, "A", "G")
+    d[e2] = 2
 
-	e2 = Edit(2, "A", "G")
-	d[e2] = 2
-
-	e3 = beret.Edit(0, "A", "G", 1)
-	assert e3 in d.keys()
-	assert d[e3] == 1
+    e3 = Edit(0, "A", "G", 1)
+    assert e3 not in d

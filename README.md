@@ -1,7 +1,7 @@
 # <img src="imgs/bean_title.svg" alt="crispr-bean" width="300"/>
 
-[![PyPI pyversions](https://img.shields.io/pypi/pyversions/berets)](https://pypi.org/project/berets/)
-[![PyPI version](https://img.shields.io/pypi/v/berets)](https://pypi.org/project/berets/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/crispr-bean)](https://pypi.org/project/crispr-bean/)
+[![PyPI version](https://img.shields.io/pypi/v/crispr-bean)](https://pypi.org/project/crispr-bean/)
 [![Code style](https://img.shields.io/badge/code%20style-black-black)](https://github.com/psf/black)
 
 **CRISPR** **B**ayesian **E**stimation of variant effect (from **B**ase **E**diting reporter screens) with guide **A**ctivity **N**ormalization  

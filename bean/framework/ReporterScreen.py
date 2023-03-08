@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Collection, Iterable, List, Optional, Union, Sequence, Literal, Tuple
+from typing import Collection, Iterable, List, Optional, Union, Sequence, Literal
 import re
 import anndata as ad
 import numpy as np
@@ -650,6 +650,7 @@ class ReporterScreen(Screen):
         alt_base="G",
         allele_uns_key="allele_counts",
         map_to_filtered=True,
+        jaccard_threshold: float = 0.5,
     ):
         """
         Filter alleles based on base change.
@@ -680,7 +681,9 @@ class ReporterScreen(Screen):
         )
         if map_to_filtered:
             allele_count_df = _map_alleles_to_filtered(
-                self.uns[allele_uns_key], allele_count_df
+                self.uns[allele_uns_key],
+                allele_count_df,
+                jaccard_threshold=jaccard_threshold,
             )
         return allele_count_df
 

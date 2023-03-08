@@ -103,7 +103,7 @@ def get_edit_significance_to_ctrl(
     guide_count_ctrl = ctrl_adata._get_allele_norm(edit_counts_merged, thres=0)[:, 0]
     guide_count_sample = sample_adata._get_allele_norm(edit_counts_merged, thres=0)
     edit_counts_merged = edit_counts_merged.set_index(["guide", "edit"])
-    if not aggregate_cond is None:
+    if aggregate_cond is not None:
         guide_count_sample = sum_column_groups(guide_count_sample, conds.values())
     sample_edit = edit_counts_merged[sample_columns]
     ctrl_edit = edit_counts_merged.iloc[:, -1]
@@ -156,7 +156,7 @@ def get_edit_significance_to_ctrl(
 def _filter_single_allele(allele: Allele, sig_edits):
     filtered_allele = deepcopy(allele)
     for edit in allele.edits:
-        if not edit in sig_edits:
+        if edit not in sig_edits:
             filtered_allele.edits.remove(edit)
     return filtered_allele
 
@@ -166,8 +166,7 @@ def _row_filter_allele(row, sample_guide_to_sig_edit_dict):
         sig_edits = sample_guide_to_sig_edit_dict[row.guide]
     except KeyError:
         return Allele()
-    filtered_allele = _filter_single_allele(row.allele, sig_edits)
-    return filtered_allele
+    return _filter_single_allele(row.allele, sig_edits)
 
 
 def _filter_allele_sample(sample_allele_tbl, sample_guide_to_sig_edit_dict):
@@ -176,17 +175,16 @@ def _filter_allele_sample(sample_allele_tbl, sample_guide_to_sig_edit_dict):
         lambda row: _row_filter_allele(row, sample_guide_to_sig_edit_dict), axis=1
     ).map(str)
     sample_filtered_allele_tbl = (
-        sample_allele_tbl.groupby(["guide", "filtered_allele_str"], numeric_only=True)
-        .sum()
+        sample_allele_tbl.groupby(["guide", "filtered_allele_str"])
+        .sum(numeric_only=True)
         .reset_index()
     )
     sample_filtered_allele_tbl = sample_filtered_allele_tbl.loc[
         sample_filtered_allele_tbl.filtered_allele_str != "", :
     ]
-    sample_filtered_allele_tbl = sample_filtered_allele_tbl.set_index(
+    return sample_filtered_allele_tbl.set_index(
         ["guide", "filtered_allele_str"], drop=True
     )
-    return sample_filtered_allele_tbl
 
 
 def _filter_allele_sample_multiproc(i):
@@ -265,7 +263,7 @@ def _filter_alleles(
                 _filter_allele_sample_multiproc, list(range(len(allele_df.columns)))
             )
     else:
-        print("Filtering alleles...".format(n_threads))
+        print("Filtering alleles...")
         filtered_allele_dfs = []
         for i in tqdm(range(len(allele_df.columns))):
             filtered_allele_dfs.append(
@@ -377,6 +375,7 @@ def filter_allele_prop(
     ]
     # if no allele is left for the guide, retain the maximum frequency allele
     if retain_max:
+        rows_to_add = []
         for guide in (
             aa_prop_filtered.reset_index().groupby("guide")[allele_col].count() == 0
         ).index:
@@ -384,7 +383,10 @@ def filter_allele_prop(
                 aa_prop.index.get_level_values("guide") == guide,
             ]
             max_frequency_idx = np.argmax(guide_df.median(axis=1))
-            aa_prop_filtered.append(guide_df.iloc[max_frequency_idx, :])
+            rows_to_add.append(guide_df.iloc[max_frequency_idx, :])
+        aa_prop_filtered = pd.concat(
+            [aa_prop_filtered] + rows_to_add, ignore_index=True
+        ).reset_index(drop=True)
     alleles = alleles.set_index(["guide", allele_col])
     aa_filtered = alleles.loc[alleles.index.isin(aa_prop_filtered.index)]
     alleles = alleles.reset_index()
@@ -427,16 +429,14 @@ def _map_alleles_to_filtered(
     )
     for guide, guide_raw_counts in tqdm(
         raw_allele_counts.groupby("guide"),
-        desc="Mapping alleles to closest filtered alleles",
+        desc=f"Mapping alleles to closest filtered alleles with min Jaccard index (nt: {nt_jaccard_threshold}, aa: {aa_jaccard_threshold})",
     ):
 
         guide_filtered_allele_counts = filtered_allele_counts.loc[
             filtered_allele_counts.guide == guide, :
         ].set_index(allele_col)
         guide_filtered_alleles = guide_filtered_allele_counts.index.tolist()
-        if len(guide_filtered_alleles) == 0:
-            pass
-        else:
+        if len(guide_filtered_alleles) != 0:
             # prioritize allele with most mean counts
             merge_priority = guide_filtered_allele_counts.mean(
                 axis=1, numeric_only=True
@@ -485,19 +485,20 @@ def _distribute_alleles_to_filtered(
     is_cn_allele = isinstance(
         raw_allele_counts.reset_index()[allele_col][0], CodingNoncodingAllele
     )
-    for guide, guide_raw_counts in tqdm(
-        raw_allele_counts.groupby("guide"),
+    for guide, guide_filtered_counts in tqdm(
+        filtered_allele_counts.groupby("guide"),
         desc="Mapping alleles to closest filtered alleles",
     ):
-        guide_filtered_allele_counts = filtered_allele_counts.loc[
-            filtered_allele_counts.guide == guide, :
-        ].set_index(allele_col)
-        guide_raw_counts = guide_raw_counts.set_index(allele_col)
-        guide_filtered_alleles = guide_filtered_allele_counts.index.tolist()
-        if len(guide_filtered_alleles) == 0:
-            continue
-        res = guide_filtered_allele_counts.values
-        for i, allele in enumerate(guide_raw_counts.index):
+        guide_filtered_counts = guide_filtered_counts.set_index(["guide", allele_col])
+        guide_raw_counts = raw_allele_counts.loc[
+            raw_allele_counts.guide == guide, :
+        ].set_index(["guide", allele_col])
+        guide_filtered_alleles = guide_filtered_counts.index.get_level_values(
+            allele_col
+        ).tolist()
+        res = guide_filtered_counts.values
+        for i, (g, allele) in enumerate(guide_raw_counts.index):
+            # for allelel in raw_counts, distribute based on similarity if not present in filtered_counts
             if allele in guide_filtered_alleles:
                 continue
             if is_cn_allele:
@@ -505,16 +506,25 @@ def _distribute_alleles_to_filtered(
                 jaccards = (aa_jaccards * 3 + nt_jaccards) / 4
             else:
                 jaccards = allele.get_jaccards(guide_filtered_alleles)
+
             weights = np.zeros(len(jaccards))
+            if not (jaccards > jaccard_threshold).any():
+                # print(f"map {allele} to {guide_filtered_alleles} failed.")
+                continue
             weights[jaccards > jaccard_threshold] = softmax(
                 jaccards[jaccards > jaccard_threshold]
             )
-            weights = np.pmin(weights, jaccards)
-            res += np.rint(weights[:, None] * guide_raw_counts.values[i, :][None, :])
+            weights = np.minimum(weights, jaccards)
+            dist_values = np.rint(
+                weights[:, None] * guide_raw_counts.values[i, :][None, :]
+            ).astype(int)
+            if not (dist_values.sum(axis=0) <= guide_raw_counts.values[i, :]).all():
+                pass  # rounding process can inflate total number of allele counts
+            res += dist_values
         added_counts = pd.DataFrame(
             res,
-            index=pd.MultiIndex.from_product([[guide], guide_filtered_alleles]),
-            col=guide_filtered_allele_counts.columns,
+            index=guide_filtered_counts.index,
+            columns=guide_filtered_counts.columns,
         )
         mapped_allele_counts.append(added_counts)
     res = pd.concat(mapped_allele_counts).reset_index()

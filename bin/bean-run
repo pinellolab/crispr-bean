@@ -1,0 +1,269 @@
+#!/usr/bin/env python
+import os
+import numpy as np
+from functools import partial
+from tqdm.auto import tqdm
+import torch
+import pyro
+import pyro.infer
+import pyro.optim
+import pickle as pkl
+import argparse
+import bean.model.model as m
+from bean.model.readwrite import write_result_table
+import bean as be
+
+pyro.set_rng_seed(101)
+
+
+def run_inference(
+    model, guide, data, initial_lr=0.01, gamma=0.1, num_steps=2000, autoguide=False
+):
+    lrd = gamma ** (1 / num_steps)
+    svi = pyro.infer.SVI(
+        model=model,
+        guide=guide,
+        optim=pyro.optim.ClippedAdam({"lr": initial_lr, "lrd": lrd}),
+        loss=pyro.infer.Trace_ELBO(),
+    )
+
+    losses = []
+    for t in tqdm(range(num_steps)):
+        loss = svi.step(data)
+        if t % 100 == 0:
+            print(f"loss {loss} @ iter {t}")
+        losses.append(loss)
+    return {
+        "loss": losses,
+        "params": pyro.get_param_store(),
+    }
+
+
+def _get_guide_target_info(bdata):
+    guide_info = bdata.guides.copy()
+    edit_rate_info = (
+        guide_info[["target", "Target gene/variant", "Group2", "edit_rate"]]
+        .groupby("target", sort=False)
+        .agg({"edit_rate": ["mean", "std"]})
+    )
+
+    edit_rate_info.columns = edit_rate_info.columns.get_level_values(1)
+    edit_rate_info = edit_rate_info.rename(
+        columns={"mean": "edit_rate_mean", "std": "edit_rate_std"}
+    )
+
+    target_info = (
+        guide_info[["target", "Target gene/variant", "Group2"]]
+        .drop_duplicates()
+        .set_index("target", drop=True)
+    )
+    target_info = target_info.join(edit_rate_info).reset_index()
+    return target_info
+
+
+def parse_args():
+    print(
+        r"""
+    _ _       
+  /  \ '\                 
+  |   \  \      _ _ _  _ _ _  
+   \   \  |    | '_| || | ' \ 
+    `.__|/     |_|  \_,_|_||_|
+    """
+    )
+    print(
+        "bean-run: Run model to identify targeted variants and their impact."
+    )
+    parser = argparse.ArgumentParser(description="Run model on data.")
+    parser.add_argument(
+        "mode",
+        type=str,
+        help="[variant, tiling]- Screen type whether to run variant or tiling screen model.",
+    )
+    parser.add_argument("bdata_path", type=str, help="Path of an ReporterScreen object")
+
+    parser.add_argument(
+        "--guide_accessibility_column",
+        "-c",
+        type=str,
+        default=None,
+        help="Column in ReporterScreen.guides DataFrame showing the accessibility signal (ATAC-seq)",
+    )
+    # TODO support for other accessibility scores than ATAC-seq by scaling them
+    # parser.add_argument('--fit-pi', '-f', action='store_true', default=False, help='Fit pi (editing rate) of target variant. Observed editing activity is ignored.')
+    parser.add_argument(
+        "--rep-pi",
+        "-r",
+        action="store_true",
+        default=False,
+        help="Fit replicate specific scaling factor. Recommended to set as True if you expect variable editing activity across biological replicates.",
+    )
+    parser.add_argument(
+        "--perfect-edit",
+        "-p",
+        action="store_true",
+        default=False,
+        help="Assume perfect editing rate for all guides.",
+    )
+    parser.add_argument(
+        "--scale-by-acc",
+        type=str,
+        default=None,
+        help="Assume perfect editing rate for all guides.",
+    )
+    parser.add_argument(
+        "--acc-col",
+        type=str,
+        default=None,
+        help="Column name in bdata.guides that specify raw ATAC-seq signal.",
+    )
+    parser.add_argument(
+        "--const-pi",
+        default=False,
+        action="store_true",
+        help="Use constant pi provided in --guide-activity-column (instead of fitting from reporter data)",
+    )
+    parser.add_argument(
+        "--guide-activity-col",
+        "-a",
+        type=str,
+        default=None,
+        help="Column in ReporterScreen.guides DataFrame showing the editing rate estimated via external tools",
+    )
+    parser.add_argument(
+        "--pi-prior-weight",
+        "-w",
+        type=float,
+        default=1.0,
+        help="Prior weight for editing rate",
+    )
+    parser.add_argument(
+        "--outdir",
+        "-o",
+        default="bean_run_result/",
+        help="directory to save the run result",
+    )
+    parser.add_argument(
+        "--sorting-bin-upper-quantile-column",
+        "-uq",
+        help="Column name with upper quantile values of each sorting bin in [Reporter]Screen.condit (or AnnData.var)",
+        default="upper_quantile",
+    )
+    parser.add_argument(
+        "--sorting-bin-lower-quantile-column",
+        "-lq",
+        help="Column name with lower quantile values of each sorting bin in [Reporter]Screen.condit (or AnnData var)",
+        default="lower_quantile",
+    )
+    parser.add_argument("--cuda", action="store_true", default=False, help="run on GPU")
+    parser.add_argument(
+        "--sample-mask-column",
+        type=str,
+        default=None,
+        help="Name of the column indicating the sample mask in [Reporter]Screen.condit (or AnnData.var). Sample is ignored if the value in this column is 0. This can be used to mask out low-quality samples.",
+    )
+    parser.add_argument(
+        "--fit-negctrl",
+        action="store_true",
+        default=False,
+        help="Fit the shared negative control distribution to normalize the fitted parameters",
+    )
+    return parser.parse_args()
+
+
+def check_args(args):
+    if args.scale_by_acc and args.acc_col is None:
+        raise ValueError("--scale-by-acc not accompanied by --acc-col to use.")
+
+
+def identify_model_guide(args):
+    if args.mode == "tiling":
+        return (m.MultiMixtureNormalModel, m.MultiMixtureNormalGuide)
+    if args.perfect_edit:
+        if args.fit_pi or args.rep_pi:
+            raise ValueError(
+                "Incompatible model specification: can't assume perfect edit and fit the edit rate or replicate scaling factor."
+            )
+        if args.guide_activity_col is not None:
+            raise ValueError(
+                "Can't use the guide activity column while constraining perfect edit."
+            )
+        return (
+            partial(m.NormalModel, scale_by_accessibility=args.scale_by_acc),
+            m.NormalGuide,
+        )
+    elif args.const_pi:
+        if args.guide_activity_col is not None:
+            raise ValueError(
+                "--guide-activity-col to be used as constant pi is not provided."
+            )
+        return (m.MixtureNormalConstPiModel, m.MixtureNormalGuide)
+    else:
+        return (
+            partial(m.MixtureNormalModel, scale_by_accessibility=args.scale_by_acc),
+            m.MixtureNormalGuide,
+        )
+
+
+def main(args):
+    if args.cuda:
+        torch.set_default_tensor_type(torch.cuda.FloatTensor)
+    else:
+        torch.set_default_tensor_type(torch.FloatTensor)
+    os.makedirs(args.workdir, exist_ok=True)
+    prefix = (
+        f"{args.workdir}/" + os.path.basename(args.bdata_path).rsplit(".h5ad", 1)[0]
+    )
+    model, guide = identify_model_guide(args)
+    bdata = be.read_h5ad(args.bdata_path)
+    guide_index = bdata.guides.index
+    target_info_df = _get_guide_target_info(bdata)
+    print("Done loading data. Preprocessing...")
+    bdata.condit["rep"] = bdata.condit["rep"].astype("category")
+    device = None
+    ndata = be.preprocessing.load_data.NData(
+        bdata,
+        5,
+        "topbot",
+        device=device,
+        repguide_mask=args.repguide_mask,
+        sample_mask_column=args.sample_mask_column,
+        fit_a0=~args.raw_alpha,
+        fit_a0_lower_quantile=args.a0_lower_quantile,
+    )
+    if args.mcmc:
+        print(ndata.X.get_device())
+
+    guide_info_df = bdata.guides
+    del bdata
+
+    print(f"Running inference for model {args.model_id}...")
+
+    param_history_dict = run_inference(model, guide, ndata)
+
+    if args.fit_negctrl:
+        negctrl_model = m.ControlNormalModel
+        negctrl_guide = m.ControlNormalGuide
+        negctrl_idx = np.where(guide_info_df.Group.str.tolower() == "negctrl")[0]
+        ndata_negctrl = ndata[negctrl_idx]
+        param_history_dict["negctrl"] = run_inference(
+            negctrl_model, negctrl_guide, ndata_negctrl
+        )
+
+    outfile_path = f"{prefix}.model{args.model_id}.result.pkl"
+    print(f"Done running inference. Writing result at {outfile_path}...")
+    with open(f"{prefix}.model{args.model_id}.result.pkl", "wb") as handle:
+        pkl.dump(param_history_dict, handle)
+    write_result_table(
+        target_info_df,
+        param_history_dict,
+        prefix=f"{prefix}.model{args.model_id}.",
+        guide_index=guide_index,
+    )
+    print("Done!")
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    check_args(args)
+    main(args)

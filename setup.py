@@ -23,6 +23,7 @@ setuptools.setup(
         "bin/bean-count-samples",
         "bin/bean-qc",
         "bin/bean-filter",
+        "bin/bean-run" #TODO: prevent error when extra requirements are not met.
     ],
     install_requires=[
         "numpy",
@@ -35,7 +36,7 @@ setuptools.setup(
         "seaborn",
         "tqdm",
     ],
-    extras_require={"model": ["pyBigWig", "pyro", "statsmodels", "torch"]},
+    extras_require={"model": ["pyBigWig", "pyro-ppl", "statsmodels", "torch"]},
     include_package_data=True,
     package_data={
         "": [

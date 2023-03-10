@@ -51,7 +51,7 @@ bean :bash:`ReporterScreen` object and perturb-seq :bash:`Screen` object are bot
 
     Genome Editing Screen comprised of n_guides x n_conditions = 3455 x 12
        guides:    'name', 'Unnamed: 0', 'Target gene/variant', 'Target descriptor', 'Arbitrary number', 'gRNA position category', 'Target base position in gRNA', 'Target base position in reporter', 'BE', 'Group', 'sequence', 'Reporter', 'barcode', '5-nt PAM', 'offset', 'target', 'target_pos', 'Group2', 'masked_sequence', 'masked_barcode', 'edit_rate'
-       condit:    'index', 'sort', 'replicate'
+       samples:    'index', 'sort', 'replicate'
        condit_m:  
        condit_p:  
        layers:    'X_bcmatch', 'edits'
@@ -59,7 +59,7 @@ bean :bash:`ReporterScreen` object and perturb-seq :bash:`Screen` object are bot
 
 -  :bash:`cdata.X`: guide count
 -  :bash:`cdata.guides`: guide metadata
--  :bash:`cdata.condit`: sample/condition metadata
+-  :bash:`cdata.samples`: sample/condition metadata
 -  :bash:`cdata.layers["X_bcmatch"]`: barcode-matched guide counts
 -  :bash:`cdata.layers["edits"]`: edit counts
 -  :bash:`cdata.uns["allele_counts"]`: allele counts per guide and condition
@@ -389,11 +389,11 @@ bean :bash:`ReporterScreen` object and perturb-seq :bash:`Screen` object are bot
     </div>
 
 
-:bash:`condit` attribute contains the sample and condition specific information.
+:bash:`samples` attribute contains the sample and condition specific information.
 
 .. code:: ipython3
 
-    cdata.condit
+    cdata.samples
 
 
 
@@ -1019,7 +1019,7 @@ Subsetting & selection
 
 .. code:: ipython3
 
-    cdata_subset = cdata[:10,cdata.condit.sort == "bulk"]
+    cdata_subset = cdata[:10,cdata.samples.sort == "bulk"]
 
 
 .. parsed-literal::
@@ -1180,10 +1180,10 @@ LFC calculation & Addition
 
 .. code:: ipython3
 
-    cdata1.condit["sort"] = cdata1.condit["index"].map(lambda s: s.rsplit("_", 1)[-1])
-    cdata1.condit["replicate"] = cdata1.condit["index"].map(lambda s: s.rsplit("_", 1)[0])
-    cdata2.condit["sort"] = cdata2.condit["index"].map(lambda s: s.rsplit("_", 1)[-1])
-    cdata2.condit["replicate"] = cdata2.condit["index"].map(lambda s: s.rsplit("_", 1)[0])
+    cdata1.samples["sort"] = cdata1.samples["index"].map(lambda s: s.rsplit("_", 1)[-1])
+    cdata1.samples["replicate"] = cdata1.samples["index"].map(lambda s: s.rsplit("_", 1)[0])
+    cdata2.samples["sort"] = cdata2.samples["index"].map(lambda s: s.rsplit("_", 1)[-1])
+    cdata2.samples["replicate"] = cdata2.samples["index"].map(lambda s: s.rsplit("_", 1)[0])
 
 .. code:: ipython3
 
@@ -1545,7 +1545,7 @@ Technical replicates show decent LFC correlation.
 
     Genome Editing Screen comprised of n_guides x n_conditions = 3455 x 12
        guides:    'name', 'Unnamed: 0', 'Target gene/variant', 'Target descriptor', 'Arbitrary number', 'gRNA position category', 'Target base position in gRNA', 'Target base position in reporter', 'BE', 'Group', 'sequence', 'Reporter', 'barcode', '5-nt PAM', 'offset', 'target', 'target_pos', 'Group2', 'masked_sequence', 'masked_barcode', 'bot_top.lfc.median'
-       condit:    'index', 'sort', 'replicate'
+       samples:    'index', 'sort', 'replicate'
        condit_m:  
        condit_p:  
        layers:    'edits', 'X_bcmatch'
@@ -1564,7 +1564,7 @@ You can concatenate different samples with shared guides.
 
     Genome Editing Screen comprised of n_guides x n_conditions = 3455 x 24
        guides:    'name', 'Unnamed: 0', 'Target gene/variant', 'Target descriptor', 'Arbitrary number', 'gRNA position category', 'Target base position in gRNA', 'Target base position in reporter', 'BE', 'Group', 'sequence', 'Reporter', 'barcode', '5-nt PAM', 'offset', 'target', 'target_pos', 'Group2', 'masked_sequence', 'masked_barcode', 'bot_top.lfc.median'
-       condit:    'index', 'sort', 'replicate'
+       samples:    'index', 'sort', 'replicate'
        condit_m:  
        condit_p:  
        layers:    'X', 'X_bcmatch', 'edits', 'lognorm_counts', 'lognorm_edits'
@@ -1985,7 +1985,7 @@ Writing
     	Sheet 4:	lognorm_counts
     	Sheet 5:	lognorm_edits
     	Sheet 6:	guides
-    	Sheet 7:	condit
+    	Sheet 7:	samples
     	Sheet 8:	screen.uns.allele_counts
     	Sheet 9:	screen.uns.edit_counts
 

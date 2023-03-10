@@ -66,10 +66,10 @@ def get_edit_significance_to_ctrl(
     """
     Calculate edit counts for all edits in sample_adata, regardless of the edit presence in the sample.
     """
-    if "index" in sample_adata.condit.columns:
-        sample_columns = sample_adata.condit["index"].tolist()
+    if "index" in sample_adata.samples.columns:
+        sample_columns = sample_adata.samples["index"].tolist()
     else:
-        sample_columns = sample_adata.condit.index.tolist()
+        sample_columns = sample_adata.samples.index.tolist()
     n_samples = len(sample_columns)
     sample_adata.uns["edit_counts"] = sample_adata.get_edit_from_allele(
         allele_count_key=allele_counts_key, return_result=True
@@ -80,7 +80,7 @@ def get_edit_significance_to_ctrl(
     edit_counts_ctrl = ctrl_adata.uns["edit_counts"]
 
     if aggregate_cond is not None:
-        conds = sample_adata.condit.reset_index().groupby(aggregate_cond).groups
+        conds = sample_adata.samples.reset_index().groupby(aggregate_cond).groups
         edit_counts_raw = sample_adata.uns["edit_counts"][
             ["guide", "edit"] + sample_columns
         ].set_index(["guide", "edit"])
@@ -304,9 +304,9 @@ def filter_alleles(
     map_to_filtered=True,
 ):
     if aggregate_cond is not None:
-        sample_tested = sample_adata.condit.groupby(aggregate_cond).ngroups
+        sample_tested = sample_adata.samples.groupby(aggregate_cond).ngroups
     elif not filter_each_sample:
-        sample_tested = len(sample_adata.condit)
+        sample_tested = len(sample_adata.samples)
     else:
         sample_tested = 1
 
@@ -359,6 +359,7 @@ def filter_allele_prop(
     """
     Filter allele based on the proportion of that allele among the guides.
     Arguments
+    adata: ReporterScreen object (should be from bulk)
     -- allele_prop_thres: Proportion of allele among the barcode matched guide counts to filter for
     -- sample_prop_thres: Proportion of samples where allele proportion exceeds the allele_prop_thres.
     -- map_to_filtered: If True, map the allele counts that are filtered out to the closest and most abundant allele that is retained after filtering. If False, discard the read counts that are filtered out.

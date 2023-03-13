@@ -4,12 +4,17 @@ import pyro
 import pyro.distributions as dist
 
 
-def get_alpha(expected_guide_p, size_factor, sample_mask, a0, epsilon=1e-10):
+def get_alpha(
+    expected_guide_p, size_factor, sample_mask, a0, epsilon=1e-5, normalize_by_a0=True
+):
     p = (
         expected_guide_p.permute(0, 2, 1) * size_factor[:, None, :]
     )  # (n_reps, n_guides, n_bins)
-    a = p / p.sum(axis=-1)[:, :, None] * a0[None, :, None]
-    a = (a * sample_mask[:, None, :]).clamp(min=epsilon)
+    if normalize_by_a0:
+        a = p / p.sum(axis=-1)[:, :, None] * a0[None, :, None]
+        a = (a * sample_mask[:, None, :]).clamp(min=epsilon)
+        return a
+    a = (p * sample_mask[:, None, :]).clamp(min=epsilon)
     return a
 
 
@@ -30,18 +35,29 @@ def get_std_normal_prob(
     inf_mask = upper_quantile == 1.0
     ninf_mask = lower_quantile == 0.0
 
-    upper_thres = tdist.Normal(0, 1).icdf(upper_quantile)
-    lower_thres = tdist.Normal(0, 1).icdf(lower_quantile)
+    upper_thres = torch.ones_like(upper_quantile)
+    lower_thres = torch.zeros_like(lower_quantile)
+    upper_thres[~inf_mask] = tdist.Normal(0, 1).icdf(upper_quantile[~inf_mask])
+    lower_thres[~ninf_mask] = tdist.Normal(0, 1).icdf(lower_quantile[~ninf_mask])
 
-    if mask is not None:
-        sd = sd + (~mask).long()
-    cdf_upper = tdist.Normal(mu, sd).cdf(upper_thres)
-    cdf_lower = tdist.Normal(mu, sd).cdf(lower_thres)
+    if not mask is None:
+        # Temporarily add mask value
+        sd = sd + (~mask).long() * 100
+    assert (sd > 0).all(), f"sd > 0 not met at {sd[~(sd > 0)]}"
+    cdf_upper = torch.ones_like(upper_quantile)
+    cdf_lower = torch.zeros_like(lower_quantile)
+    assert (
+        cdf_upper.shape == inf_mask.shape
+    ), f"mask:{inf_mask.shape}, cdf:{cdf_upper.shape}"
 
+    cdf_upper[~inf_mask] = tdist.Normal(mu[~inf_mask], sd[~inf_mask]).cdf(
+        upper_thres[~inf_mask]
+    )
+    cdf_lower[~ninf_mask] = tdist.Normal(mu[~ninf_mask], sd[~ninf_mask]).cdf(
+        lower_thres[~ninf_mask]
+    )
     res = cdf_upper - cdf_lower
-    res[inf_mask] = (1 - cdf_lower)[inf_mask]
-    res[ninf_mask] = cdf_upper[ninf_mask]
-    if mask is not None:
+    if not mask is None:
         res[~mask] = 0
 
     return res

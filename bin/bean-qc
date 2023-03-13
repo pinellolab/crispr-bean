@@ -34,6 +34,18 @@ def parse_args():
         type=str,
     )
     parser.add_argument(
+        "--replicate-label",
+        help="Label of column in 'bdata.samples' that describes replicate ID.",
+        type=str,
+        default="rep",
+    )
+    parser.add_argument(
+        "--condition-label",
+        help="Label of column in 'bdata.samples' that describes experimental condition. (sorting bin, time, etc.)",
+        type=str,
+        default="bin",
+    )
+    parser.add_argument(
         "--edit_start_pos",
         help="Edit start position to quantify editing rate on, 0-based inclusive relative to spacer start position",
         default=2,
@@ -47,8 +59,9 @@ def parse_args():
         "--count_correlation_thres",
         help="Correlation threshold to mask out.",
         type=float,
-        default=0.7,
+        default=0.8,
     )
+
     parser.add_argument(
         "--edit_rate_thres",
         help="Editing rate threshold per sample to mask out.",
@@ -59,7 +72,7 @@ def parse_args():
         "--lfc_thres",
         help="Positive guides' correlation threshold to filter out.",
         type=float,
-        default=0.7,
+        default=-0.1,
     )
     args = parser.parse_args()
     if args.out_screen_path is None:
@@ -79,6 +92,10 @@ def main():
             out_bdata_path=args.out_screen_path,
             edit_quantification_start_pos=args.edit_start_pos,
             edit_quantification_end_pos=args.edit_end_pos,
+            corr_X_thres=args.count_correlation_thres,
+            edit_rate_thres=args.edit_rate_thres,
+            lfc_thres=args.lfc_thres,
+            condition_label=args.condition_label,
         ),
         kernel_name="jy_anbe_py38",  # TODO needs to be specified? how do i know the name of kernel installed in current conda env?
     )

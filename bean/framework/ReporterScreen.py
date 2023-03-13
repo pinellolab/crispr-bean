@@ -86,11 +86,13 @@ class ReporterScreen(Screen):
         X_edit=None,
         X_bcmatch=None,
         target_base_change: Optional[str] = None,
+        replicate_label: str = "rep",
+        condition_label: str = "bin",
         tiling: Optional[bool] = None,
         *args,
         **kwargs,
     ):
-        (super().__init__)(X, *args, **kwargs)
+        (super().__init__)(X=X, *args, **kwargs)
         if X_edit is not None:
             self.layers["edits"] = X_edit
         if X_bcmatch is not None:

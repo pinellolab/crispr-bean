@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import os
+import sys
+import logging
 import numpy as np
 from functools import partial
 from tqdm.auto import tqdm
@@ -11,9 +13,35 @@ import pickle as pkl
 import argparse
 import bean.model.model as m
 from bean.model.readwrite import write_result_table
+from bean.preprocessing.data_class import (
+    VariantSortingScreenData,
+    VariantSortingReporterScreenData,
+    TilingSortingReporterScreenData,
+)
+
 import bean as be
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)-5s @ %(asctime)s:\n\t %(message)s \n",
+    datefmt="%a, %d %b %Y %H:%M:%S",
+    stream=sys.stderr,
+    filemode="w",
+)
+error = logging.critical
+warn = logging.warning
+debug = logging.debug
+info = logging.info
 pyro.set_rng_seed(101)
+
+DATACLASS_DICT = {
+    "Normal": VariantSortingReporterScreenData,
+    "MixtureNormal": VariantSortingReporterScreenData,
+    "MixtureNormal+Acc": VariantSortingReporterScreenData,
+    "MixtureNormalConstPi": VariantSortingScreenData,
+    "MultiMixtureNormal": TilingSortingReporterScreenData,
+    "MultiMixtureNormal+Acc": TilingSortingReporterScreenData,
+}
 
 
 def run_inference(
@@ -28,11 +56,16 @@ def run_inference(
     )
 
     losses = []
-    for t in tqdm(range(num_steps)):
-        loss = svi.step(data)
-        if t % 100 == 0:
-            print(f"loss {loss} @ iter {t}")
-        losses.append(loss)
+    try:
+        for t in tqdm(range(num_steps)):
+            loss = svi.step(data)
+            if t % 100 == 0:
+                print(f"loss {loss} @ iter {t}")
+            losses.append(loss)
+    except ValueError as exc:
+        raise ValueError(
+            f"Fitting halted for command: {' '.join(sys.argv)} with following error: \n {exc}"
+        )
     return {
         "loss": losses,
         "params": pyro.get_param_store(),
@@ -71,9 +104,7 @@ def parse_args():
     `.__|/     |_|  \_,_|_||_|
     """
     )
-    print(
-        "bean-run: Run model to identify targeted variants and their impact."
-    )
+    print("bean-run: Run model to identify targeted variants and their impact.")
     parser = argparse.ArgumentParser(description="Run model on data.")
     parser.add_argument(
         "mode",
@@ -81,16 +112,6 @@ def parse_args():
         help="[variant, tiling]- Screen type whether to run variant or tiling screen model.",
     )
     parser.add_argument("bdata_path", type=str, help="Path of an ReporterScreen object")
-
-    parser.add_argument(
-        "--guide_accessibility_column",
-        "-c",
-        type=str,
-        default=None,
-        help="Column in ReporterScreen.guides DataFrame showing the accessibility signal (ATAC-seq)",
-    )
-    # TODO support for other accessibility scores than ATAC-seq by scaling them
-    # parser.add_argument('--fit-pi', '-f', action='store_true', default=False, help='Fit pi (editing rate) of target variant. Observed editing activity is ignored.')
     parser.add_argument(
         "--rep-pi",
         "-r",
@@ -107,9 +128,15 @@ def parse_args():
     )
     parser.add_argument(
         "--scale-by-acc",
+        action="store_true",
+        default=False,
+        help="Assume perfect editing rate for all guides.",
+    )
+    parser.add_argument(
+        "--acc-bw-path",
         type=str,
         default=None,
-        help="Assume perfect editing rate for all guides.",
+        help="Accessibility .bigWig file to be used to assign accessibility of guides.",
     )
     parser.add_argument(
         "--acc-col",
@@ -122,6 +149,12 @@ def parse_args():
         default=False,
         action="store_true",
         help="Use constant pi provided in --guide-activity-column (instead of fitting from reporter data)",
+    )
+    parser.add_argument(
+        "--condition-column",
+        default="bin",
+        type=str,
+        help="Condition column to use.",
     )
     parser.add_argument(
         "--guide-activity-col",
@@ -140,19 +173,20 @@ def parse_args():
     parser.add_argument(
         "--outdir",
         "-o",
-        default="bean_run_result/",
+        default=None,
+        type=str,
         help="directory to save the run result",
     )
     parser.add_argument(
         "--sorting-bin-upper-quantile-column",
         "-uq",
-        help="Column name with upper quantile values of each sorting bin in [Reporter]Screen.condit (or AnnData.var)",
+        help="Column name with upper quantile values of each sorting bin in [Reporter]Screen.samples (or AnnData.var)",
         default="upper_quantile",
     )
     parser.add_argument(
         "--sorting-bin-lower-quantile-column",
         "-lq",
-        help="Column name with lower quantile values of each sorting bin in [Reporter]Screen.condit (or AnnData var)",
+        help="Column name with lower quantile values of each sorting bin in [Reporter]Screen.samples (or AnnData var)",
         default="lower_quantile",
     )
     parser.add_argument("--cuda", action="store_true", default=False, help="run on GPU")
@@ -160,7 +194,7 @@ def parse_args():
         "--sample-mask-column",
         type=str,
         default=None,
-        help="Name of the column indicating the sample mask in [Reporter]Screen.condit (or AnnData.var). Sample is ignored if the value in this column is 0. This can be used to mask out low-quality samples.",
+        help="Name of the column indicating the sample mask in [Reporter]Screen.samples (or AnnData.var). Sample is ignored if the value in this column is 0. This can be used to mask out low-quality samples.",
     )
     parser.add_argument(
         "--fit-negctrl",
@@ -168,28 +202,66 @@ def parse_args():
         default=False,
         help="Fit the shared negative control distribution to normalize the fitted parameters",
     )
+    parser.add_argument(
+        "--repguide-mask",
+        type=str,
+        default="repguide_mask",
+        help="n_replicate x n_guide mask to mask the outlier guides. screen.uns[repguide_mask] will be used.",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        help="Optionally use GPU if provided valid GPU device name (ex. cuda:0)",
+    )
+
     return parser.parse_args()
 
 
+def assign_acc_from_bw(bdata, acc_bw_path):
+    pass
+
+
 def check_args(args):
-    if args.scale_by_acc and args.acc_col is None:
-        raise ValueError("--scale-by-acc not accompanied by --acc-col to use.")
+    if args.scale_by_acc:
+        if args.acc_col is None and args.acc_bw_path is None:
+            raise ValueError(
+                "--scale-by-acc not accompanied by --acc-col nor --acc-bw-path to use. Pass either one."
+            )
+        elif args.acc_col is not None and args.acc_bw_path is not None:
+            warn(
+                "Both --acc-col and --acc-bw-path is specified. --acc-bw-path is ignored."
+            )
+            args.acc_bw_path = None
+    if args.outdir is None:
+        args.outdir = os.path.dirname(args.bdata_path)
+
+    return args
 
 
 def identify_model_guide(args):
     if args.mode == "tiling":
-        return (m.MultiMixtureNormalModel, m.MultiMixtureNormalGuide)
+        info("Using Mixture Normal model...")
+        return (
+            f"MultiMixtureNormal{'+Acc' if args.scale_by_acc else ''}",
+            partial(
+                m.MultiMixtureNormalModel, scale_by_accessibility=args.scale_by_acc
+            ),
+            m.MultiMixtureNormalGuide,
+        )
     if args.perfect_edit:
-        if args.fit_pi or args.rep_pi:
-            raise ValueError(
-                "Incompatible model specification: can't assume perfect edit and fit the edit rate or replicate scaling factor."
-            )
+        # if args.fit_pi or args.rep_pi:
+        #     raise ValueError(
+        #         "Incompatible model specification: can't assume perfect edit and fit the edit rate or replicate scaling factor."
+        #     )
         if args.guide_activity_col is not None:
             raise ValueError(
                 "Can't use the guide activity column while constraining perfect edit."
             )
+        info("Using Normal model...")
         return (
-            partial(m.NormalModel, scale_by_accessibility=args.scale_by_acc),
+            "Normal",
+            m.NormalModel,
             m.NormalGuide,
         )
     elif args.const_pi:
@@ -197,9 +269,18 @@ def identify_model_guide(args):
             raise ValueError(
                 "--guide-activity-col to be used as constant pi is not provided."
             )
-        return (m.MixtureNormalConstPiModel, m.MixtureNormalGuide)
-    else:
+        info("Using Mixture Normal model with constant weight ...")
         return (
+            "MixtureNormalConstPi",
+            m.MixtureNormalConstPiModel,
+            m.MixtureNormalGuide,
+        )
+    else:
+        info(
+            f"Using Mixture Normal model {'with accessibility normalization' if args.scale_by_acc else ''}..."
+        )
+        return (
+            f"MixtureNormal{'+Acc' if args.scale_by_acc else ''}",
             partial(m.MixtureNormalModel, scale_by_accessibility=args.scale_by_acc),
             m.MixtureNormalGuide,
         )
@@ -210,34 +291,33 @@ def main(args):
         torch.set_default_tensor_type(torch.cuda.FloatTensor)
     else:
         torch.set_default_tensor_type(torch.FloatTensor)
-    os.makedirs(args.workdir, exist_ok=True)
     prefix = (
-        f"{args.workdir}/" + os.path.basename(args.bdata_path).rsplit(".h5ad", 1)[0]
+        args.outdir
+        + "/bean_run_result."
+        + os.path.basename(args.bdata_path).rsplit(".", 1)[0]
     )
-    model, guide = identify_model_guide(args)
+    os.makedirs(prefix, exist_ok=True)
+    model_label, model, guide = identify_model_guide(args)
     bdata = be.read_h5ad(args.bdata_path)
     guide_index = bdata.guides.index
     target_info_df = _get_guide_target_info(bdata)
     print("Done loading data. Preprocessing...")
-    bdata.condit["rep"] = bdata.condit["rep"].astype("category")
-    device = None
-    ndata = be.preprocessing.load_data.NData(
-        bdata,
-        5,
-        "topbot",
-        device=device,
+    bdata.samples["rep"] = bdata.samples["rep"].astype("category")
+    ndata = DATACLASS_DICT[model_label](
+        screen=bdata,
+        device=args.device,
         repguide_mask=args.repguide_mask,
         sample_mask_column=args.sample_mask_column,
-        fit_a0=~args.raw_alpha,
-        fit_a0_lower_quantile=args.a0_lower_quantile,
+        accessibility_col=args.acc_col,
+        accessibility_bw_path=args.acc_bw_path,
+        use_const_pi=args.const_pi,
+        condition_column=args.condition_column,
     )
-    if args.mcmc:
-        print(ndata.X.get_device())
 
     guide_info_df = bdata.guides
     del bdata
 
-    print(f"Running inference for model {args.model_id}...")
+    print(f"Running inference for {model_label}...")
 
     param_history_dict = run_inference(model, guide, ndata)
 
@@ -250,14 +330,15 @@ def main(args):
             negctrl_model, negctrl_guide, ndata_negctrl
         )
 
-    outfile_path = f"{prefix}.model{args.model_id}.result.pkl"
+    outfile_path = f"{prefix}/{model_label}.result.pkl"
     print(f"Done running inference. Writing result at {outfile_path}...")
-    with open(f"{prefix}.model{args.model_id}.result.pkl", "wb") as handle:
+    with open(f"{prefix}/{model_label}.result.pkl", "wb") as handle:
         pkl.dump(param_history_dict, handle)
     write_result_table(
         target_info_df,
         param_history_dict,
-        prefix=f"{prefix}.model{args.model_id}.",
+        model_label=model_label,
+        prefix=f"{prefix}/",
         guide_index=guide_index,
     )
     print("Done!")
@@ -265,5 +346,5 @@ def main(args):
 
 if __name__ == "__main__":
     args = parse_args()
-    check_args(args)
+    args = check_args(args)
     main(args)

@@ -371,25 +371,28 @@ def filter_allele_prop(
         ["guide", allele_col]
     )
     aa_prop_filtered = aa_prop.loc[
-        (np.nan_to_num(aa_prop) > allele_prop_thres).mean(axis=1) >= sample_prop_thres,
+        (np.nan_to_num(aa_prop.loc[:, adata.samples.index]) > allele_prop_thres).mean(
+            axis=1
+        )
+        >= sample_prop_thres,
         :,
     ]
     # if no allele is left for the guide, retain the maximum frequency allele
+
     if retain_max:
-        rows_to_add = []
-        for guide in (
-            aa_prop_filtered.reset_index().groupby("guide")[allele_col].count() == 0
-        ).index:
-            guide_df = aa_prop.loc[
-                aa_prop.index.get_level_values("guide") == guide,
-            ]
-            max_frequency_idx = np.argmax(guide_df.median(axis=1))
-            rows_to_add.append(guide_df.iloc[max_frequency_idx, :])
-        aa_prop_filtered = pd.concat(
-            [aa_prop_filtered] + rows_to_add, ignore_index=True
-        ).reset_index(drop=True)
+        filtered_guide = aa_prop_filtered.index.get_level_values("guide").unique()
+        append_rows = []
+        for guide in tqdm(aa_prop.index.get_level_values("guide").unique().tolist()):
+            if guide not in filtered_guide:
+                guide_df = aa_prop.loc[
+                    aa_prop.index.get_level_values("guide") == guide,
+                ]
+                max_frequency_idx = np.argmax(guide_df.mean(axis=1))
+                append_rows.append(guide_df.iloc[[max_frequency_idx], :])
+        aa_prop_filtered = pd.concat([aa_prop_filtered] + append_rows, axis=0)
+
     alleles = alleles.set_index(["guide", allele_col])
-    aa_filtered = alleles.loc[alleles.index.isin(aa_prop_filtered.index)]
+    aa_filtered = alleles.loc[alleles.index.isin(aa_prop_filtered.index), :]
     alleles = alleles.reset_index()
     aa_filtered = aa_filtered.reset_index()
     if map_to_filtered:
@@ -430,7 +433,7 @@ def _map_alleles_to_filtered(
     )
     for guide, guide_raw_counts in tqdm(
         raw_allele_counts.groupby("guide"),
-        desc=f"Mapping alleles to closest filtered alleles with min Jaccard index (nt: {nt_jaccard_threshold}, aa: {aa_jaccard_threshold})",
+        desc="Mapping alleles to closest filtered alleles",
     ):
 
         guide_filtered_allele_counts = filtered_allele_counts.loc[
@@ -443,6 +446,7 @@ def _map_alleles_to_filtered(
                 axis=1, numeric_only=True
             )
             if is_cn_allele:
+
                 guide_raw_counts["allele_mapped"] = guide_raw_counts[allele_col].map(
                     lambda allele: allele.map_to_closest(
                         guide_filtered_alleles,

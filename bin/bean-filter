@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
 import sys
 import argparse
 import logging
 import bean as be
+from bean.plotting.allele_stats import plot_n_alleles_per_guide, plot_n_guides_per_edit
 import matplotlib.pyplot as plt
 
+plt.style.use("default")
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)-5s @ %(asctime)s:\n\t %(message)s \n",
@@ -36,17 +39,19 @@ def parse_args():
         description="Filter alleles based on edit position in spacer and frequency across samples.",
     )
     parser.add_argument(
-        "h5ad_path",
+        "bdata_path",
         type=str,
         help="Input ReporterScreen file of which allele will be filtered out.",
     )
     parser.add_argument(
-        "output-prefix",
+        "--output-prefix",
+        "-o",
         type=str,
+        default=None,
         help="Output prefix for log and ReporterScreen file with allele assignment",
     )
     parser.add_argument(
-        "--plasmid_path",
+        "--plasmid-path",
         "-p",
         type=str,
         help="Plasmid ReporterScreen object path. If provided, alleles are filtered based on if a nucleotide edit is more significantly enriched in sample compared to the plasmid data. Negative control data where no edit is expected can be fed in instead of plasmid library.",
@@ -110,6 +115,9 @@ def parse_args():
 
 
 def check_args(args):
+    if args.output_prefix is None:
+        args.output_prefix = args.bdata_path.rsplit(".h5ad", 1)[0] + "_alleleFiltered"
+    info(f"Saving results to {args.output_prefix}")
     if args.filter_window:
         if args.edit_start_pos is None and args.edit_end_pos is None:
             raise ValueError(
@@ -143,110 +151,116 @@ if __name__ == "__main__":
     info(
         f"Starting from .uns['allele_counts'] with {len(bdata.uns['allele_counts'])} alleles."
     )
-    if args.plasmid_path is not None:
-        info(
-            "Filtering significantly more edited nucleotide per guide compared to plasmid library..."
-        )
-        plasmid_adata = be.read_h5ad(args.plasmid_path)
-        plasmid_adata.uns[allele_df_keys[-1]] = plasmid_adata.uns[
-            allele_df_keys[-1]
-        ].loc[plasmid_adata.uns[allele_df_keys[-1]].allele.map(str) != "", :]
+    if os.path.exists(f"{args.output_prefix}.h5ad"):
+        bdata = be.read_h5ad(f"{args.output_prefix}.h5ad")
+    else:
+        if args.plasmid_path is not None:
+            info(
+                "Filtering significantly more edited nucleotide per guide compared to plasmid library..."
+            )
+            plasmid_adata = be.read_h5ad(args.plasmid_path)
+            plasmid_adata.uns[allele_df_keys[-1]] = plasmid_adata.uns[
+                allele_df_keys[-1]
+            ].loc[plasmid_adata.uns[allele_df_keys[-1]].allele.map(str) != "", :]
 
-        (q_val_each, sig_allele_df,) = be.an.filter_alleles.filter_alleles(
-            bdata, plasmid_adata, filter_each_sample=True, run_parallel=True
-        )
-        bdata.uns["sig_allele_counts"] = sig_allele_df.reset_index(drop=True)
-        allele_df_keys.append("sig_allele_counts")
-        info(f"Filtered down to {len(bdata.uns['sig_allele_counts'])} alleles.")
+            (q_val_each, sig_allele_df,) = be.an.filter_alleles.filter_alleles(
+                bdata, plasmid_adata, filter_each_sample=True, run_parallel=True
+            )
+            bdata.uns["sig_allele_counts"] = sig_allele_df.reset_index(drop=True)
+            allele_df_keys.append("sig_allele_counts")
+            info(f"Filtered down to {len(bdata.uns['sig_allele_counts'])} alleles.")
 
-    info("Filtering out edits outside spacer position...")
-    bdata.uns[f"{allele_df_keys[-1]}_spacer"] = bdata.filter_allele_counts_by_pos(
-        rel_pos_start=0,
-        rel_pos_end=20,
-        rel_pos_is_reporter=False,
-        map_to_filtered=True,
-        allele_uns_key=allele_df_keys[-1],
-        jaccard_threshold=args.jaccard_threshold,
-    ).reset_index(drop=True)
-    info(f"Filtered down to {len(bdata.uns[f'{allele_df_keys[-1]}_spacer'])} alleles.")
-    allele_df_keys.append(f"{allele_df_keys[-1]}_spacer")
-
-    if args.filter_window:
-        info(
-            f"Filtering out edits based on relatvie position in spacer: 0-based [{args.edit_start_pos},{args.edit_end_pos})..."
-        )
-        filtered_key = f"{allele_df_keys[-1]}_{args.edit_start_pos}_{args.edit_end_pos}"
-        bdata.uns[filtered_key] = bdata.filter_allele_counts_by_pos(
-            rel_pos_start=args.edit_start_pos,
-            rel_pos_end=args.edit_end_pos,
+        info("Filtering out edits outside spacer position...")
+        bdata.uns[f"{allele_df_keys[-1]}_spacer"] = bdata.filter_allele_counts_by_pos(
+            rel_pos_start=0,
+            rel_pos_end=20,
             rel_pos_is_reporter=False,
             map_to_filtered=True,
             allele_uns_key=allele_df_keys[-1],
             jaccard_threshold=args.jaccard_threshold,
         ).reset_index(drop=True)
-        allele_df_keys.append(filtered_key)
-        info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
-
-    if args.filter_target_basechange:
-        filtered_key = (
-            f"{allele_df_keys[-1]}_{bdata.base_edited_from}.{bdata.base_edited_to}"
-        )
-        info(f"Filtering out non-{bdata.uns['target_base_change']} edits...")
-        bdata.uns[filtered_key] = bdata.filter_allele_counts_by_base(
-            bdata.base_edited_from,
-            bdata.base_edited_to,
-            map_to_filtered=False,
-            allele_uns_key=allele_df_keys[-1],
-        ).reset_index(drop=True)
-        info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
-        allele_df_keys.append(filtered_key)
-
-    if args.translate:
         info(
-            "Translating alleles..."
-        )  # TODO: Check & document custom fasta file for translation
-        filtered_key = f"{allele_df_keys[-1]}_translated"
-        bdata.uns[filtered_key] = be.translate_allele_df(
-            bdata.uns[allele_df_keys[-1]], fasta_file=args.translate_fasta
-        ).rename(columns={"allele": "aa_allele"})
-        allele_df_keys.append(filtered_key)
-        info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
+            f"Filtered down to {len(bdata.uns[f'{allele_df_keys[-1]}_spacer'])} alleles."
+        )
+        allele_df_keys.append(f"{allele_df_keys[-1]}_spacer")
 
-    if args.filter_allele_proportion is not None:
+        if args.filter_window:
+            info(
+                f"Filtering out edits based on relatvie position in spacer: 0-based [{args.edit_start_pos},{args.edit_end_pos})..."
+            )
+            filtered_key = (
+                f"{allele_df_keys[-1]}_{args.edit_start_pos}_{args.edit_end_pos}"
+            )
+            bdata.uns[filtered_key] = bdata.filter_allele_counts_by_pos(
+                rel_pos_start=args.edit_start_pos,
+                rel_pos_end=args.edit_end_pos,
+                rel_pos_is_reporter=False,
+                map_to_filtered=True,
+                allele_uns_key=allele_df_keys[-1],
+                jaccard_threshold=args.jaccard_threshold,
+            ).reset_index(drop=True)
+            allele_df_keys.append(filtered_key)
+            info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
+
+        if args.filter_target_basechange:
+            filtered_key = (
+                f"{allele_df_keys[-1]}_{bdata.base_edited_from}.{bdata.base_edited_to}"
+            )
+            info(f"Filtering out non-{bdata.uns['target_base_change']} edits...")
+            bdata.uns[filtered_key] = bdata.filter_allele_counts_by_base(
+                bdata.base_edited_from,
+                bdata.base_edited_to,
+                map_to_filtered=False,
+                allele_uns_key=allele_df_keys[-1],
+            ).reset_index(drop=True)
+            info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
+            allele_df_keys.append(filtered_key)
+
+        if args.translate:
+            info(
+                "Translating alleles..."
+            )  # TODO: Check & document custom fasta file for translation
+            filtered_key = f"{allele_df_keys[-1]}_translated"
+            bdata.uns[filtered_key] = be.translate_allele_df(
+                bdata.uns[allele_df_keys[-1]], fasta_file=args.translate_fasta
+            ).rename(columns={"allele": "aa_allele"})
+            allele_df_keys.append(filtered_key)
+            info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
+
+        if args.filter_allele_proportion is not None:
+            info(
+                f"Filtering alleles for those have allele fraction {args.filter_allele_proportion} in at least {args.filter_sample_proportion*100}% of samples..."
+            )
+            filtered_key = f"{allele_df_keys[-1]}_prop{args.filter_allele_proportion}_{args.filter_sample_proportion}"
+            bdata.uns[filtered_key] = be.an.filter_alleles.filter_allele_prop(
+                bdata,
+                allele_df_keys[-1],
+                allele_prop_thres=args.filter_allele_proportion,
+                sample_prop_thres=args.filter_sample_proportion,
+                map_to_filtered=True,
+                retain_max=True,
+                allele_col=bdata.uns[allele_df_keys[-1]].columns[1],
+                distribute=True,
+                jaccard_threshold=args.jaccard_threshold,
+            )
+            allele_df_keys.append(filtered_key)
+            info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
+            info("Done filtering!")
         info(
-            f"Filtering alleles for those have allele fraction {args.filter_allele_proportion} in at least {args.filter_sample_proportion*100}% of samples..."
+            f"Saving ReporterScreen with filtered alleles at {args.output_prefix}.h5ad..."
         )
-        filtered_key = f"{allele_df_keys[-1]}_prop{args.filter_allele_proportion}_{args.filter_sample_proportion}"
-        bdata.uns[filtered_key] = be.an.filter_alleles.filter_allele_prop(
-            bdata,
-            allele_df_keys[-1],
-            allele_prop_thres=args.filter_allele_proportion,
-            sample_prop_thres=args.filter_sample_proportion,
-            map_to_filtered=True,
-            retain_max=True,
-            allele_col=bdata.uns[allele_df_keys[-1]].columns[1],
-            distribute=True,
-            jaccard_threshold=args.jaccard_threshold,
-        )
-        allele_df_keys.append(filtered_key)
-        info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
-        info("Done filtering!")
+        bdata.write(f"{args.output_prefix}.h5ad")
 
-    if args.plot:
-        fig, ax = plt.subplots(
-            2, len(allele_df_keys), figsize=(6, 3 * len(allele_df_keys))
-        )
-        for i, key in enumerate(allele_df_keys):
-            be.pl.allele_stats.plot_n_alleles_per_guide(
-                bdata, key, bdata.uns[key].columns[1], ax[i, 0]
-            )
-            be.pl.allele_stats.plot_n_guides_per_edit(
-                bdata, key, bdata.uns[key].columns[1], ax[i, 1]
-            )
-        plt.tight_layout()
-        plt.savefig(
-            f"{args.output_prefix}.filtered_allele_stats.pdf", bbox_inches="tight"
-        )
+    info("Plotting allele stats for each filtering step...")
+    fig, ax = plt.subplots(len(allele_df_keys), 2, figsize=(6, 3 * len(allele_df_keys)))
+    for i, key in enumerate(allele_df_keys):
+        plot_n_alleles_per_guide(bdata, key, bdata.uns[key].columns[1], ax[i, 0])
+        plot_n_guides_per_edit(bdata, key, bdata.uns[key].columns[1], ax[i, 1])
+    plt.tight_layout()
+    plt.savefig(f"{args.output_prefix}.filtered_allele_stats.pdf", bbox_inches="tight")
+    info(
+        f"Saving plotting result and log at {args.output_prefix}.[filtered_allele_stats.pdf, filter_log.txt]."
+    )
     with open(f"{args.output_prefix}.filter_log.txt", "w") as out_log:
         for key in allele_df_keys:
             out_log.write(f"{key}\t{len(bdata.uns[key])}\n")

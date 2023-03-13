@@ -17,6 +17,7 @@ def get_fdr(mu_z, plot=False):
 def write_result_table(
     target_info_df: pd.DataFrame,
     param_hist_dict,
+    model_label: str,
     prefix: str = "",
     write_fitted_eff: bool = True,
     guide_index: Optional[Sequence[str]] = None,
@@ -77,8 +78,8 @@ def write_result_table(
         sgRNA_df = pd.DataFrame({"edit_eff": pi}, index=guide_index)
         if guide_acc is not None:
             sgRNA_df["accessibility"] = guide_acc
-        sgRNA_df.to_csv(f"{prefix}CRISPRbean_sgRNA_result.csv")
+        sgRNA_df.to_csv(f"{prefix}bean_sgRNA_result.{model_label}.csv")
 
     if return_result:
         return fit_df
-    fit_df.to_csv(f"{prefix}CRISPRbean_element_result.csv")
+    fit_df.to_csv(f"{prefix}bean_element_result.{model_label}.csv")

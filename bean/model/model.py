@@ -7,9 +7,8 @@ from .utils import (
     get_alpha,
     get_std_normal_prob,
     scale_pi_by_accessibility,
-    add_noise_to_pi,
 )
-from .preprocessing.load_data import (
+from ..preprocessing.data_class import (
     VariantSortingScreenData,
     VariantSortingReporterScreenData,
     TilingSortingReporterScreenData,
@@ -25,14 +24,9 @@ def NormalModel(
     --
     data: input data
     """
-    if data.sorting_scheme == "topbot":
-        replicate_plate = pyro.plate("topbot_plate", data.n_reps, dim=-3)
-        replicate_plate2 = pyro.plate("topbot_plate2", data.n_reps, dim=-2)
-        bin_plate = pyro.plate("tb_bin_plate", data.n_bins, dim=-2)
-    else:
-        replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
-        replicate_plate2 = pyro.plate("rep_plate2", data.n_reps, dim=-2)
-        bin_plate = pyro.plate("bin_plate", data.n_bins, dim=-2)
+    replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
+    replicate_plate2 = pyro.plate("rep_plate2", data.n_reps, dim=-2)
+    bin_plate = pyro.plate("bin_plate", data.n_condits, dim=-2)
     guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
 
     # Set the prior for phenotype means
@@ -56,16 +50,16 @@ def NormalModel(
         with bin_plate as b:
             uq = data.upper_bounds[b]
             lq = data.lower_bounds[b]
-            assert uq.shape == lq.shape == (data.n_bins,)
+            assert uq.shape == lq.shape == (data.n_condits,)
             # with guide_plate, poutine.mask(mask=(data.allele_counts.sum(axis=-1) == 0)):
             with guide_plate:
                 alleles_p_bin = get_std_normal_prob(
                     uq.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
                     lq.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
-                    mu.unsqueeze(0).expand((data.n_bins, -1, -1)),
-                    sd.unsqueeze(0).expand((data.n_bins, -1, -1)),
+                    mu.unsqueeze(0).expand((data.n_condits, -1, -1)),
+                    sd.unsqueeze(0).expand((data.n_condits, -1, -1)),
                 )
-                assert alleles_p_bin.shape == (data.n_bins, data.n_guides, 1)
+                assert alleles_p_bin.shape == (data.n_condits, data.n_guides, 1)
 
             expected_allele_p = alleles_p_bin.unsqueeze(0).expand(
                 data.n_reps, -1, -1, -1
@@ -73,26 +67,31 @@ def NormalModel(
             expected_guide_p = expected_allele_p.sum(axis=-1)
             assert expected_guide_p.shape == (
                 data.n_reps,
-                data.n_bins,
+                data.n_condits,
                 data.n_guides,
             ), expected_guide_p.shape
 
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
             a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
-            a_bcmatch = a
+            a_bcmatch = get_alpha(
+                expected_guide_p,
+                data.size_factor_bcmatch,
+                data.sample_mask,
+                data.a0_bcmatch,
+            )
             assert (
                 data.X.shape
                 == data.X_bcmatch.shape
                 == (
                     data.n_reps,
-                    data.n_bins,
+                    data.n_condits,
                     data.n_guides,
                 )
             )
             with poutine.mask(
                 mask=torch.logical_and(
-                    data.X.permute(0, 2, 1).sum(axis=-1) > mask_thres,
+                    data.X_masked.permute(0, 2, 1).sum(axis=-1) > mask_thres,
                     data.repguide_mask,
                 )
             ):
@@ -104,7 +103,8 @@ def NormalModel(
             if use_bcmatch:
                 with poutine.mask(
                     mask=torch.logical_and(
-                        data.X_bcmatch.permute(0, 2, 1).sum(axis=-1) > mask_thres,
+                        data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1)
+                        > mask_thres,
                         data.repguide_mask,
                     )
                 ):
@@ -121,14 +121,9 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
     """
     Fit shared control distribution
     """
-    if data.sorting_scheme == "topbot":
-        replicate_plate = pyro.plate("topbot_plate", data.n_reps, dim=-3)
-        replicate_plate2 = pyro.plate("topbot_plate2", data.n_reps, dim=-2)
-        bin_plate = pyro.plate("tb_bin_plate", data.n_bins, dim=-2)
-    else:
-        replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
-        replicate_plate2 = pyro.plate("rep_plate2", data.n_reps, dim=-2)
-        bin_plate = pyro.plate("bin_plate", data.n_bins, dim=-2)
+    replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
+    replicate_plate2 = pyro.plate("rep_plate2", data.n_reps, dim=-2)
+    bin_plate = pyro.plate("bin_plate", data.n_condits, dim=-2)
     guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
 
     # Set the prior for phenotype means
@@ -141,15 +136,15 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
         with bin_plate as b:
             uq = data.upper_bounds[b]
             lq = data.lower_bounds[b]
-            assert uq.shape == lq.shape == (data.n_bins,)
+            assert uq.shape == lq.shape == (data.n_condits,)
             with guide_plate:
                 alleles_p_bin = get_std_normal_prob(
                     uq.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
                     lq.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
-                    mu.unsqueeze(0).expand((data.n_bins, -1, -1)),
-                    sd.unsqueeze(0).expand((data.n_bins, -1, -1)),
+                    mu.unsqueeze(0).expand((data.n_condits, -1, -1)),
+                    sd.unsqueeze(0).expand((data.n_condits, -1, -1)),
                 )
-                assert alleles_p_bin.shape == (data.n_bins, data.n_guides, 1)
+                assert alleles_p_bin.shape == (data.n_condits, data.n_guides, 1)
 
             expected_allele_p = alleles_p_bin.unsqueeze(0).expand(
                 data.n_reps, -1, -1, -1
@@ -157,26 +152,31 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
             expected_guide_p = expected_allele_p.sum(axis=-1)
             assert expected_guide_p.shape == (
                 data.n_reps,
-                data.n_bins,
+                data.n_condits,
                 data.n_guides,
             ), expected_guide_p.shape
 
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
             a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
-            a_bcmatch = a
+            a_bcmatch = get_alpha(
+                expected_guide_p,
+                data.size_factor_bcmatch,
+                data.sample_mask,
+                data.a0_bcmatch,
+            )
             assert (
                 data.X.shape
                 == data.X_bcmatch.shape
                 == (
                     data.n_reps,
-                    data.n_bins,
+                    data.n_condits,
                     data.n_guides,
                 )
             )
             with poutine.mask(
                 mask=torch.logical_and(
-                    data.X.permute(0, 2, 1).sum(axis=-1) > mask_thres,
+                    data.X_masked.permute(0, 2, 1).sum(axis=-1) > mask_thres,
                     data.repguide_mask,
                 )
             ):
@@ -188,7 +188,8 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
             if use_bcmatch:
                 with poutine.mask(
                     mask=torch.logical_and(
-                        data.X_bcmatch.permute(0, 2, 1).sum(axis=-1) > mask_thres,
+                        data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1)
+                        > mask_thres,
                         data.repguide_mask,
                     )
                 ):
@@ -214,7 +215,7 @@ def MixtureNormalConstPiModel(
     """
     replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
     replicate_plate2 = pyro.plate("rep_plate2", data.n_reps, dim=-2)
-    bin_plate = pyro.plate("bin_plate", data.n_bins, dim=-2)
+    bin_plate = pyro.plate("bin_plate", data.n_condits, dim=-2)
     guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
 
     # Set the prior for phenotype means
@@ -258,46 +259,51 @@ def MixtureNormalConstPiModel(
         with bin_plate as b:
             uq = data.upper_bounds[b]
             lq = data.lower_bounds[b]
-            assert uq.shape == lq.shape == (data.n_bins,)
+            assert uq.shape == lq.shape == (data.n_condits,)
             # with guide_plate, poutine.mask(mask=(data.allele_counts.sum(axis=-1) == 0)):
             with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
                 alleles_p_bin = get_std_normal_prob(
                     uq.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 2)),
                     lq.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 2)),
-                    mu.unsqueeze(0).expand((data.n_bins, -1, -1)),
-                    sd.unsqueeze(0).expand((data.n_bins, -1, -1)),
+                    mu.unsqueeze(0).expand((data.n_condits, -1, -1)),
+                    sd.unsqueeze(0).expand((data.n_condits, -1, -1)),
                 )
-                assert alleles_p_bin.shape == (data.n_bins, data.n_guides, 2)
+                assert alleles_p_bin.shape == (data.n_condits, data.n_guides, 2)
 
             expected_allele_p = (
-                pi.expand(data.n_reps, data.n_bins, -1, -1)
+                pi.expand(data.n_reps, data.n_condits, -1, -1)
                 * alleles_p_bin[None, :, :, :]
             )
             expected_guide_p = expected_allele_p.sum(axis=-1)
             assert expected_guide_p.shape == (
                 data.n_reps,
-                data.n_bins,
+                data.n_condits,
                 data.n_guides,
             ), expected_guide_p.shape
 
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
             a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
-            a_bcmatch = a
+            a_bcmatch = get_alpha(
+                expected_guide_p,
+                data.size_factor_bcmatch,
+                data.sample_mask,
+                data.a0_bcmatch,
+            )
             # a_bcmatch = get_alpha(expected_guide_p, data.size_factor_bcmatch, data.sample_mask, data.a0_bcmatch)
-            # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_bins)
+            # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_condits)
             assert (
                 data.X.shape
                 == data.X_bcmatch.shape
                 == (
                     data.n_reps,
-                    data.n_bins,
+                    data.n_condits,
                     data.n_guides,
                 )
             )
             with poutine.mask(
                 mask=torch.logical_and(
-                    data.X.permute(0, 2, 1).sum(axis=-1) > 10, data.repguide_mask
+                    data.X_masked.permute(0, 2, 1).sum(axis=-1) > 10, data.repguide_mask
                 )
             ):
                 pyro.sample(
@@ -308,7 +314,7 @@ def MixtureNormalConstPiModel(
             if use_bcmatch:
                 with poutine.mask(
                     mask=torch.logical_and(
-                        data.X_bcmatch.permute(0, 2, 1).sum(axis=-1) > 10,
+                        data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1) > 10,
                         data.repguide_mask,
                     )
                 ):
@@ -331,9 +337,9 @@ def MixtureNormalModel(
         scale_by_accessibility: If True, pi fitted from reporter data is scaled by accessibility*0.128
     """
     torch.autograd.set_detect_anomaly(True)
-    replicate_plate = pyro.plate("topbot_plate", data.n_reps, dim=-3)
-    replicate_plate2 = pyro.plate("topbot_plate2", data.n_reps, dim=-2)
-    bin_plate = pyro.plate("tb_bin_plate", data.n_bins, dim=-2)
+    replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
+    replicate_plate2 = pyro.plate("rep_plate2", data.n_reps, dim=-2)
+    bin_plate = pyro.plate("bin_plate", data.n_condits, dim=-2)
     guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
 
     # Set the prior for phenotype means
@@ -390,56 +396,60 @@ def MixtureNormalModel(
             pyro.sample(
                 "bulk_allele_count",
                 dist.Multinomial(probs=pi, validate_args=False),
-                obs=data.allele_counts_bulk,
+                obs=data.allele_counts_control,
             )
     if scale_by_accessibility:
         # Endogenous target site editing rate may be different
         pi = scale_pi_by_accessibility(pi, data.guide_accessibility)
-        pi = add_noise_to_pi(pi)
     with replicate_plate:
         with bin_plate as b:
             uq = data.upper_bounds[b]
             lq = data.lower_bounds[b]
-            assert uq.shape == lq.shape == (data.n_bins,)
+            assert uq.shape == lq.shape == (data.n_condits,)
             # with guide_plate, poutine.mask(mask=(data.allele_counts.sum(axis=-1) == 0)):
             with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
                 alleles_p_bin = get_std_normal_prob(
                     uq.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 2)),
                     lq.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 2)),
-                    mu.unsqueeze(0).expand((data.n_bins, -1, -1)),
-                    sd.unsqueeze(0).expand((data.n_bins, -1, -1)),
+                    mu.unsqueeze(0).expand((data.n_condits, -1, -1)),
+                    sd.unsqueeze(0).expand((data.n_condits, -1, -1)),
                 )
-                assert alleles_p_bin.shape == (data.n_bins, data.n_guides, 2)
+                assert alleles_p_bin.shape == (data.n_condits, data.n_guides, 2)
 
             expected_allele_p = (
-                pi.expand(data.n_reps, data.n_bins, -1, -1)
+                pi.expand(data.n_reps, data.n_condits, -1, -1)
                 * alleles_p_bin[None, :, :, :]
             )
             expected_guide_p = expected_allele_p.sum(axis=-1)
             assert expected_guide_p.shape == (
                 data.n_reps,
-                data.n_bins,
+                data.n_condits,
                 data.n_guides,
             ), expected_guide_p.shape
 
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
             a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
-            a_bcmatch = a
+            a_bcmatch = get_alpha(
+                expected_guide_p,
+                data.size_factor_bcmatch,
+                data.sample_mask,
+                data.a0_bcmatch,
+            )
             # a_bcmatch = get_alpha(expected_guide_p, data.size_factor_bcmatch, data.sample_mask, data.a0_bcmatch)
-            # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_bins)
+            # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_condits)
             assert (
                 data.X.shape
                 == data.X_bcmatch.shape
                 == (
                     data.n_reps,
-                    data.n_bins,
+                    data.n_condits,
                     data.n_guides,
                 )
             )
             with poutine.mask(
                 mask=torch.logical_and(
-                    data.X.permute(0, 2, 1).sum(axis=-1) > 10, data.repguide_mask
+                    data.X_masked.permute(0, 2, 1).sum(axis=-1) > 10, data.repguide_mask
                 )
             ):
                 pyro.sample(
@@ -450,7 +460,7 @@ def MixtureNormalModel(
             if use_bcmatch:
                 with poutine.mask(
                     mask=torch.logical_and(
-                        data.X_bcmatch.permute(0, 2, 1).sum(axis=-1) > 10,
+                        data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1) > 10,
                         data.repguide_mask,
                     )
                 ):
@@ -461,7 +471,26 @@ def MixtureNormalModel(
                     )
 
 
-def guide_MixtureNormal(
+def NormalGuide(data):
+    with pyro.plate("guide_plate0", 1):
+        with pyro.plate("guide_plate1", data.n_targets):
+            mu_loc = pyro.param("mu_loc", torch.zeros((data.n_targets, 1)))
+            mu_scale = pyro.param(
+                "mu_scale",
+                torch.ones((data.n_targets, 1)),
+                constraint=constraints.positive,
+            )
+            mu_alleles = pyro.sample("mu_alleles", dist.Normal(mu_loc, mu_scale))
+            sd_loc = pyro.param("sd_loc", torch.zeros((data.n_targets, 1)))
+            sd_scale = pyro.param(
+                "sd_scale",
+                torch.ones((data.n_targets, 1)),
+                constraint=constraints.positive,
+            )
+            sd_alleles = pyro.sample("sd_alleles", dist.LogNormal(sd_loc, sd_scale))
+
+
+def MixtureNormalGuide(
     data,
     alpha_prior=1,
     use_bcmatch=True,
@@ -559,7 +588,7 @@ def MultiMixtureNormalModel(
 
     replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
     replicate_plate2 = pyro.plate("rep_plate2", data.n_reps, dim=-2)
-    bin_plate = pyro.plate("bin_plate", data.n_bins, dim=-2)
+    bin_plate = pyro.plate("bin_plate", data.n_condits, dim=-2)
     guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
 
     # Set the prior for phenotype means
@@ -621,18 +650,17 @@ def MultiMixtureNormalModel(
             pyro.sample(
                 "bulk_allele_count",
                 dist.Multinomial(probs=pi, validate_args=False),
-                obs=data.allele_counts_bulk,
+                obs=data.allele_counts_control,
             )
     if scale_by_accessibility:
         # Endogenous target site editing rate may be different
         pi = scale_pi_by_accessibility(pi, data.guide_accessibility)
-        pi = add_noise_to_pi(pi)
 
     with replicate_plate:
         with bin_plate as b:
             uq = data.upper_bounds[b]
             lq = data.lower_bounds[b]
-            assert uq.shape == lq.shape == (data.n_bins,)
+            assert uq.shape == lq.shape == (data.n_condits,)
             with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
                 alleles_p_bin = get_std_normal_prob(
                     uq.unsqueeze(-1)
@@ -641,44 +669,49 @@ def MultiMixtureNormalModel(
                     lq.unsqueeze(-1)
                     .unsqueeze(-1)
                     .expand((-1, data.n_guides, data.n_max_alleles)),
-                    mu.unsqueeze(0).expand((data.n_bins, -1, -1)),
-                    sd.unsqueeze(0).expand((data.n_bins, -1, -1)),
-                    mask=data.allele_mask.unsqueeze(0).expand((data.n_bins, -1, -1)),
+                    mu.unsqueeze(0).expand((data.n_condits, -1, -1)),
+                    sd.unsqueeze(0).expand((data.n_condits, -1, -1)),
+                    mask=data.allele_mask.unsqueeze(0).expand((data.n_condits, -1, -1)),
                 )
                 assert alleles_p_bin.shape == (
-                    data.n_bins,
+                    data.n_condits,
                     data.n_guides,
                     data.n_max_alleles,
                 )
             expected_allele_p = (
-                pi.expand(data.n_reps, data.n_bins, -1, -1)
+                pi.expand(data.n_reps, data.n_condits, -1, -1)
                 * alleles_p_bin[None, :, :, :]
             )
             expected_guide_p = expected_allele_p.sum(axis=-1)
             assert expected_guide_p.shape == (
                 data.n_reps,
-                data.n_bins,
+                data.n_condits,
                 data.n_guides,
             ), expected_guide_p.shape
 
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
             a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
-            a_bcmatch = a
+            a_bcmatch = get_alpha(
+                expected_guide_p,
+                data.size_factor_bcmatch,
+                data.sample_mask,
+                data.a0_bcmatch,
+            )
             # a_bcmatch = get_alpha(expected_guide_p, data.size_factor_bcmatch, data.sample_mask, data.a0_bcmatch)
-            # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_bins)
+            # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_condits)
             assert (
                 data.X.shape
                 == data.X_bcmatch.shape
                 == (
                     data.n_reps,
-                    data.n_bins,
+                    data.n_condits,
                     data.n_guides,
                 )
             )
             with poutine.mask(
                 mask=torch.logical_and(
-                    data.X.permute(0, 2, 1).sum(axis=-1) > 10, data.repguide_mask
+                    data.X_masked.permute(0, 2, 1).sum(axis=-1) > 10, data.repguide_mask
                 )
             ):
                 pyro.sample(
@@ -689,7 +722,7 @@ def MultiMixtureNormalModel(
             if use_bcmatch:
                 with poutine.mask(
                     mask=torch.logical_and(
-                        data.X_bcmatch.permute(0, 2, 1).sum(axis=-1) > 10,
+                        data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1) > 10,
                         data.repguide_mask,
                     )
                 ):

@@ -1,5 +1,5 @@
 import os
-from typing import List, Iterable, Dict, Tuple
+from typing import List, Iterable, Dict, Tuple, Collection
 from copy import deepcopy
 import numpy as np
 import pandas as pd

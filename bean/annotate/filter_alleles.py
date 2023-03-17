@@ -192,8 +192,16 @@ def _filter_allele_sample_multiproc(i):
     sample_allele_df = sample_allele_df[sample_allele_df > 0]
     if filter_each_sample:
         sample_sig_edit = edit_significance_tbl.iloc[:, i] < q_thres
+        if odds_ratio_tbl is not None and odds_ratio_thres is not None:
+            sample_sig_edit = sample_sig_edit & (
+                odds_ratio_tbl.iloc[:, i] > odds_ratio_thres
+            )
     else:
         sample_sig_edit = (edit_significance_tbl < q_thres).any(axis=1)
+        if odds_ratio_tbl is not None and odds_ratio_thres is not None:
+            sample_sig_edit = sample_sig_edit & (odds_ratio_tbl > odds_ratio_thres).any(
+                axis=1
+            )
     sample_sig_edit = sample_sig_edit.loc[sample_sig_edit]
     sample_guide_to_sig_edit_dict = (
         sample_sig_edit.index.to_frame()
@@ -206,14 +214,28 @@ def _filter_allele_sample_multiproc(i):
 
 
 def _filter_allele_sample_loop(
-    i, allele_df, edit_significance_tbl, q_thres, filter_each_sample=False
+    i,
+    allele_df,
+    edit_significance_tbl,
+    q_thres,
+    filter_each_sample=False,
+    odds_ratio_tbl=None,
+    odds_ratio_thres=None,
 ):
     sample_allele_df = allele_df.iloc[:, i]
     sample_allele_df = sample_allele_df[sample_allele_df > 0]
     if filter_each_sample:
         sample_sig_edit = edit_significance_tbl.iloc[:, i] < q_thres
+        if odds_ratio_tbl is not None and odds_ratio_thres is not None:
+            sample_sig_edit = sample_sig_edit & (
+                odds_ratio_tbl.iloc[:, i] > odds_ratio_thres
+            )
     else:
         sample_sig_edit = (edit_significance_tbl < q_thres).any(axis=1)
+        if odds_ratio_tbl is not None and odds_ratio_thres is not None:
+            sample_sig_edit = sample_sig_edit & (odds_ratio_tbl > odds_ratio_thres).any(
+                axis=1
+            )
     sample_sig_edit = sample_sig_edit.loc[sample_sig_edit]
     sample_guide_to_sig_edit_dict = (
         sample_sig_edit.index.to_frame()
@@ -226,15 +248,19 @@ def _filter_allele_sample_loop(
 
 
 def _filter_alleles(
-    allele_df,
-    edit_significance_tbl,
-    q_thres,
+    allele_df: pd.DataFrame,
+    edit_significance_tbl: pd.DataFrame,
+    q_thres: float,
+    odds_ratio_tbl: pd.DataFrame = None,
+    odds_ratio_thres: float = None,
     n_threads=None,
     filter_each_sample=False,
     run_parallel=False,
 ):
     """
     - args
+        allele_df: DataFrame with guide(str), allele(Allele) and sample counts
+        edit_significance_tbl:
         filter_each_sample (bool) : filter out edits that are insignificant in each of the sample.
         If False, preserve the edit if called significant in any of the sample.
     """
@@ -243,21 +269,35 @@ def _filter_alleles(
     allele_df = allele_df.set_index(["guide", "allele"]).copy().fillna(0)
 
     def child_initialize(
-        _allele_df, _edit_significance_tbl, _filter_each_sample, _q_thres
+        _allele_df,
+        _edit_significance_tbl,
+        _filter_each_sample,
+        _q_thres,
+        _odds_ratio_tbl=None,
+        _odds_ratio_thres=None,
     ):
         # https://stackoverflow.com/questions/25825995/python-multiprocessing-only-one-process-is-running
-        global allele_df, edit_significance_tbl, filter_each_sample, q_thres
+        global allele_df, edit_significance_tbl, filter_each_sample, q_thres, odds_ratio_tbl, odds_ratio_thres
         allele_df = _allele_df
         edit_significance_tbl = _edit_significance_tbl
         filter_each_sample = _filter_each_sample
         q_thres = _q_thres
+        odds_ratio_tbl = _odds_ratio_tbl
+        odds_ratio_thres = _odds_ratio_thres
 
     if run_parallel:
         print("Running {} parallel processes to filter alleles...".format(n_threads))
         with multiprocessing.Pool(
             n_threads,
             initializer=child_initialize,
-            initargs=(allele_df, edit_significance_tbl, filter_each_sample, q_thres),
+            initargs=(
+                allele_df,
+                edit_significance_tbl,
+                filter_each_sample,
+                q_thres,
+                odds_ratio_tbl,
+                odds_ratio_thres,
+            ),
         ) as pool:
             filtered_allele_dfs = pool.map(
                 _filter_allele_sample_multiproc, list(range(len(allele_df.columns)))
@@ -295,7 +335,7 @@ def filter_alleles(
     ctrl_adata,
     allele_counts_key="allele_counts",
     q_thres=0.05,
-    OR_thres=2,
+    odds_ratio_thres=2,
     aggregate_cond=None,
     filter_each_sample=False,
     edit_sig_tbl=None,
@@ -325,12 +365,14 @@ def filter_alleles(
         q_bonf_tbl = edit_sig_tbl
         print("Using provided edit significance table.\n")
     print(
-        f"Filtering alleles for those containing significant edits (q < {q_thres})..."
+        f"Filtering alleles for those containing significant edits (q < {q_thres}) and odds ratio higher than {odds_ratio_thres}..."
     )
     filtered_alleles = _filter_alleles(
         sample_adata.uns[allele_counts_key],
         q_bonf_tbl,
         q_thres,
+        odds_ratio_tbl,
+        odds_ratio_thres,
         filter_each_sample=filter_each_sample,
         n_threads=n_threads,
         run_parallel=run_parallel,

@@ -2,8 +2,10 @@
 import os
 import sys
 import logging
-import numpy as np
 from functools import partial
+import numpy as np
+import pandas as pd
+
 from tqdm.auto import tqdm
 import torch
 import pyro
@@ -56,6 +58,7 @@ def run_inference(
     )
 
     losses = []
+
     try:
         for t in tqdm(range(num_steps)):
             loss = svi.step(data)
@@ -63,6 +66,12 @@ def run_inference(
                 print(f"loss {loss} @ iter {t}")
             losses.append(loss)
     except ValueError as exc:
+        error(
+            "Error occurred during fitting. Saving temporary output at tmp_result.pkl."
+        )
+        with open("tmp_result.pkl", "wb") as handle:
+            pkl.dump({"param": pyro.get_param_store()}, handle)
+
         raise ValueError(
             f"Fitting halted for command: {' '.join(sys.argv)} with following error: \n {exc}"
         )
@@ -75,7 +84,7 @@ def run_inference(
 def _get_guide_target_info(bdata):
     guide_info = bdata.guides.copy()
     edit_rate_info = (
-        guide_info[["target", "Target gene/variant", "Group2", "edit_rate"]]
+        guide_info[["target", "edit_rate"]]
         .groupby("target", sort=False)
         .agg({"edit_rate": ["mean", "std"]})
     )
@@ -84,9 +93,11 @@ def _get_guide_target_info(bdata):
     edit_rate_info = edit_rate_info.rename(
         columns={"mean": "edit_rate_mean", "std": "edit_rate_std"}
     )
-
     target_info = (
-        guide_info[["target", "Target gene/variant", "Group2"]]
+        guide_info[
+            ["target"]
+            + [col for col in guide_info.columns if col.startswith("target_")]
+        ]  # TODO: this should be generalized! (Target gene/variant, Group2)
         .drop_duplicates()
         .set_index("target", drop=True)
     )
@@ -214,12 +225,26 @@ def parse_args():
         default=None,
         help="Optionally use GPU if provided valid GPU device name (ex. cuda:0)",
     )
+    parser.add_argument(
+        "--ignore-bcmatch",
+        action="store_true",
+        default=False,
+        help="If provided, even if the screen object has .X_bcmatch, ignore the count when fitting.",
+    )
+    parser.add_argument(
+        "--allele-df-key",
+        type=str,
+        default=None,
+        help="screen.uns[allele_df_key] will be used as the allele count.",
+    )
+    parser.add_argument(
+        "--splice-site-path",
+        type=str,
+        default=None,
+        help="Path to splicing site",
+    )
 
     return parser.parse_args()
-
-
-def assign_acc_from_bw(bdata, acc_bw_path):
-    pass
 
 
 def check_args(args):
@@ -235,7 +260,17 @@ def check_args(args):
             args.acc_bw_path = None
     if args.outdir is None:
         args.outdir = os.path.dirname(args.bdata_path)
-
+    if args.mode == "variant":
+        pass
+    elif args.mode == "tiling":
+        if args.allele_df_key is None:
+            raise ValueError(
+                "--allele-df-key not provided for tiling screen. Feed in the key then allele counts in screen.uns[allele_df_key] will be used."
+            )
+    else:
+        raise ValueError(
+            "Invalid mode provided. Select either 'variant' or 'tiling'."
+        )  # TODO: change this into discrete modes via argparse
     return args
 
 
@@ -245,15 +280,13 @@ def identify_model_guide(args):
         return (
             f"MultiMixtureNormal{'+Acc' if args.scale_by_acc else ''}",
             partial(
-                m.MultiMixtureNormalModel, scale_by_accessibility=args.scale_by_acc
+                m.MultiMixtureNormalModel,
+                scale_by_accessibility=args.scale_by_acc,
+                use_bcmatch=~args.ignore_bcmatch,
             ),
             m.MultiMixtureNormalGuide,
         )
     if args.perfect_edit:
-        # if args.fit_pi or args.rep_pi:
-        #     raise ValueError(
-        #         "Incompatible model specification: can't assume perfect edit and fit the edit rate or replicate scaling factor."
-        #     )
         if args.guide_activity_col is not None:
             raise ValueError(
                 "Can't use the guide activity column while constraining perfect edit."
@@ -261,7 +294,7 @@ def identify_model_guide(args):
         info("Using Normal model...")
         return (
             "Normal",
-            m.NormalModel,
+            partial(m.NormalModel, use_bcmatch=~args.ignore_bcmatch),
             m.NormalGuide,
         )
     elif args.const_pi:
@@ -272,7 +305,7 @@ def identify_model_guide(args):
         info("Using Mixture Normal model with constant weight ...")
         return (
             "MixtureNormalConstPi",
-            m.MixtureNormalConstPiModel,
+            partial(m.MixtureNormalConstPiModel, use_bcmatch=~args.ignore_bcmatch),
             m.MixtureNormalGuide,
         )
     else:
@@ -281,14 +314,20 @@ def identify_model_guide(args):
         )
         return (
             f"MixtureNormal{'+Acc' if args.scale_by_acc else ''}",
-            partial(m.MixtureNormalModel, scale_by_accessibility=args.scale_by_acc),
+            partial(
+                m.MixtureNormalModel,
+                scale_by_accessibility=args.scale_by_acc,
+                use_bcmatch=~args.ignore_bcmatch,
+            ),
             m.MixtureNormalGuide,
         )
 
 
 def main(args):
     if args.cuda:
+        os.environ["CUDA_VISIBLE_DEVICES"] = "1"
         torch.set_default_tensor_type(torch.cuda.FloatTensor)
+
     else:
         torch.set_default_tensor_type(torch.FloatTensor)
     prefix = (
@@ -300,7 +339,6 @@ def main(args):
     model_label, model, guide = identify_model_guide(args)
     bdata = be.read_h5ad(args.bdata_path)
     guide_index = bdata.guides.index
-    target_info_df = _get_guide_target_info(bdata)
     print("Done loading data. Preprocessing...")
     bdata.samples["rep"] = bdata.samples["rep"].astype("category")
     ndata = DATACLASS_DICT[model_label](
@@ -312,7 +350,19 @@ def main(args):
         accessibility_bw_path=args.acc_bw_path,
         use_const_pi=args.const_pi,
         condition_column=args.condition_column,
+        allele_df_key=args.allele_df_key,
     )
+    if args.mode == "variant":
+        target_info_df = _get_guide_target_info(bdata)
+    else:
+        if args.splice_site_path is not None:
+            splice_site = pd.read_csv(args.splice_site_path).pos
+        target_info_df = be.an.translate_allele.annotate_edit(
+            pd.DataFrame(pd.Series(ndata.edit_index))
+            .reset_index()
+            .rename(columns={"index": "edit"}),
+            splice_sites=None if args.splice_site_path is None else splice_site,
+        )
 
     guide_info_df = bdata.guides
     del bdata

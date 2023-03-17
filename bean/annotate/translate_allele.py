@@ -339,3 +339,55 @@ def filter_nt_alleles(cn_allele_df: pd.DataFrame, pos_include: Iterable[int]):
     alleles = alleles.groupby(["guide", "aa_allele"]).sum().reset_index()
     alleles = alleles.loc[alleles.aa_allele.map(bool), :]
     return alleles
+
+
+def annotate_edit(
+    edit_info: pd.DataFrame,
+    edit_col="edit",
+    splice_sites: Collection[
+        int
+    ] = None,  # TODO: may be needed to extended into multi-chromosome case
+):
+    """Classify edit strings into coding/noncoding and synonymous/misseinse[splicing/trunc]
+
+    Args
+    edit_info: pd.DataFrame with at least 1 column of 'edit_col', which has 'Edit' format.
+    splice_sites: Collection of integer splice site positions. If the edit position matches the positions, it will be annotated as 'splicing'.
+
+    """
+    edit_info = edit_info.copy()
+    edit_info["group"] = ""
+    edit_info["int_pos"] = -1
+    if "pos" not in edit_info.columns:
+        edit_info["pos"], transition = zip(*(edit_info[edit_col].str.split(":")))
+        edit_info["ref"], edit_info["alt"] = zip(
+            *(pd.Series(transition).str.split(">"))
+        )
+    edit_info.loc[edit_info.pos.map(lambda s: s.startswith("A")), "coding"] = "coding"
+    edit_info.loc[
+        edit_info.pos.map(lambda s: not s.startswith("A")), "coding"
+    ] = "noncoding"
+    edit_info.loc[edit_info.pos.map(lambda s: "CONTROL" in s), "group"] = "negctrl"
+    edit_info.loc[edit_info.pos.map(lambda s: "CONTROL" in s), "coding"] = "negctrl"
+    edit_info.loc[
+        (edit_info.coding == "noncoding") & (edit_info.group != "negctrl"), "int_pos"
+    ] = edit_info.loc[
+        (edit_info.coding == "noncoding") & (edit_info.group != "negctrl"), "pos"
+    ].map(
+        int
+    )
+
+    edit_info.loc[
+        (edit_info.alt != edit_info.ref) & (edit_info.coding == "coding"), "group"
+    ] = "missense"
+    edit_info.loc[edit_info.alt == "*", "group"] = "trunc"
+    edit_info.loc[
+        (edit_info.alt == edit_info.ref) & (edit_info.coding == "coding"), "group"
+    ] = "syn"
+    if splice_sites is not None:
+        edit_info.loc[
+            edit_info.pos.isin(splice_sites.astype(str)), "group"
+        ] = "splicing"
+    edit_info.loc[edit_info.int_pos < -100, "group"] = "negctrl"
+    edit_info.loc[edit_info.int_pos < -100, "coding"] = "negctrl"
+    return edit_info

@@ -11,7 +11,11 @@ def get_alpha(
         expected_guide_p.permute(0, 2, 1) * size_factor[:, None, :]
     )  # (n_reps, n_guides, n_bins)
     if normalize_by_a0:
-        a = p / p.sum(axis=-1)[:, :, None] * a0[None, :, None]
+        a = (
+            (p + epsilon / p.shape[-1])
+            / (p.sum(axis=-1)[:, :, None] + epsilon)
+            * a0[None, :, None]
+        )
         a = (a * sample_mask[:, None, :]).clamp(min=epsilon)
         return a
     a = (p * sample_mask[:, None, :]).clamp(min=epsilon)
@@ -110,9 +114,7 @@ def scale_pi_by_accessibility(
     scaled_pi = _scale_edited_pi(pi[..., 1:], guide_accessibility)
     ctrl_pi = torch.ones(pi[:, :, :, 0].shape) - scaled_pi.sum(axis=-1)
     pi = torch.concat([ctrl_pi.unsqueeze(-1), scaled_pi], axis=-1)
-    pi = (
-        pi / pi.sum(axis=-1).clamp(min=1.0)[..., None]
-    )  # if scaled pi exceeds 1 in total, normalize.
+    pi = pi / pi.sum(axis=-1).clamp(min=1.0)[..., None]
     assert pi.shape == pi_shape, (pi.shape, scaled_pi.shape, pi_shape)
     pi = add_noise_to_pi(pi)
     return pi
@@ -131,7 +133,9 @@ def add_noise_to_pi(pi: torch.Tensor, pi_noise_sd: float = 0.655):
     logit_pi = torch.logit(pi[..., 1:].clamp(min=1e-3, max=1 - 1e-3))
 
     with pyro.plate("guide_plate_noise", n_guides):
-        logit_pi_noise = pyro.sample("logit_pi_noise", dist.Normal(0, pi_noise_sd))
+        logit_pi_noise = pyro.sample(
+            "logit_pi_noise", dist.Normal(0, pi_noise_sd), infer={"is_auxiliary": True}
+        )
     logit_pi += (
         logit_pi_noise.unsqueeze(0)
         .unsqueeze(0)

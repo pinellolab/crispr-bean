@@ -10,6 +10,7 @@ from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from .CRISPResso2Align import read_matrix, global_align_base_editor
 from ..framework.Edit import Allele, Edit
 
+
 class InputFileError(Exception):
     pass
 
@@ -85,6 +86,7 @@ def _check_readname_match(R1: List[SeqIO.SeqRecord], R2: List[SeqIO.SeqRecord]):
                     )
                 )
 
+
 def _get_guide_to_reporter_df(sgRNA_filename: str) -> pd.DataFrame:
     """Returns a gRNA name to reporter sequence mapping."""
     guide_to_reporter = {}
@@ -106,9 +108,9 @@ def revcomp(seq: Union[Seq, str]) -> str:
 
 
 def _fastq_iter_to_text(record: SeqIO.SeqRecord):
-    t = record.id, 
+    t = (record.id,)
     seq = record.seq
-    q = record.letter_annotations['phred_quality']
+    q = record.letter_annotations["phred_quality"]
     return "{}\n{}\n+\n{}\n".format(t, seq, q)
 
 
@@ -260,7 +262,16 @@ def _multiindex_dict_to_df(input_dict, key_column_names, value_column_name):
     df.index = mi
     df.reset_index(inplace=True)
     if len(key_column_names) == 1:
-        df.rename(columns={"level_0": "guide", "level_1": key_column_names[0]}, inplace=True)
+        df.rename(
+            columns={"level_0": "guide", "level_1": key_column_names[0]}, inplace=True
+        )
     elif len(key_column_names) == 2:
-        df.rename(columns={"level_0": "guide", "level_1": key_column_names[0], "level_2": key_column_names[1]}, inplace=True)
+        df.rename(
+            columns={
+                "level_0": "guide",
+                "level_1": key_column_names[0],
+                "level_2": key_column_names[1],
+            },
+            inplace=True,
+        )
     return df

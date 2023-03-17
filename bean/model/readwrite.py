@@ -26,13 +26,13 @@ def write_result_table(
 ) -> Union[pd.DataFrame, None]:
     """Combine target information and scores to write result table to a csv file or return it."""
     if param_hist_dict["params"]["mu_loc"].dim() == 2:
-        mu = param_hist_dict["params"]["mu_loc"].detach()[:, 0].numpy()
-        mu_sd = param_hist_dict["params"]["mu_scale"].detach()[:, 0].numpy()
-        sd = param_hist_dict["params"]["sd_loc"].detach().exp()[:, 0].numpy()
+        mu = param_hist_dict["params"]["mu_loc"].detach()[:, 0].cpu().numpy()
+        mu_sd = param_hist_dict["params"]["mu_scale"].detach()[:, 0].cpu().numpy()
+        sd = param_hist_dict["params"]["sd_loc"].detach().exp()[:, 0].cpu().numpy()
     elif param_hist_dict["params"]["mu_loc"].dim() == 1:
-        mu = param_hist_dict["params"]["mu_loc"].detach().numpy()
-        mu_sd = param_hist_dict["params"]["mu_scale"].detach().numpy()
-        sd = param_hist_dict["params"]["sd_loc"].detach().exp().numpy()
+        mu = param_hist_dict["params"]["mu_loc"].detach().cpu().numpy()
+        mu_sd = param_hist_dict["params"]["mu_scale"].detach().cpu().numpy()
+        sd = param_hist_dict["params"]["sd_loc"].detach().exp().cpu().numpy()
     else:
         raise ValueError(
             f'`mu_loc` has invalid shape of {param_hist_dict["params"]["mu_loc"].shape}'
@@ -52,8 +52,10 @@ def write_result_table(
     )
     if "negctrl" in param_hist_dict.keys():
         print("Normalizing with common negative control distribution")
-        mu0 = param_hist_dict["negctrl"]["params"]["mu_loc"].detach().numpy()
-        sd0 = param_hist_dict["negctrl"]["params"]["sd_loc"].detach().exp().numpy()
+        mu0 = param_hist_dict["negctrl"]["params"]["mu_loc"].detach().cpu().numpy()
+        sd0 = (
+            param_hist_dict["negctrl"]["params"]["sd_loc"].detach().exp().cpu().numpy()
+        )
         print(f"Fitted mu0={mu0}, sd0={sd0}.")
         fit_df["mu_adj"] = (mu - mu0) / sd0
         fit_df["mu_sd_adj"] = mu_sd / sd0
@@ -73,7 +75,7 @@ def write_result_table(
         if "alpha_pi" not in param_hist_dict["params"].keys():
             pi = 1.0
         else:
-            a_fitted = param_hist_dict["params"]["alpha_pi"].detach().numpy()
+            a_fitted = param_hist_dict["params"]["alpha_pi"].detach().cpu().numpy()
             pi = a_fitted[..., 0] / a_fitted.sum(axis=1)
         sgRNA_df = pd.DataFrame({"edit_eff": pi}, index=guide_index)
         if guide_acc is not None:

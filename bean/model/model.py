@@ -108,6 +108,9 @@ def NormalModel(
                         data.repguide_mask,
                     )
                 ):
+                    assert (
+                        a_bcmatch > 0
+                    ).all(), f"{torch.where(a_bcmatch < 1e-6)}\n{torch.where(torch.isnan(a_bcmatch))}"
                     pyro.sample(
                         "guide_bcmatch_counts",
                         dist.DirichletMultinomial(a_bcmatch, validate_args=False),
@@ -334,7 +337,7 @@ def MixtureNormalModel(
 ):
     """
     Args:
-        scale_by_accessibility: If True, pi fitted from reporter data is scaled by accessibility*0.128
+        scale_by_accessibility: If True, pi fitted from reporter data is scaled by accessibility
     """
     torch.autograd.set_detect_anomaly(True)
     replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
@@ -480,14 +483,14 @@ def NormalGuide(data):
                 torch.ones((data.n_targets, 1)),
                 constraint=constraints.positive,
             )
-            mu_alleles = pyro.sample("mu_alleles", dist.Normal(mu_loc, mu_scale))
+            pyro.sample("mu_alleles", dist.Normal(mu_loc, mu_scale))
             sd_loc = pyro.param("sd_loc", torch.zeros((data.n_targets, 1)))
             sd_scale = pyro.param(
                 "sd_scale",
                 torch.ones((data.n_targets, 1)),
                 constraint=constraints.positive,
             )
-            sd_alleles = pyro.sample("sd_alleles", dist.LogNormal(sd_loc, sd_scale))
+            pyro.sample("sd_alleles", dist.LogNormal(sd_loc, sd_scale))
 
 
 def MixtureNormalGuide(
@@ -572,17 +575,18 @@ def ControlNormalGuide(data, mask_thres=10, use_bcmatch=True):
     sd_scale = pyro.param(
         "sd_scale", torch.tensor(1.0), constraint=constraints.positive
     )
-    mu_alleles = pyro.sample("mu_alleles", dist.Normal(mu_loc, mu_scale))
-    sd_alleles = pyro.sample("sd_alleles", dist.LogNormal(sd_loc, sd_scale))
+    pyro.sample("mu_alleles", dist.Normal(mu_loc, mu_scale))
+    pyro.sample("sd_alleles", dist.LogNormal(sd_loc, sd_scale))
 
 
 def MultiMixtureNormalModel(
-    data,
+    data: TilingSortingReporterScreenData,
     alpha_prior=1,
     use_bcmatch=True,
     sd_scale=0.01,
     norm_pi=False,
     scale_by_accessibility=False,
+    epsilon=1e-5,
 ):
     """Tiling version of MixtureNormalModel"""
 
@@ -635,10 +639,21 @@ def MultiMixtureNormalModel(
     )
     # Effectively remove alphas for non-existing alleles
     assert data.allele_mask.shape == (data.n_guides, data.n_max_alleles)
-    alpha_pi0[~data.allele_mask] = 1e-10
+    alpha_pi0[~data.allele_mask] = epsilon
     alpha_pi = pyro.param("alpha_pi", alpha_pi0, constraint=constraints.positive)
-    alpha_pi[~data.allele_mask] = 1e-10
-    pi_a_scaled = alpha_pi / alpha_pi.sum(axis=-1)[:, None] * data.pi_a0[:, None]
+    alpha_pi[~data.allele_mask] = epsilon
+    pi_a_scaled = (
+        (alpha_pi + epsilon / alpha_pi.shape[-1])
+        / (alpha_pi.sum(axis=-1)[:, None] + epsilon)
+        * data.pi_a0[:, None]
+    )
+    pi_a_scaled[pi_a_scaled < epsilon] = epsilon
+    if torch.isnan(pi_a_scaled).any():
+        print(torch.where(alpha_pi.isnan()))
+        print(torch.where(alpha_pi < 0))
+        exit(1)
+    if (pi_a_scaled <= 0).any():
+        print(torch.where(alpha_pi < 0))
     with replicate_plate:
         with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
             pi = pyro.sample(
@@ -733,11 +748,7 @@ def MultiMixtureNormalModel(
                     )
 
 
-def MultiMixtureNormalGuide(
-    data,
-    alpha_prior=1,
-    use_bcmatch=True,
-):
+def MultiMixtureNormalGuide(data, alpha_prior=1, use_bcmatch=True, epsilon=1e-5):
     """
     Guide for model C14
     """
@@ -787,9 +798,9 @@ def MultiMixtureNormalGuide(
     )
     # Effectively remove alphas for non-existing alleles
     assert data.allele_mask.shape == (data.n_guides, data.n_max_alleles)
-    alpha_pi0[~data.allele_mask] = 1e-10
+    alpha_pi0[~data.allele_mask] = epsilon
     alpha_pi = pyro.param("alpha_pi", alpha_pi0, constraint=constraints.positive)
-    # alpha_pi[~data.allele_mask] = 1e-10
+    alpha_pi[~data.allele_mask] = epsilon
     pi_a_scaled = alpha_pi / alpha_pi.sum(axis=-1)[:, None] * data.pi_a0[:, None]
 
     with replicate_plate:

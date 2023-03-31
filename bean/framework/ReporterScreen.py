@@ -407,8 +407,12 @@ class ReporterScreen(Screen):
         if not match_target_position:
             edits["rel_pos"] = edits.edit.map(lambda e: e.rel_pos)
             edits["in_rel_pos_range"] = (
-                edits.rel_pos >= rel_pos_start + edits.guide_start_pos
-            ) & (edits.rel_pos < rel_pos_end + edits.guide_start_pos)
+                edits.rel_pos
+                >= rel_pos_start + (0 if rel_pos_is_reporter else edits.guide_start_pos)
+            ) & (
+                edits.rel_pos
+                < rel_pos_end + (0 if rel_pos_is_reporter else edits.guide_start_pos)
+            )
             good_edits = edits.loc[
                 edits.in_rel_pos_range, ["guide", "edit"] + self.samples.index.tolist()
             ]

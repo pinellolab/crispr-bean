@@ -61,9 +61,7 @@ def _add_absent_edits(
 
 
 def get_edit_rates(
-    bdata,
-    edit_count_key="edit_counts",
-    add_absent=True,
+    bdata, edit_count_key="edit_counts", add_absent=True, adjust_spacer_pos: bool = True
 ):
     """
     Obtain position- and context-wise editing rate (context: base preceding the target base position).
@@ -87,17 +85,30 @@ def get_edit_rates(
                 edit_rates_agg.guide.unique(),
                 desc="Calibrating edits in editable positions...",
             ):
-                edit_rates_agg = _add_absent_edits(bdata, guide, edit_rates_agg)
-        if "guide_len" not in bdata.guides.columns:
-            bdata.guides["guide_len"] = bdata.guides.sequence.map(len)
-        start_pad = (
-            32 - 6 - bdata.guides.guide_len[edit_rates_agg.guide].reset_index(drop=True)
-        )
-        edit_rates_agg["spacer_pos"] = (edit_rates_agg.rel_pos - start_pad).astype(int)
-        edit_rates_agg = edit_rates_agg[
-            (edit_rates_agg.spacer_pos >= 0) & (edit_rates_agg.spacer_pos < 20)
-        ].reset_index(drop=True)
-        edit_rates_agg.loc[:, "spacer_pos"] = edit_rates_agg["spacer_pos"] + 1
+                edit_rates_agg = _add_absent_edits(
+                    bdata,
+                    guide,
+                    edit_rates_agg,
+                    edited_base=bdata.base_edited_from,
+                    target_alt=bdata.base_edited_to,
+                )
+        if adjust_spacer_pos:
+            if "guide_len" not in bdata.guides.columns:
+                bdata.guides["guide_len"] = bdata.guides.sequence.map(len)
+            start_pad = (
+                32
+                - 6
+                - bdata.guides.guide_len[edit_rates_agg.guide].reset_index(drop=True)
+            )
+            edit_rates_agg["spacer_pos"] = (edit_rates_agg.rel_pos - start_pad).astype(
+                int
+            )
+            edit_rates_agg = edit_rates_agg[
+                (edit_rates_agg.spacer_pos >= 0) & (edit_rates_agg.spacer_pos < 20)
+            ].reset_index(drop=True)
+            edit_rates_agg.loc[:, "spacer_pos"] = edit_rates_agg["spacer_pos"] + 1
+        else:
+            edit_rates_agg["spacer_pos"] = edit_rates_agg.rel_pos + 1
         edit_rates_agg["base_change"] = edit_rates_agg.edit.map(
             lambda e: e.get_base_change()
         )
@@ -113,14 +124,25 @@ def get_edit_rates(
     return edit_rates_agg
 
 
-def plot_by_pos_context(edit_rates_df: pd.DataFrame):
-    context_to_offset_map = {"AA": -0.4, "GA": -0.2, "CA": 0, "TA": 0.2}
+def plot_by_pos_context(
+    edit_rates_df: pd.DataFrame,
+    target_base="A",
+):
+    target_base_alt = {"A": "G", "C": "T"}[target_base]
+    context_to_offset_map = {
+        f"A{target_base}": -0.4,
+        f"G{target_base}": -0.2,
+        f"C{target_base}": 0,
+        f"T{target_base}": 0.2,
+    }
     edit_rates_df[
         "spacer_pos_ctxt"
     ] = edit_rates_df.spacer_pos + edit_rates_df.context.map(context_to_offset_map)
     fig, ax = plt.subplots(figsize=(6, 3))
     sns.scatterplot(
-        edit_rates_df.loc[(edit_rates_df.base_change == "A>G")],
+        edit_rates_df.loc[
+            (edit_rates_df.base_change == f"{target_base}>{target_base_alt}")
+        ],
         x="spacer_pos_ctxt",
         y="rep_mean",
         hue="context",
@@ -131,7 +153,7 @@ def plot_by_pos_context(edit_rates_df: pd.DataFrame):
     )
     ax.legend(bbox_to_anchor=(1.02, 0.5), loc="center left", title="Context")
     ax.set_xlabel("Protospacer position")
-    ax.set_ylabel("A>G editing rate")
+    ax.set_ylabel(f"{target_base}>{target_base_alt} editing rate")
     ax.set_ylim((0, 1))
     return ax
 
@@ -310,7 +332,7 @@ def get_position_by_pam_rates(bdata, edit_rates_df: pd.DataFrame):
     edit_rates_df["pam12"] = edit_rates_df.pam.map(lambda s: s[:2])
     edit_rates_df["pam34"] = edit_rates_df.pam.map(lambda s: s[2:4])
     return pd.pivot(
-        edit_rates_df.loc[(edit_rates_df.base_change == "A>G")]
+        edit_rates_df.loc[(edit_rates_df.base_change == bdata.target_base_change)]
         .groupby(["pam23", "spacer_pos"])
         .mean()
         .reset_index(),
@@ -338,7 +360,7 @@ def plot_by_pos_pam_and_context(bdata, edit_rates_df, figsize=(6, 6)):
     pos_by_pam = get_position_by_pam_rates(bdata, edit_rates_df)
     fig, ax = plt.subplots(2, 1, figsize=figsize)
     sns.scatterplot(
-        edit_rates_df.loc[(edit_rates_df.base_change == "A>G")],
+        edit_rates_df.loc[(edit_rates_df.base_change == bdata.target_base_change)],
         x="spacer_pos_ctxt",
         y="rep_mean",
         hue="context",
@@ -351,7 +373,7 @@ def plot_by_pos_pam_and_context(bdata, edit_rates_df, figsize=(6, 6)):
     ax[0].set_xlabel("Protospacer position")
     ax[0].set_xticks(list(range(1, 21)))
     ax[0].set_xticklabels(list(range(1, 21)))
-    ax[0].set_ylabel("A>G editing rate")
+    ax[0].set_ylabel(f"{bdata.target_base_change} editing rate")
     ax[0].set_ylim((0, 1))
     ax[0].set_xlim((0.5, 20.5))
 

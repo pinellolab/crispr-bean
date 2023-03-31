@@ -78,7 +78,7 @@ def parse_args():
     if args.out_screen_path is None:
         args.out_screen_path = f"{args.bdata_path.rsplit('.h5ad', 1)[0]}.filtered.h5ad"
     if args.out_report_prefix is None:
-        args.out_report_prefix = f"{args.bdata_prefix.rsplit('.h5ad', 1)[0]}.qc_report"
+        args.out_report_prefix = f"{args.bdata_path.rsplit('.h5ad', 1)[0]}.qc_report"
     return args
 
 

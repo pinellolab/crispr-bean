@@ -146,7 +146,7 @@ def check_args(args):
 if __name__ == "__main__":
     args = parse_args()
     check_args(args)
-    bdata = be.read_h5ad(args.h5ad_path)
+    bdata = be.read_h5ad(args.bdata_path)
     allele_df_keys = ["allele_counts"]
     info(
         f"Starting from .uns['allele_counts'] with {len(bdata.uns['allele_counts'])} alleles."

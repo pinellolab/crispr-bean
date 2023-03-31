@@ -164,6 +164,10 @@ class ReporterScreen(Screen):
         return self.uns["target_base_change"][-1]
 
     @property
+    def target_base_change(self):
+        return self.uns["target_base_change"]
+
+    @property
     def tiling(self):
         return self.uns["tiling"]
 

@@ -2,6 +2,7 @@
 import os
 import sys
 import logging
+from copy import deepcopy
 from functools import partial
 import numpy as np
 import pandas as pd
@@ -39,6 +40,7 @@ pyro.set_rng_seed(101)
 DATACLASS_DICT = {
     "Normal": VariantSortingReporterScreenData,
     "MixtureNormal": VariantSortingReporterScreenData,
+    "_MixtureNormal+Acc": VariantSortingReporterScreenData,  # TODO: old
     "MixtureNormal+Acc": VariantSortingReporterScreenData,
     "MixtureNormalConstPi": VariantSortingScreenData,
     "MultiMixtureNormal": TilingSortingReporterScreenData,
@@ -49,6 +51,7 @@ DATACLASS_DICT = {
 def run_inference(
     model, guide, data, initial_lr=0.01, gamma=0.1, num_steps=2000, autoguide=False
 ):
+    pyro.clear_param_store()
     lrd = gamma ** (1 / num_steps)
     svi = pyro.infer.SVI(
         model=model,
@@ -88,7 +91,6 @@ def _get_guide_target_info(bdata):
         .groupby("target", sort=False)
         .agg({"edit_rate": ["mean", "std"]})
     )
-
     edit_rate_info.columns = edit_rate_info.columns.get_level_values(1)
     edit_rate_info = edit_rate_info.rename(
         columns={"mean": "edit_rate_mean", "std": "edit_rate_std"}
@@ -96,12 +98,18 @@ def _get_guide_target_info(bdata):
     target_info = (
         guide_info[
             ["target"]
-            + [col for col in guide_info.columns if col.startswith("target_")]
-        ]  # TODO: this should be generalized! (Target gene/variant, Group2)
+            + [
+                col
+                for col in guide_info.columns
+                if col.startswith("target_")
+                and len(guide_info[["target", col]].drop_duplicates())
+                == len(guide_info["target"].unique())
+            ]
+        ]
         .drop_duplicates()
         .set_index("target", drop=True)
     )
-    target_info = target_info.join(edit_rate_info).reset_index()
+    target_info = target_info.join(edit_rate_info)
     return target_info
 
 
@@ -214,6 +222,12 @@ def parse_args():
         help="Fit the shared negative control distribution to normalize the fitted parameters",
     )
     parser.add_argument(
+        "--negctrl-col",
+        type=str,
+        default="target_group",
+        help="Column in bdata.obs specifying if a guide is negative control. If the (column value).tolower() == 'negctrl', it is treated as negative control guide.",
+    )
+    parser.add_argument(
         "--repguide-mask",
         type=str,
         default="repguide_mask",
@@ -242,6 +256,21 @@ def parse_args():
         type=str,
         default=None,
         help="Path to splicing site",
+    )
+    parser.add_argument(
+        "--control-guide-tag",
+        type=str,
+        default="CONTROL",
+        help="If this string is in guide name, treat each guide separately not to mix the position. Used for negative controls.",
+    )
+    parser.add_argument(
+        "--dont-fit-noise",  # TODO: add check args
+        action="store_true",
+    )
+    parser.add_argument(
+        "--load-existing",  # TODO: add check args
+        action="store_true",
+        help="Load existing .pkl file if present.",
     )
 
     return parser.parse_args()
@@ -313,13 +342,17 @@ def identify_model_guide(args):
             f"Using Mixture Normal model {'with accessibility normalization' if args.scale_by_acc else ''}..."
         )
         return (
-            f"MixtureNormal{'+Acc' if args.scale_by_acc else ''}",
+            f"{'_' if args.dont_fit_noise else ''}MixtureNormal{'+Acc' if args.scale_by_acc else ''}",
             partial(
                 m.MixtureNormalModel,
                 scale_by_accessibility=args.scale_by_acc,
                 use_bcmatch=~args.ignore_bcmatch,
             ),
-            m.MixtureNormalGuide,
+            partial(
+                m.MixtureNormalGuide,
+                scale_by_accessibility=args.scale_by_acc,
+                fit_noise=~args.dont_fit_noise,
+            ),
         )
 
 
@@ -339,7 +372,7 @@ def main(args):
     model_label, model, guide = identify_model_guide(args)
     bdata = be.read_h5ad(args.bdata_path)
     guide_index = bdata.guides.index
-    print("Done loading data. Preprocessing...")
+    info("Done loading data. Preprocessing...")
     bdata.samples["rep"] = bdata.samples["rep"].astype("category")
     ndata = DATACLASS_DICT[model_label](
         screen=bdata,
@@ -351,6 +384,7 @@ def main(args):
         use_const_pi=args.const_pi,
         condition_column=args.condition_column,
         allele_df_key=args.allele_df_key,
+        control_guide_tag=args.control_guide_tag,
     )
     if args.mode == "variant":
         target_info_df = _get_guide_target_info(bdata)
@@ -367,21 +401,28 @@ def main(args):
     guide_info_df = bdata.guides
     del bdata
 
-    print(f"Running inference for {model_label}...")
+    info(f"Running inference for {model_label}...")
 
-    param_history_dict = run_inference(model, guide, ndata)
+    if args.load_existing:
+        with open(f"{prefix}/{model_label}.result.pkl", "rb") as handle:
+            param_history_dict = pkl.load(handle)
+    else:
+        param_history_dict = deepcopy(run_inference(model, guide, ndata))
+        if args.fit_negctrl:
+            negctrl_model = m.ControlNormalModel
+            negctrl_guide = m.ControlNormalGuide
+            negctrl_idx = np.where(
+                guide_info_df[args.negctrl_col].map(lambda s: s.lower()) == "negctrl"
+            )[0]
+            print(len(negctrl_idx))
+            print(negctrl_idx.shape)
+            ndata_negctrl = ndata[negctrl_idx]
+            param_history_dict["negctrl"] = run_inference(
+                negctrl_model, negctrl_guide, ndata_negctrl
+            )
 
-    if args.fit_negctrl:
-        negctrl_model = m.ControlNormalModel
-        negctrl_guide = m.ControlNormalGuide
-        negctrl_idx = np.where(guide_info_df.Group.str.tolower() == "negctrl")[0]
-        ndata_negctrl = ndata[negctrl_idx]
-        param_history_dict["negctrl"] = run_inference(
-            negctrl_model, negctrl_guide, ndata_negctrl
-        )
-
-    outfile_path = f"{prefix}/{model_label}.result.pkl"
-    print(f"Done running inference. Writing result at {outfile_path}...")
+    outfile_path = f"{prefix}/bean_element[sgRNA]_result.{model_label}.csv"
+    info(f"Done running inference. Writing result at {outfile_path}...")
     with open(f"{prefix}/{model_label}.result.pkl", "wb") as handle:
         pkl.dump(param_history_dict, handle)
     write_result_table(
@@ -390,8 +431,12 @@ def main(args):
         model_label=model_label,
         prefix=f"{prefix}/",
         guide_index=guide_index,
+        guide_acc=ndata.guide_accessibility.cpu().numpy()
+        if hasattr(ndata, "guide_accessibility")
+        and ndata.guide_accessibility is not None
+        else None,
     )
-    print("Done!")
+    info("Done!")
 
 
 if __name__ == "__main__":

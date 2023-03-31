@@ -860,14 +860,20 @@ def concat(screens: Collection[ReporterScreen], *args, axis=1, **kwargs):
 
     if axis == 0:
         for k in keys:
-            if "edit" not in k and "allele" not in k:
+            if k in ["target_base_change", "tiling"]:
+                adata.uns[k] = screens[0].uns[k]
+                continue
+            elif "edit" not in k and "allele" not in k:
                 continue
             adata.uns[k] = pd.concat([screen.uns[k] for screen in screens])
 
     if axis == 1:
         # If combining multiple samples, edit/allele tables should be merged.
         for k in keys:
-            if "edit" not in k and "allele" not in k:
+            if k in ["target_base_change", "tiling"]:
+                adata.uns[k] = screens[0].uns[k]
+                continue
+            elif "edit" not in k and "allele" not in k:
                 continue
             screen_uns_dfs = [screen.uns[k] for screen in screens]
 

@@ -2,6 +2,7 @@ import torch
 import torch.distributions as tdist
 import pyro
 import pyro.distributions as dist
+import pyro.distributions.constraints as constraints
 
 
 def get_alpha(
@@ -99,6 +100,7 @@ def scale_pi_by_accessibility(
     guide_accessibility: torch.Tensor,
     a: float = 0.2513,
     b: float = -1.9458,
+    fit_noise: bool = False,
 ):
     """Scale pi by its accessibility.
 
@@ -116,11 +118,11 @@ def scale_pi_by_accessibility(
     pi = torch.concat([ctrl_pi.unsqueeze(-1), scaled_pi], axis=-1)
     pi = pi / pi.sum(axis=-1).clamp(min=1.0)[..., None]
     assert pi.shape == pi_shape, (pi.shape, scaled_pi.shape, pi_shape)
-    pi = add_noise_to_pi(pi)
+    pi = add_noise_to_pi(pi, fit_noise=fit_noise)
     return pi
 
 
-def add_noise_to_pi(pi: torch.Tensor, pi_noise_sd: float = 0.655):
+def add_noise_to_pi(pi: torch.Tensor, pi_noise_sd: float = 0.655, fit_noise=False):
     """Add noise to pi.
 
     Gaussian noise is added on the logit scale. Scale of the noise is fitted from the data (updated 1/17/2023).
@@ -131,11 +133,24 @@ def add_noise_to_pi(pi: torch.Tensor, pi_noise_sd: float = 0.655):
     pi_shape = pi.shape
     n_reps, _, n_guides, n_alleles = pi_shape
     logit_pi = torch.logit(pi[..., 1:].clamp(min=1e-3, max=1 - 1e-3))
-
-    with pyro.plate("guide_plate_noise", n_guides):
-        logit_pi_noise = pyro.sample(
-            "logit_pi_noise", dist.Normal(0, pi_noise_sd), infer={"is_auxiliary": True}
-        )
+    if fit_noise:
+        with pyro.plate("guide_plate_noise", n_guides):
+            noise_loc = pyro.param("noise_loc", torch.zeros((n_guides,)))
+            noise_scale = pyro.param(
+                "noise_scale",
+                torch.ones((n_guides,)) * pi_noise_sd,
+                constraint=constraints.positive,
+            )
+            logit_pi_noise = pyro.sample(
+                "logit_pi_noise",
+                dist.Normal(noise_loc, noise_scale),  # infer={"is_auxiliary": True}
+            )
+    else:
+        with pyro.plate("guide_plate_noise", n_guides):
+            logit_pi_noise = pyro.sample(
+                "logit_pi_noise",
+                dist.Normal(0, pi_noise_sd),  # infer={"is_auxiliary": True}
+            )
     logit_pi += (
         logit_pi_noise.unsqueeze(0)
         .unsqueeze(0)

@@ -334,6 +334,7 @@ def MixtureNormalModel(
     use_bcmatch: bool = True,
     sd_scale: float = 0.01,
     scale_by_accessibility: bool = False,
+    fit_noise: bool = False,
 ):
     """
     Args:
@@ -403,7 +404,9 @@ def MixtureNormalModel(
             )
     if scale_by_accessibility:
         # Endogenous target site editing rate may be different
-        pi = scale_pi_by_accessibility(pi, data.guide_accessibility)
+        pi = scale_pi_by_accessibility(
+            pi, data.guide_accessibility, fit_noise=fit_noise
+        )
     with replicate_plate:
         with bin_plate as b:
             uq = data.upper_bounds[b]
@@ -495,8 +498,10 @@ def NormalGuide(data):
 
 def MixtureNormalGuide(
     data,
-    alpha_prior=1,
-    use_bcmatch=True,
+    alpha_prior: float = 1,
+    use_bcmatch: bool = True,
+    scale_by_accessibility: bool = False,
+    fit_noise: bool = False,
 ):
     """
     Guide for MixtureNormal model
@@ -560,6 +565,11 @@ def MixtureNormalGuide(
                 data.n_guides,
                 2,
             ), pi.shape
+    if scale_by_accessibility:
+        # Endogenous target site editing rate may be different
+        pi = scale_pi_by_accessibility(
+            pi, data.guide_accessibility, fit_noise=fit_noise
+        )
 
 
 def ControlNormalGuide(data, mask_thres=10, use_bcmatch=True):

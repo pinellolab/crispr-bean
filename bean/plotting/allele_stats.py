@@ -26,10 +26,13 @@ def plot_n_guides_per_edit(
     bdata, allele_df_key: str, allele_col: str = "aa_allele", ax=None
 ):
     a = bdata.uns[allele_df_key][["guide", allele_col]].copy()
-    a["edits"] = a[allele_col].map(
-        lambda a: list(a.aa_allele.edits)
-        + list(map(lambda e: e.get_abs_edit(), a.nt_allele.edits))
-    )
+    if allele_col == "aa_allele":
+        a["edits"] = a[allele_col].map(
+            lambda a: list(a.aa_allele.edits)
+            + list(map(lambda e: e.get_abs_edit(), a.nt_allele.edits))
+        )
+    elif allele_col == "allele":
+        a["edits"] = a[allele_col].map(lambda a: list(a.edits))
     edits_df = a.explode("edits")[["guide", "edits"]]
     edits_df["edits"] = edits_df.edits.map(str)
     edits_df = edits_df.loc[~edits_df.edits.str.startswith("-"), :].drop_duplicates()
@@ -38,6 +41,6 @@ def plot_n_guides_per_edit(
         fig, ax = plt.subplots()
     ax.hist(n_guides, bins=np.arange(min(n_guides) - 0.5, max(n_guides) + 0.5))
     ax.set_xlabel("# guides")
-    ax.set_title(f"# guides per edit (n={len(bdata.uns[allele_df_key])})")
+    ax.set_title(f"# guides per edit (n={len(edits_df)})")
     ax.set_ylabel("# edits")
     return ax

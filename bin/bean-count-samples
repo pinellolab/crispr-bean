@@ -58,6 +58,7 @@ def get_input_parser() -> argparse.Namespace:
         + "Formatted as `sample_id,guide_end_seq`",
         default=None,
     )
+    
     parser.add_argument(
         "--rerun", help="Recount each sample", action="store_true", default=False
     )

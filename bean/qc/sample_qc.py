@@ -22,7 +22,7 @@ def plot_sample_edit_rates(
     set_sample_edit_rates(bdata, agg_method)
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
-    for i, sample in enumerate(bdata.condit.index):
+    for i, sample in enumerate(bdata.samples.index):
         sns.kdeplot(
             bdata.layers["edit_rate"][:, i],
             label=f"{sample}(median {np.nanmedian(bdata.layers['edit_rate'][:, i]):.2f})",
@@ -46,10 +46,10 @@ def set_sample_edit_rates(
             "ReporterScreen object doesn't have .edit_rate. Calculate target site edits first using .get_edit_rate(...)"
         )
     if agg_method == "median":
-        bdata.condit[f"{agg_method}_editing_rate"] = np.nanmedian(
+        bdata.samples[f"{agg_method}_editing_rate"] = np.nanmedian(
             bdata.layers["edit_rate"], axis=0
         )
     if agg_method == "mean":
-        bdata.condit[f"{agg_method}_editing_rate"] = np.nanmean(
+        bdata.samples[f"{agg_method}_editing_rate"] = np.nanmean(
             bdata.layers["edit_rate"], axis=0
         )

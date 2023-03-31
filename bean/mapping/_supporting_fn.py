@@ -10,6 +10,7 @@ from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from .CRISPResso2Align import read_matrix, global_align_base_editor
 from ..framework.Edit import Allele, Edit
 
+
 class InputFileError(Exception):
     pass
 
@@ -85,6 +86,7 @@ def _check_readname_match(R1: List[SeqIO.SeqRecord], R2: List[SeqIO.SeqRecord]):
                     )
                 )
 
+
 def _get_guide_to_reporter_df(sgRNA_filename: str) -> pd.DataFrame:
     """Returns a gRNA name to reporter sequence mapping."""
     guide_to_reporter = {}
@@ -106,9 +108,9 @@ def revcomp(seq: Union[Seq, str]) -> str:
 
 
 def _fastq_iter_to_text(record: SeqIO.SeqRecord):
-    t = record.id, 
+    t = (record.id,)
     seq = record.seq
-    q = record.letter_annotations['phred_quality']
+    q = record.letter_annotations["phred_quality"]
     return "{}\n{}\n+\n{}\n".format(t, seq, q)
 
 
@@ -145,61 +147,79 @@ def _get_edited_allele(
 
     return allele
 
+
 def _write_alignment_matrix(
-    ref_base: str,
-    alt_base: str, 
-    path,
-    allow_complementary= False):
-    '''
+    ref_base: str, alt_base: str, path, allow_complementary=False
+):
+    """
     Writes base substitution matrix
-    '''
+    """
     bases = ["A", "C", "T", "G"]
     if not (ref_base in bases and alt_base in bases):
-        raise ValueError("Specified ref base '{}' or alt base '{}' isn't valid".format(ref_base, alt_base))
-    mat = np.ones((4,4), dtype=int)*-4
+        raise ValueError(
+            "Specified ref base '{}' or alt base '{}' isn't valid".format(
+                ref_base, alt_base
+            )
+        )
+    mat = np.ones((4, 4), dtype=int) * -4
     np.fill_diagonal(mat, 5)
-    aln_df = pd.DataFrame(mat, index = bases, columns = bases)
+    aln_df = pd.DataFrame(mat, index=bases, columns=bases)
     aln_df.loc[ref_base, alt_base] = 0
     if allow_complementary:
-        comp_map = {"A":"T", "C":"G", "T":"A", "G":"C"}
+        comp_map = {"A": "T", "C": "G", "T": "A", "G": "C"}
         aln_df.loc[comp_map[ref_base], comp_map[alt_base]] = 0
-    aln_df.to_csv(path, sep = " ")
+    aln_df.to_csv(path, sep=" ")
+
 
 def _get_allele_from_alignment(
-    ref_aligned: str, 
-    query_aligned: str, 
-    offset: int, 
-    strand: int, 
-    start_pos: int, end_pos: int, 
-    positionwise_quality: np.ndarray = None, 
-    quality_thres: float = -1,):
+    ref_aligned: str,
+    query_aligned: str,
+    offset: int,
+    strand: int,
+    start_pos: int,
+    end_pos: int,
+    positionwise_quality: np.ndarray = None,
+    quality_thres: float = -1,
+):
     assert len(ref_aligned) == len(query_aligned)
     allele = Allele()
     ref_gaps = 0
     alt_gaps = 0
-    alt_seq_len = len(query_aligned) - query_aligned.count('-')
+    alt_seq_len = len(query_aligned) - query_aligned.count("-")
     if positionwise_quality is None:
-        #alt_position_is_good_quality = np.ones(alt_seq_len, dtype=bool)
-        alt_position_is_good_quality = np.array([c != "N" for c in query_aligned.replace('-', '')])
+        # alt_position_is_good_quality = np.ones(alt_seq_len, dtype=bool)
+        alt_position_is_good_quality = np.array(
+            [c != "N" for c in query_aligned.replace("-", "")]
+        )
     else:
         assert len(positionwise_quality) == alt_seq_len
         alt_position_is_good_quality = positionwise_quality > quality_thres
     for i in range(len(ref_aligned)):
-        if ref_aligned[i] == query_aligned[i]: continue
+        if ref_aligned[i] == query_aligned[i]:
+            continue
         ref_base = ref_aligned[i]
         alt_base = query_aligned[i]
-        if alt_base != '-':
+        if alt_base != "-":
             alt_base_is_good_quality = alt_position_is_good_quality[i - alt_gaps]
         else:
             alt_base_is_good_quality = True
-        if ref_base == '-': ref_gaps += 1
-        elif alt_base == '-': alt_gaps += 1
+        if ref_base == "-":
+            ref_gaps += 1
+        elif alt_base == "-":
+            alt_gaps += 1
         ref_pos = i - ref_gaps
         if alt_base_is_good_quality and ref_pos >= start_pos and ref_pos < end_pos:
-            allele.add(Edit(rel_pos = ref_pos, ref_base = ref_base, alt_base = alt_base,
-            offset = offset, strand = strand
-            ))
-    return(allele)
+            allele.add(
+                Edit(
+                    rel_pos=ref_pos,
+                    ref_base=ref_base,
+                    alt_base=alt_base,
+                    offset=offset,
+                    strand=strand,
+                )
+            )
+    return allele
+
 
 def _get_edited_allele_crispresso(
     ref_seq: str,
@@ -213,45 +233,67 @@ def _get_edited_allele_crispresso(
     end_pos: int = 100,
     positionwise_quality: np.ndarray = None,
     quality_thres: float = 30,
-    objectify_allele = True
+    objectify_allele=True,
 ):
     aln_matrix = read_matrix(aln_mat_path)
     assert strand in [-1, +1]
-    gap_incentive = np.zeros(len(ref_seq) + 1, dtype = np.int)
+    gap_incentive = np.zeros(len(ref_seq) + 1, dtype=np.int)
     query_aligned, ref_aligned, score = global_align_base_editor(
-        query_seq, 
-        ref_seq, 
+        query_seq,
+        ref_seq,
         ref_base,
         alt_base,
-        aln_matrix, 
+        aln_matrix,
         gap_incentive,
-        gap_open = -20,
-        gap_extend = -10,
+        gap_open=-20,
+        gap_extend=-10,
     )
     if objectify_allele:
-        allele = _get_allele_from_alignment(ref_aligned, query_aligned, offset, strand, start_pos, end_pos, 
-        positionwise_quality, quality_thres)
+        allele = _get_allele_from_alignment(
+            ref_aligned,
+            query_aligned,
+            offset,
+            strand,
+            start_pos,
+            end_pos,
+            positionwise_quality,
+            quality_thres,
+        )
         for e in allele.edits:
-            if e.ref_base == '-': continue
-            assert ref_seq[e.rel_pos] == e.ref_base, "relative position mismatch: ref pos {}: {} vs {}".format(
-                e.rel_pos, ref_seq[e.rel_pos], e.ref_base) + \
-            "\nallele {}, \nrefseq {}, \naltseq {}, \n".format(allele, ref_seq, query_seq) + \
-                "ref_align {}, \nalt_align {}".format(ref_aligned, query_aligned)
+            if e.ref_base == "-":
+                continue
+            assert ref_seq[e.rel_pos] == e.ref_base, (
+                "relative position mismatch: ref pos {}: {} vs {}".format(
+                    e.rel_pos, ref_seq[e.rel_pos], e.ref_base
+                )
+                + "\nallele {}, \nrefseq {}, \naltseq {}, \n".format(
+                    allele, ref_seq, query_seq
+                )
+                + "ref_align {}, \nalt_align {}".format(ref_aligned, query_aligned)
+            )
     else:
-        allele = _string_filter_basewise_quality(ref_aligned, query_aligned, positionwise_quality, quality_thres)
-    return(allele, score)
+        allele = _string_filter_basewise_quality(
+            ref_aligned, query_aligned, positionwise_quality, quality_thres
+        )
+    return (allele, score)
 
-def _string_filter_basewise_quality(ref_seq, query_seq, positionwise_quality, quality_thres):
+
+def _string_filter_basewise_quality(
+    ref_seq, query_seq, positionwise_quality, quality_thres
+):
     query_seq_chars = list(query_seq)
     for i in range(len(positionwise_quality)):
         if positionwise_quality[i] < quality_thres:
             query_seq_chars[i] = ref_seq[i]
-    return("".join(query_seq_chars))
+    return "".join(query_seq_chars)
+
 
 def _multiindex_dict_to_df(input_dict, key_column_names, value_column_name):
     if not isinstance(key_column_names, list):
         key_column_names = [key_column_names]
-    mi = pd.MultiIndex.from_tuples(input_dict.keys(), names=["guide"] + key_column_names)
+    mi = pd.MultiIndex.from_tuples(
+        input_dict.keys(), names=["guide"] + key_column_names
+    )
     df = pd.DataFrame.from_dict(
         input_dict,
         orient="index",
@@ -260,7 +302,16 @@ def _multiindex_dict_to_df(input_dict, key_column_names, value_column_name):
     df.index = mi
     df.reset_index(inplace=True)
     if len(key_column_names) == 1:
-        df.rename(columns={"level_0": "guide", "level_1": key_column_names[0]}, inplace=True)
+        df.rename(
+            columns={"level_0": "guide", "level_1": key_column_names[0]}, inplace=True
+        )
     elif len(key_column_names) == 2:
-        df.rename(columns={"level_0": "guide", "level_1": key_column_names[0], "level_2": key_column_names[1]}, inplace=True)
+        df.rename(
+            columns={
+                "level_0": "guide",
+                "level_1": key_column_names[0],
+                "level_2": key_column_names[1],
+            },
+            inplace=True,
+        )
     return df

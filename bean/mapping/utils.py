@@ -4,6 +4,7 @@ import gzip
 import pandas as pd
 from Bio import SeqIO
 
+
 class InputFileError(Exception):
     """Raised when the input file is not valid."""
 
@@ -170,6 +171,11 @@ def _get_input_parser():
         "-m",
         "--count-guide-reporter-alleles",
         help="count the matched allele of guide and reporter edit",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--tiling",
+        help="Specify that the guide library is tiling library without 'n guides per target' design",
         action="store_true",
     )
 

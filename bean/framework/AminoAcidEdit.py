@@ -130,6 +130,16 @@ class AminoAcidAllele(Allele):
             severities.append(edit._severity())
         return max(severities)
 
+    def get_most_severe_edit(self):
+        if len(self.edits) == 0:
+            return None
+        severities = []
+        edits = []
+        for edit in self.edits:
+            severities.append(edit._severity())
+            edits.append(edit)
+        return edits[np.argmax(severities)]
+
 
 class CodingNoncodingAllele(Allele):
     def __init__(
@@ -185,6 +195,13 @@ class CodingNoncodingAllele(Allele):
         if len(self.nt_allele.edits) > 0:
             return max(aa_sev, 0.1)
         return aa_sev
+
+    def get_most_severe_edit(self):
+        aa_sev = self.aa_allele.get_most_severe()
+        sev_aa = self.aa_allele.get_most_severe_edit()
+        if len(self.nt_allele.edits) > 0 and aa_sev > 0.1:
+            return next(iter(self.nt_allele.edits))
+        return sev_aa
 
     def set_uid(self, uid):
         self.uid = uid

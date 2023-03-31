@@ -1,6 +1,5 @@
-from contextlib import suppress
 import os
-from typing import List, Iterable
+from typing import List, Iterable, Dict, Tuple, Collection
 from copy import deepcopy
 import numpy as np
 import pandas as pd
@@ -9,7 +8,6 @@ import bean as be
 from bean.framework.Edit import Edit, Allele
 from bean.framework.AminoAcidEdit import (
     AminoAcidEdit,
-    AminoAcidAllele,
     CodingNoncodingAllele,
 )
 import logging
@@ -103,7 +101,8 @@ class RefBaseMismatchException(Exception):
 
 
 # This function is adopted from https://github.com/gpp-rnd/be-validation-pipeline/blob/main/notebooks/01_BEV_allele_frequencies.ipynb
-def _translate(seq, codon_map):
+def _translate(seq: str, codon_map: Dict[str, str]):
+    """Translate seq"""
     #     if not seq: # if remove_introns returned False -> possible splice site mutation
     if seq == "UTR":
         return "Possible UTR mutation"
@@ -115,29 +114,20 @@ def _translate(seq, codon_map):
     while i < len(seq):
         substring = ""
         while frame <= 3:
-            if i < len(seq):
-                if seq[i] == "-":  # print('deletion')
-                    i += 1
-                else:
-                    substring += seq[i]
-                    i += 1
-                    frame += 1
-            else:  # if reached end of the sequence and frame still <=3, complete codon sequence based on last_codon
-                substring += last_codon[frame - 1]
-                i += 1
+            if i >= len(seq):
+                return aa + ">"
+            if seq[i] != "-":
+                substring += seq[i]
                 frame += 1
+            i += 1
         if len(substring) == 3:
-            frame = 1  # reset frame
-            if "N" in substring:
-                aa = aa + "-"
-            else:
-                aa = aa + codon_map[substring]  # translate codon
-        else:
-            frame = 1
+            aa = aa + "-" if "N" in substring else aa + codon_map[substring]
+        frame = 1  # reset frame
     return aa
 
 
-def _parse_range(chr_range):
+def _parse_range(chr_range: str) -> Tuple[str, int, int]:
+    """Parse 'chr:start-end' into chr,start,end tuple"""
     chrom, gen_range = chr_range.split(":")
     start, end = gen_range.split("-")
     start = int(start)
@@ -145,14 +135,16 @@ def _parse_range(chr_range):
     return (chrom, start, end)
 
 
-def _parse_description(desc_str):
+def _parse_description(desc_str: str):
+    """Parse description line of fasta file to get range."""
     sstr = desc_str.split(" ")
     for s in sstr:
         if s.startswith("range="):
             return _parse_range(s[6:])
 
 
-def _get_seq_pos_from_fasta(fasta_file_name: str):
+def _get_seq_pos_from_fasta(fasta_file_name: str) -> Tuple[List[str], List[int]]:
+    """Obtain tuple of lists, first with nucleotide and second with genomic position of the nucleotide."""
     exons = list(SeqIO.parse(fasta_file_name, "fasta"))
     translated_seq = []
     genomic_pos = []
@@ -167,26 +159,23 @@ def _get_seq_pos_from_fasta(fasta_file_name: str):
 
 
 def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
+    """Translate `aa_pos`-th codon of `nt_seq_string`."""
     codon = "".join(nt_seq_string[aa_pos * 3 : (aa_pos * 3 + 3)])
     if len(codon) != 3:
         print("reached the end of CDS, frameshift.")
         return "/"
     try:
-        aa = codon_map[codon]
-        return aa
+        return codon_map[codon]
     except KeyError:
         if codon[-1] == "N" and codon[0] in BASE_SET and codon[1] in BASE_SET:
-            aa_set = set()
-            for N in BASE_SET:
-                aa_set.add(codon_map[codon[:2] + N])
+            aa_set = {codon_map[codon[:2] + N] for N in BASE_SET}
             if len(aa_set) == 1:
                 return next(iter(aa_set))
-            else:
-                print("warning: no matching aa with codon {}".format(codon))
-                return "_"
+            print(f"warning: no matching aa with codon {codon}")
         else:
-            print("Cannot translate codon due to ambiguity: {}".format(codon))
-            return "_"
+            print(f"Cannot translate codon due to ambiguity: {codon}")
+
+        return "_"
 
 
 class CDS:
@@ -218,9 +207,7 @@ class CDS:
     def _get_relative_nt_pos(self, absolute_pos):
         nt_relative_pos = np.where(type(self).pos == absolute_pos)[0]
         assert len(nt_relative_pos) <= 1, nt_relative_pos
-        if not nt_relative_pos:
-            return -1
-        return nt_relative_pos.astype(int).item()
+        return nt_relative_pos.astype(int).item() if nt_relative_pos else -1
 
     def _edit_pos_to_aa_pos(self, edit_pos):
         nt_relative_pos = self._get_relative_nt_pos(edit_pos)
@@ -242,9 +229,7 @@ class CDS:
         elif type(self).nt[rel_pos] != ref_base:
             if ref_base != "-":
                 raise RefBaseMismatchException(
-                    "ref:{} at pos {}, got edit {}".format(
-                        type(self).nt[rel_pos], rel_pos, edit
-                    )
+                    f"ref:{type(self).nt[rel_pos]} at pos {rel_pos}, got edit {edit}"
                 )
         else:
             self.edited_nt[rel_pos] = alt_base
@@ -287,24 +272,30 @@ def get_allele_aa_change(allele_str, include_synonymous=True, fasta_file=None):
     return cds.get_aa_change(include_synonymous)
 
 
-def translate_allele(allele: Allele, include_synonymouns=True, allow_ref_mismatch=True):
+def translate_allele(
+    allele: Allele, include_synonymouns=True, allow_ref_mismatch=True, fasta_file=None
+):
     try:
-        return get_allele_aa_change(allele, include_synonymous=include_synonymouns)
+        return get_allele_aa_change(
+            allele, include_synonymous=include_synonymouns, fasta_file=fasta_file
+        )
     except RefBaseMismatchException as e:
-        if allow_ref_mismatch:
-            print(e)
-            return "ref mismatch"
-        else:
+        if not allow_ref_mismatch:
             raise e
+        print(e)
+        return "ref mismatch"
 
 
-def translate_allele_df(allele_df, include_synonymouns=True, allow_ref_mismatch=True):
+def translate_allele_df(
+    allele_df, include_synonymouns=True, allow_ref_mismatch=True, fasta_file=None
+):
     allele_df = allele_df.copy()
     translated_alleles = allele_df.allele.map(
         lambda a: be.translate_allele(
             a,
             include_synonymouns=include_synonymouns,
             allow_ref_mismatch=allow_ref_mismatch,
+            fasta_file=fasta_file,
         )
     )
     allele_df.insert(2, "cn_allele", translated_alleles)
@@ -328,10 +319,7 @@ def filter_nt_allele(cn_allele: CodingNoncodingAllele, pos_include: Iterable[int
     For CodingNoncodingAllele object, retain all amino acid mutation while filtering the nt_allele based on edit position.
     """
     cn_allele = deepcopy(cn_allele)
-    edit_list = []
-    for e in cn_allele.nt_allele.edits:
-        if e.pos in pos_include:
-            edit_list.append(e)
+    edit_list = [e for e in cn_allele.nt_allele.edits if e.pos in pos_include]
     cn_allele.nt_allele = be.Allele(edit_list)
     return cn_allele
 
@@ -351,3 +339,55 @@ def filter_nt_alleles(cn_allele_df: pd.DataFrame, pos_include: Iterable[int]):
     alleles = alleles.groupby(["guide", "aa_allele"]).sum().reset_index()
     alleles = alleles.loc[alleles.aa_allele.map(bool), :]
     return alleles
+
+
+def annotate_edit(
+    edit_info: pd.DataFrame,
+    edit_col="edit",
+    splice_sites: Collection[
+        int
+    ] = None,  # TODO: may be needed to extended into multi-chromosome case
+):
+    """Classify edit strings into coding/noncoding and synonymous/misseinse[splicing/trunc]
+
+    Args
+    edit_info: pd.DataFrame with at least 1 column of 'edit_col', which has 'Edit' format.
+    splice_sites: Collection of integer splice site positions. If the edit position matches the positions, it will be annotated as 'splicing'.
+
+    """
+    edit_info = edit_info.copy()
+    edit_info["group"] = ""
+    edit_info["int_pos"] = -1
+    if "pos" not in edit_info.columns:
+        edit_info["pos"], transition = zip(*(edit_info[edit_col].str.split(":")))
+        edit_info["ref"], edit_info["alt"] = zip(
+            *(pd.Series(transition).str.split(">"))
+        )
+    edit_info.loc[edit_info.pos.map(lambda s: s.startswith("A")), "coding"] = "coding"
+    edit_info.loc[
+        edit_info.pos.map(lambda s: not s.startswith("A")), "coding"
+    ] = "noncoding"
+    edit_info.loc[edit_info.pos.map(lambda s: "CONTROL" in s), "group"] = "negctrl"
+    edit_info.loc[edit_info.pos.map(lambda s: "CONTROL" in s), "coding"] = "negctrl"
+    edit_info.loc[
+        (edit_info.coding == "noncoding") & (edit_info.group != "negctrl"), "int_pos"
+    ] = edit_info.loc[
+        (edit_info.coding == "noncoding") & (edit_info.group != "negctrl"), "pos"
+    ].map(
+        int
+    )
+
+    edit_info.loc[
+        (edit_info.alt != edit_info.ref) & (edit_info.coding == "coding"), "group"
+    ] = "missense"
+    edit_info.loc[edit_info.alt == "*", "group"] = "trunc"
+    edit_info.loc[
+        (edit_info.alt == edit_info.ref) & (edit_info.coding == "coding"), "group"
+    ] = "syn"
+    if splice_sites is not None:
+        edit_info.loc[
+            edit_info.pos.isin(splice_sites.astype(str)), "group"
+        ] = "splicing"
+    edit_info.loc[edit_info.int_pos < -100, "group"] = "negctrl"
+    edit_info.loc[edit_info.int_pos < -100, "coding"] = "negctrl"
+    return edit_info

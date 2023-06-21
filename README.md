@@ -32,12 +32,12 @@ pip install crispr-bean
 This wouldn't have variant effect size quantification (`bean-run`) functionality.  
 
 ## Count reporter screen data  
-`beret-count-samples` or `beret-count` maps guide into guide counts, **allowing for base transition in spacer sequence**. When the matched reporter information is provided, it can count the **target site edits** and **alleles produced by each guide**. Mapping is efficiently done based on [CRISPResso2](https://github.com/pinellolab/CRISPResso2) modified for base-edit-aware mapping.
+`bean-count-samples` or `bean-count` maps guide into guide counts, **allowing for base transition in spacer sequence**. When the matched reporter information is provided, it can count the **target site edits** and **alleles produced by each guide**. Mapping is efficiently done based on [CRISPResso2](https://github.com/pinellolab/CRISPResso2) modified for base-edit-aware mapping.
 
 
 
 ```python
-beret-count-samples         \
+bean-count-samples         \
   --input sample_list.csv   \ # sample with lines 'R1_filepath,R2_filepath,sample_name\n'  
   -b A                      \ # base that is being edited (A/G)
   -f gRNA_library.csv       \ # sgRNA information 
@@ -54,9 +54,9 @@ File should contain following columns.
 * `barcode`: R2 barcode to help match reporter to gRNA  
 
 Optional: 
-* `strand`: Specifies gRNA strand information relative to reference genome. 
+* `strand`: Specifies gRNA strand information relative to the reference genome. 
 * `start_pos`: gRNA starting position in the genome. Required when you provide `strand` column. Should specify the smaller coordinate value among start and end position regardless of gRNA strandedness.
-* `offset`: Specifies absolute positional offset to be added to edited position. Useful when you need amino acid translation results for ex. coding sequence tiling screens.
+* `offset`: Specifies the absolute positional offset to be added to the edited position. Useful when you need amino acid translation results for ex. coding sequence tiling screens.
 * `target_pos`: If `--match_target_pos` flag is used, input file needs `target_pos` which specifies 0-based relative position of targeted base within Reporter sequence.
   
 ### Output file format

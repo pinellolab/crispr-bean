@@ -37,14 +37,14 @@ This wouldn't have variant effect size quantification (`bean-run`) functionality
 
 
 ```python
-bean-count-samples         \
-  --input sample_list.csv   \ # sample with lines 'R1_filepath,R2_filepath,sample_name\n'  
-  -b A                      \ # base that is being edited (A/G)
-  -f gRNA_library.csv       \ # sgRNA information 
-  -o .                      \ # output directory    
-  -r                        \ # read edit/allele information from reporter  
-  -t 12                     \ # number of threads  
-  --name LDLvar_fullsort    \ # name of this sample run  
+bean-count-samples \
+  --input sample_list.csv   `# sample with lines 'R1_filepath,R2_filepath,sample_name\n'` \
+  -b A                      `# base that is being edited (A/G)` \
+  -f sgRNA_info_table.csv       `# sgRNA information` \
+  -o .                      `# output directory` \
+  -r                        `# read edit/allele information from reporter` \
+  -t 12                     `# number of threads` \
+  --name my_sorting_screen  `# name of this sample run`
 ```
 ### Input file format
 #### gRNA_library.csv

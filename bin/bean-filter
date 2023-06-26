@@ -73,7 +73,7 @@ def parse_args():
         "-j",
         type=float,
         help="Jaccard Index threshold when the alleles are mapped to the most similar alleles. In each filtering step, allele counts of filtered out alleles will be mapped to the most similar allele only if they have Jaccard Index of shared edit higher than this threshold.",
-        default=0.5,
+        default=0.3,
     )
     parser.add_argument(
         "--filter-window",
@@ -170,7 +170,10 @@ if __name__ == "__main__":
                 allele_df_keys[-1]
             ].loc[plasmid_adata.uns[allele_df_keys[-1]].allele.map(str) != "", :]
 
-            (q_val_each, sig_allele_df,) = be.an.filter_alleles.filter_alleles(
+            (
+                q_val_each,
+                sig_allele_df,
+            ) = be.an.filter_alleles.filter_alleles(
                 bdata, plasmid_adata, filter_each_sample=True, run_parallel=True
             )
             bdata.uns["sig_allele_counts"] = sig_allele_df.reset_index(drop=True)
@@ -184,7 +187,7 @@ if __name__ == "__main__":
             rel_pos_is_reporter=False,
             map_to_filtered=True,
             allele_uns_key=allele_df_keys[-1],
-            jaccard_threshold=args.jaccard_threshold,
+            jaccard_threshold=0.2,
         ).reset_index(drop=True)
         info(
             f"Filtered down to {len(bdata.uns[f'{allele_df_keys[-1]}_spacer'])} alleles."
@@ -243,6 +246,7 @@ if __name__ == "__main__":
                 bdata,
                 allele_df_keys[-1],
                 allele_prop_thres=args.filter_allele_proportion,
+                allele_count_thres=args.filter_allele_count,
                 sample_prop_thres=args.filter_sample_proportion,
                 map_to_filtered=True,
                 retain_max=True,

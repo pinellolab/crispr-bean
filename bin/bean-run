@@ -87,8 +87,8 @@ def run_inference(
 def _get_guide_target_info(bdata):
     guide_info = bdata.guides.copy()
     edit_rate_info = (
-        guide_info[["target", "edit_rate"]]
-        .groupby("target", sort=False)
+        guide_info[[args.target_column, "edit_rate"]]
+        .groupby(args.target_column, sort=False)
         .agg({"edit_rate": ["mean", "std"]})
     )
     edit_rate_info.columns = edit_rate_info.columns.get_level_values(1)
@@ -97,17 +97,18 @@ def _get_guide_target_info(bdata):
     )
     target_info = (
         guide_info[
-            ["target"]
+            [args.target_column]
             + [
                 col
                 for col in guide_info.columns
                 if col.startswith("target_")
-                and len(guide_info[["target", col]].drop_duplicates())
-                == len(guide_info["target"].unique())
+                and len(guide_info[[args.target_column, col]].drop_duplicates())
+                == len(guide_info[args.target_column].unique())
+                and col != args.target_column
             ]
         ]
         .drop_duplicates()
-        .set_index("target", drop=True)
+        .set_index(args.target_column, drop=True)
     )
     target_info = target_info.join(edit_rate_info)
     return target_info
@@ -176,6 +177,12 @@ def parse_args():
         help="Condition column to use.",
     )
     parser.add_argument(
+        "--target-column",
+        default="target",
+        type=str,
+        help="Column key in bdata.guides that describes the target element of each guide.",
+    )
+    parser.add_argument(
         "--guide-activity-col",
         "-a",
         type=str,
@@ -195,6 +202,12 @@ def parse_args():
         default=None,
         type=str,
         help="directory to save the run result",
+    )
+    parser.add_argument(
+        "--result-suffix",
+        default="",
+        type=str,
+        help="Suffix of the output files",
     )
     parser.add_argument(
         "--sorting-bin-upper-quantile-column",
@@ -225,6 +238,12 @@ def parse_args():
         "--negctrl-col",
         type=str,
         default="target_group",
+        help="Column in bdata.obs specifying if a guide is negative control. If the (column value).tolower() == 'negctrl', it is treated as negative control guide.",
+    )
+    parser.add_argument(
+        "--negctrl-col-value",
+        type=str,
+        default="negctrl",
         help="Column in bdata.obs specifying if a guide is negative control. If the (column value).tolower() == 'negctrl', it is treated as negative control guide.",
     )
     parser.add_argument(
@@ -300,6 +319,16 @@ def check_args(args):
         raise ValueError(
             "Invalid mode provided. Select either 'variant' or 'tiling'."
         )  # TODO: change this into discrete modes via argparse
+    if args.fit_negctrl:
+        bdata = be.read_h5ad(args.bdata_path)
+        n_negctrl = (
+            bdata.guides[args.negctrl_col].map(lambda s: s.lower())
+            == args.negctrl_col_value.lower()
+        ).sum()
+        if not n_negctrl >= 20:
+            raise ValueError(
+                f"Not enough negative control guide in the input data: {n_negctrl}. Check your input arguments."
+            )
     return args
 
 

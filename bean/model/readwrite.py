@@ -8,7 +8,7 @@ from statsmodels.stats.multitest import fdrcorrection
 
 def get_fdr(mu_z, plot=False):
     p_dec = norm.cdf(mu_z)
-    p_inc = 1 - norm.cdf(mu_z)
+    p_inc = norm.cdf(-mu_z)
     _, fdr_dec = fdrcorrection(p_dec)
     _, fdr_inc = fdrcorrection(p_inc)
     fdr = np.minimum(fdr_dec, fdr_inc)

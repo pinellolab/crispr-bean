@@ -67,11 +67,15 @@ class GuideEditCounter:
         self.min_single_bp_quality = kwargs["min_single_bp_quality"]
 
         self.guides_info_df = pd.read_csv(kwargs["sgRNA_filename"])
-        self.guides_has_strands = "strand" in self.guides_info_df.columns
+        self.guides_has_strands = (
+            "strand" in self.guides_info_df.columns
+        )  # @TODO: fix this?
         if self.guides_has_strands:
-            info("Considering strand information of guides")
-            assert "start_pos" in self.guides_info_df.columns
-            # assert "gRNA_end" in self.guides_info_df.columns
+            info("Considering `strand` column in sgRNA info file")
+            if "start_pos" not in self.guides_info_df.columns:
+                raise InputFileError("Guide `start_pos` not in sgRNA info file.")
+            if "guide_len" not in self.guides_info_df.columns:
+                self.guides_info_df["guide_len"] = self.guides_info_df.sequence.map(len)
         else:
             info("Ignoring guide strands, all guides are considered positive")
 
@@ -410,7 +414,7 @@ class GuideEditCounter:
         single_base_qual_cutoff: Ignore this base if the Phread quality score is less than this threshold
         guide_allele: Allele from baseedit in gRNA spacer sequence when paired with guide allele.
         """
-        ref_reporter_seq = self.screen.guides.Reporter[matched_guide_idx]
+        ref_reporter_seq = self.screen.guides.reporter[matched_guide_idx]
         read_reporter_seq, read_reporter_qual = self.get_reporter_seq_qual(R2_record)
 
         guide_strand, offset = self._get_strand_offset_from_guide_index(
@@ -470,9 +474,7 @@ class GuideEditCounter:
                 )
 
                 if len(bc_match) == 0:
-                    if (
-                        len(semimatch) == 0
-                    ):  # no guide matchsplit string by period pythonpan
+                    if len(semimatch) == 0:  # no guide match
                         if self.keep_intermediate:
                             _write_paired_end_reads(
                                 r1, r2, outfile_R1_nomatch, outfile_R2_nomatch
@@ -605,7 +607,7 @@ class GuideEditCounter:
         return revcomp(R2_seq[: self.guide_bc_len])
 
     def _match_read_to_sgRNA_bcmatch_semimatch(self, R1_seq: str, R2_seq: str):
-        # This should be adjusted for each experimental recipes.'
+        # This should be adjusted for each experimental recipes.
         guide_barcode = self.get_barcode(R1_seq, R2_seq)
         bc_match_idx = np.array([])
         semimatch_idx = np.array([])

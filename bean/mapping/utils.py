@@ -59,9 +59,8 @@ def _get_input_parser():
         "--sgRNA-filename",
         type=str,
         required=True,
-        help="""sgRNA description file. The format requires three columns: gRNA, Reporter, gRNA_barcode.""",
+        help="""sgRNA description file. The format requires three columns: name, sequence, barcode [ reporter [,strand, target_pos], [start_pos, offset] ].""",
     )
-
     # optional
     parser.add_argument(
         "--guide-start-seq",
@@ -133,7 +132,7 @@ def _get_input_parser():
     )
     parser.add_argument(
         "--target-pos-col",
-        help="Column name specifying the relative target position within reporter sequence.",
+        help="Column name specifying the relative target position within *reporter* sequence.",  # ??
         default="target_pos",
     )
 
@@ -146,7 +145,7 @@ def _get_input_parser():
     )
     parser.add_argument(
         "--offset",
-        help="Guide file has offest column that will be added to the relative position of reporters.",
+        help="Guide file has `offest` column that will be added to the relative position of reporters.",
         action="store_true",
     )
     parser.add_argument(
@@ -241,7 +240,7 @@ def _check_arguments(args, info_logger, warn_logger, error_logger):
         if args.offset:
             if "offset" not in sgRNA_info_tbl.columns:
                 raise InputFileError(
-                    "Offset option is set but the input file doesn't contain the offset column."
+                    "Offset option is set but the input file doesn't contain the `offset` column."
                 )
             if len(args.align_fasta) > 0:
                 error_logger("Can't have --offset and --align_fasta option together.")

@@ -20,6 +20,7 @@ def write_result_table(
     param_hist_dict,
     model_label: str,
     prefix: str = "",
+    suffix: str = "",
     write_fitted_eff: bool = True,
     guide_index: Optional[Sequence[str]] = None,
     guide_acc: Optional[Sequence] = None,
@@ -77,7 +78,7 @@ def write_result_table(
             pi = 1.0
         else:
             a_fitted = param_hist_dict["params"]["alpha_pi"].detach().cpu().numpy()
-            pi = a_fitted[..., 0] / a_fitted.sum(axis=1)
+            pi = a_fitted[..., 1:].sum(axis=1) / a_fitted.sum(axis=1)
         sgRNA_df = pd.DataFrame({"edit_eff": pi}, index=guide_index)
         if guide_acc is not None:
             sgRNA_df["accessibility"] = guide_acc
@@ -89,11 +90,11 @@ def write_result_table(
                 .cpu()
                 .numpy(),
             )
-        sgRNA_df.to_csv(f"{prefix}bean_sgRNA_result.{model_label}.csv")
+        sgRNA_df.to_csv(f"{prefix}bean_sgRNA_result.{model_label}{suffix}.csv")
 
     if return_result:
         return fit_df
-    fit_df.to_csv(f"{prefix}bean_element_result.{model_label}.csv")
+    fit_df.to_csv(f"{prefix}bean_element_result.{model_label}{suffix}.csv")
 
 
 def _scale_edited_pi(

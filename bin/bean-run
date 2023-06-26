@@ -342,7 +342,11 @@ def identify_model_guide(args):
                 scale_by_accessibility=args.scale_by_acc,
                 use_bcmatch=~args.ignore_bcmatch,
             ),
-            m.MultiMixtureNormalGuide,
+            partial(
+                m.MultiMixtureNormalGuide,
+                scale_by_accessibility=args.scale_by_acc,
+                fit_noise=~args.dont_fit_noise,
+            ),
         )
     if args.perfect_edit:
         if args.guide_activity_col is not None:
@@ -403,6 +407,9 @@ def main(args):
     guide_index = bdata.guides.index
     info("Done loading data. Preprocessing...")
     bdata.samples["rep"] = bdata.samples["rep"].astype("category")
+    bdata.guides = bdata.guides.loc[:, ~bdata.guides.columns.duplicated()].copy()
+    if args.mode == "variant":
+        bdata = bdata[bdata.guides[args.target_column].argsort(), :]
     ndata = DATACLASS_DICT[model_label](
         screen=bdata,
         device=args.device,
@@ -414,9 +421,10 @@ def main(args):
         condition_column=args.condition_column,
         allele_df_key=args.allele_df_key,
         control_guide_tag=args.control_guide_tag,
+        target_col=args.target_column,
     )
     if args.mode == "variant":
-        target_info_df = _get_guide_target_info(bdata)
+        target_info_df = _get_guide_target_info(ndata.screen)
     else:
         if args.splice_site_path is not None:
             splice_site = pd.read_csv(args.splice_site_path).pos
@@ -427,7 +435,7 @@ def main(args):
             splice_sites=None if args.splice_site_path is None else splice_site,
         )
 
-    guide_info_df = bdata.guides
+    guide_info_df = ndata.screen.guides
     del bdata
 
     info(f"Running inference for {model_label}...")
@@ -441,7 +449,8 @@ def main(args):
             negctrl_model = m.ControlNormalModel
             negctrl_guide = m.ControlNormalGuide
             negctrl_idx = np.where(
-                guide_info_df[args.negctrl_col].map(lambda s: s.lower()) == "negctrl"
+                guide_info_df[args.negctrl_col].map(lambda s: s.lower())
+                == args.negctrl_col_value.lower()
             )[0]
             print(len(negctrl_idx))
             print(negctrl_idx.shape)
@@ -450,15 +459,22 @@ def main(args):
                 negctrl_model, negctrl_guide, ndata_negctrl
             )
 
-    outfile_path = f"{prefix}/bean_element[sgRNA]_result.{model_label}.csv"
+    outfile_path = (
+        f"{prefix}/bean_element[sgRNA]_result.{model_label}{args.result_suffix}.csv"
+    )
     info(f"Done running inference. Writing result at {outfile_path}...")
-    with open(f"{prefix}/{model_label}.result.pkl", "wb") as handle:
-        pkl.dump(param_history_dict, handle)
+    with open(f"{prefix}/{model_label}.result{args.result_suffix}.pkl", "wb") as handle:
+        try:
+            pkl.dump(param_history_dict, handle)
+        except TypeError as exc:
+            print(exc.message)
+            # print(param_history_dict)
     write_result_table(
         target_info_df,
         param_history_dict,
         model_label=model_label,
         prefix=f"{prefix}/",
+        suffix=args.result_suffix,
         guide_index=guide_index,
         guide_acc=ndata.guide_accessibility.cpu().numpy()
         if hasattr(ndata, "guide_accessibility")

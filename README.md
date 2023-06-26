@@ -73,10 +73,31 @@ Following attributes are included if matched reporter is provided and you chose 
 <img src="imgs/screendata.svg" alt="screendata" width="700"/>
 
 ## QC of reporter screen data
-`bean-qc` supports following quality control and masks samples with low quality.
 ```
-bean-qc my_sorting_screen.h5ad -o my_sorting_screen_masked.h5ad -r qc_report_my_sorting_screen.html
+bean-qc my_sorting_screen.h5ad -o my_sorting_screen_masked.h5ad -r qc_report_my_sorting_screen
 ```
+`bean-qc` supports following quality control and masks samples with low quality. Specifically:
+* Plots guide coverage and the uniformity of coverage
+* Guide count correlation between samples
+* Log fold change correlation when positive controls are provided
+* Plots editing rate distribution
+* Identify samples with low guide coverage/guide count correlation/editing rate and mask the sample in `bdata.samples.mask`
+* Identify outlier guides to exclude them
+And produces 
+Above command produces `my_sorting_screen_masked.h5ad` without problematic replicate and guides and with sample masks, and `qc_report_my_sorting_screen.[html,ipynb]` as QC report.  
+
+#### Additional parameters
+* `--replicate-label` (default: `"rep"`): Label of column in `bdata.samples` that describes replicate ID.
+* `--condition-label` (default: `"bin"`)": Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.).
+* `--target-pos-col` (default: `"target_pos"`): Target position column in `bdata.guides` specifying target edit position in reporter.
+* `--rel-pos-is-reporter` (default: `False`): Specifies whether `edit_start_pos` and `edit_end_pos` are relative to reporter position. If `False`, those are relative to spacer position.
+* `--edit-start-pos` (default: `2`): Edit start position to quantify editing rate on, 0-based inclusive.
+* `--edit-end-pos` (default: `7`): Edit end position to quantify editing rate on, 0-based exclusive.
+* `--count-correlation-thres` (default: `0.8`): Threshold of guide count correlation to mask out.
+* `--edit-rate-thres` (default: `0.1`): Median editing rate threshold per sample to mask out.
+* `--posctrl-col` (default: `group`): Column name in .h5ad.guides DataFrame that specifies guide category.
+* `--posctrl-val` (default: `PosCtrl`): Value in .h5ad.guides[`posctrl_col`] that specifies guide will be used as the positive control in calculating log fold change.
+* `--lfc-thres` (default: `0.1`): Positive guides' correlation threshold to filter out.
 
 ## Using as python module
 ```

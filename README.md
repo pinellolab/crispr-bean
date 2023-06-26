@@ -76,15 +76,15 @@ Following attributes are included if matched reporter is provided and you chose 
 ```
 bean-qc my_sorting_screen.h5ad -o my_sorting_screen_masked.h5ad -r qc_report_my_sorting_screen
 ```
+Above command produces `my_sorting_screen_masked.h5ad` without problematic replicate and guides and with sample masks, and `qc_report_my_sorting_screen.[html,ipynb]` as QC report.  
 `bean-qc` supports following quality control and masks samples with low quality. Specifically:
 * Plots guide coverage and the uniformity of coverage
 * Guide count correlation between samples
 * Log fold change correlation when positive controls are provided
 * Plots editing rate distribution
 * Identify samples with low guide coverage/guide count correlation/editing rate and mask the sample in `bdata.samples.mask`
-* Identify outlier guides to exclude them
-And produces 
-Above command produces `my_sorting_screen_masked.h5ad` without problematic replicate and guides and with sample masks, and `qc_report_my_sorting_screen.[html,ipynb]` as QC report.  
+* Identify outlier guides to filter out
+
 
 #### Additional parameters
 * `--replicate-label` (default: `"rep"`): Label of column in `bdata.samples` that describes replicate ID.

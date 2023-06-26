@@ -72,6 +72,12 @@ Following attributes are included if matched reporter is provided and you chose 
 * `.xlsx`: This output file contains `.guides`, `.samples`, `.X[_bcmatch,_edits]`. (`allele_tables` are often too large to write into an Excel!)
 <img src="imgs/screendata.svg" alt="screendata" width="700"/>
 
+## QC of reporter screen data
+`bean-qc` supports following quality control and masks samples with low quality.
+```
+bean-qc my_sorting_screen.h5ad -o my_sorting_screen_masked.h5ad -r qc_report_my_sorting_screen.html
+```
+
 ## Using as python module
 ```
 import crispr_bean as be

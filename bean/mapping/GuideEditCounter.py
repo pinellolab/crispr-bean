@@ -450,16 +450,17 @@ class GuideEditCounter:
     def _get_guide_counts_bcmatch_semimatch(
         self, bcmatch_layer="X_bcmatch", semimatch_layer="X"
     ):
-
         self.screen.layers[semimatch_layer] = np.zeros_like((self.screen.X))
         R1_iter, R2_iter = self._get_fastq_iterators()
-
-        outfile_R1_nomatch, outfile_R2_nomatch = self._get_fastq_handle("nomatch")
-        outfile_R1_semimatch, outfile_R2_semimatch = self._get_fastq_handle("semimatch")
-        outfile_R1_dup_wo_bc, outfile_R2_dup_wo_bc = self._get_fastq_handle(
-            "duplicate_wo_barcode"
-        )
-        outfile_R1_dup, outfile_R2_dup = self._get_fastq_handle("duplicate")
+        if self.keep_intermediate:
+            outfile_R1_nomatch, outfile_R2_nomatch = self._get_fastq_handle("nomatch")
+            outfile_R1_semimatch, outfile_R2_semimatch = self._get_fastq_handle(
+                "semimatch"
+            )
+            outfile_R1_dup_wo_bc, outfile_R2_dup_wo_bc = self._get_fastq_handle(
+                "duplicate_wo_barcode"
+            )
+            outfile_R1_dup, outfile_R2_dup = self._get_fastq_handle("duplicate")
         with tqdm(
             enumerate(zip(R1_iter, R2_iter)),
             total=self.n_reads_after_filtering,

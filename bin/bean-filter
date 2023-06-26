@@ -105,6 +105,13 @@ def parse_args():
         help="If provided, alleles that exceed `filter_allele_proportion` in `filter-sample-proportion` will be retained.",
     )
     parser.add_argument(
+        "--filter-allele-count",
+        "-ac",
+        type=int,
+        default=5,
+        help="If provided, alleles that exceed `filter_allele_proportion` AND `filter_allele_count` in `filter-sample-proportion` will be retained.",
+    )
+    parser.add_argument(
         "--filter-sample-proportion",
         "-sp",
         type=float,

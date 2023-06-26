@@ -597,6 +597,7 @@ def MultiMixtureNormalModel(
     norm_pi=False,
     scale_by_accessibility=False,
     epsilon=1e-5,
+    fit_noise: bool = False,
 ):
     """Tiling version of MixtureNormalModel"""
 
@@ -679,7 +680,9 @@ def MultiMixtureNormalModel(
             )
     if scale_by_accessibility:
         # Endogenous target site editing rate may be different
-        pi = scale_pi_by_accessibility(pi, data.guide_accessibility)
+        pi = scale_pi_by_accessibility(
+            pi, data.guide_accessibility, fit_noise=fit_noise
+        )
 
     with replicate_plate:
         with bin_plate as b:
@@ -758,7 +761,14 @@ def MultiMixtureNormalModel(
                     )
 
 
-def MultiMixtureNormalGuide(data, alpha_prior=1, use_bcmatch=True, epsilon=1e-5):
+def MultiMixtureNormalGuide(
+    data,
+    alpha_prior=1,
+    use_bcmatch=True,
+    epsilon=1e-5,
+    scale_by_accessibility: bool = False,
+    fit_noise: bool = False,
+):
     """
     Guide for model C14
     """
@@ -831,3 +841,8 @@ def MultiMixtureNormalGuide(data, alpha_prior=1, use_bcmatch=True, epsilon=1e-5)
                 data.n_guides,
                 data.n_max_alleles,
             ), pi.shape
+    if scale_by_accessibility:
+        # Endogenous target site editing rate may be different
+        pi = scale_pi_by_accessibility(
+            pi, data.guide_accessibility, fit_noise=fit_noise
+        )

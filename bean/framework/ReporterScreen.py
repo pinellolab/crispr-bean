@@ -372,6 +372,22 @@ class ReporterScreen(Screen):
         target_pos_col="target_pos",
         edit_count_key="edit_counts",
     ):
+        """
+        Get the edit matrix from `.uns[edit_count_key]` to store the result in `.layers["edits"]`
+        and returns the old `.layers["edits"]`.
+
+        Args
+        --
+        ref_base: reference base of editing event to count. If not provided, default value in `.base_edited_from` is used.
+        alt_base: alternate base of editing event to count. If not provided, default value in `.base_edited_to` is used.
+        match_target_position: If `True`, edits with `.rel_pos` that matches `.guides[target_pos_col]` are counted.
+        If `False`, edits with `.rel_pos` in range [rel_pos_start, rel_pos_end) is counted.
+        rel_pos_start: Position from which edits will be counted when `match_target_position` is `False`.
+        rel_pos_end: Position until where edits will be counted when `match_target_position` is `False`.
+        rel_pos_is_reporter: `rel_pos_start` and `rel_pos_end` is relative to the reporter position. If `False`, those are treated to be relative of spacer position.
+        target_pos_col: Column name in `.guides` DataFrame that has target position information when `match_target_position` is `True`.
+        edit_count_key: Key of the edit counts DataFrame to be used to count the edits (`.uns[edit_count_key]`).
+        """
         if ref_base is None:
             ref_base = self.base_edited_from
         if alt_base is None:

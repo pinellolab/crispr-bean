@@ -881,7 +881,7 @@ def concat(screens: Collection[ReporterScreen], *args, axis=1, **kwargs):
                 continue
             merge_on = screen[0].uns[k].columns[:2].tolist()
             try:
-                edit_cls = type(screen[0].uns[k][merge_on[1]][0])
+                edit_cls = type(screens[0].uns[k][merge_on[1]][0])
             except IndexError:
                 print(merge_on)
                 print(screen[0].uns[k])

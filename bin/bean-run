@@ -140,17 +140,17 @@ def parse_args():
         help="Fit replicate specific scaling factor. Recommended to set as True if you expect variable editing activity across biological replicates.",
     )
     parser.add_argument(
-        "--perfect-edit",
+        "--uniform-edit",
         "-p",
         action="store_true",
         default=False,
-        help="Assume perfect editing rate for all guides.",
+        help="Assume uniform editing rate for all guides.",
     )
     parser.add_argument(
         "--scale-by-acc",
         action="store_true",
         default=False,
-        help="Assume perfect editing rate for all guides.",
+        help="Scale guide editing efficiency by the target loci accessibility",
     )
     parser.add_argument(
         "--acc-bw-path",
@@ -174,13 +174,13 @@ def parse_args():
         "--condition-column",
         default="bin",
         type=str,
-        help="Condition column to use.",
+        help="Column key in `bdata.samples` that describes experimental condition.",
     )
     parser.add_argument(
         "--target-column",
         default="target",
         type=str,
-        help="Column key in bdata.guides that describes the target element of each guide.",
+        help="Column key in `bdata.guides` that describes the target element of each guide.",
     )
     parser.add_argument(
         "--guide-activity-col",
@@ -190,18 +190,11 @@ def parse_args():
         help="Column in ReporterScreen.guides DataFrame showing the editing rate estimated via external tools",
     )
     parser.add_argument(
-        "--pi-prior-weight",
-        "-w",
-        type=float,
-        default=1.0,
-        help="Prior weight for editing rate",
-    )
-    parser.add_argument(
         "--outdir",
         "-o",
         default=None,
         type=str,
-        help="directory to save the run result",
+        help="Directory to save the run result.",
     )
     parser.add_argument(
         "--result-suffix",
@@ -238,13 +231,13 @@ def parse_args():
         "--negctrl-col",
         type=str,
         default="target_group",
-        help="Column in bdata.obs specifying if a guide is negative control. If the (column value).tolower() == 'negctrl', it is treated as negative control guide.",
+        help="Column in bdata.obs specifying if a guide is negative control. If the `bdata.guides[negctrl_col].tolower() == negctrl_col_value`, it is treated as negative control guide.",
     )
     parser.add_argument(
         "--negctrl-col-value",
         type=str,
         default="negctrl",
-        help="Column in bdata.obs specifying if a guide is negative control. If the (column value).tolower() == 'negctrl', it is treated as negative control guide.",
+        help="Column value in bdata.guides specifying if a guide is negative control. If the `bdata.guides[negctrl_col].tolower() == negctrl_col_value`, it is treated as negative control guide.",
     )
     parser.add_argument(
         "--repguide-mask",
@@ -348,10 +341,10 @@ def identify_model_guide(args):
                 fit_noise=~args.dont_fit_noise,
             ),
         )
-    if args.perfect_edit:
+    if args.uniform_edit:
         if args.guide_activity_col is not None:
             raise ValueError(
-                "Can't use the guide activity column while constraining perfect edit."
+                "Can't use the guide activity column while constraining uniform edit."
             )
         info("Using Normal model...")
         return (

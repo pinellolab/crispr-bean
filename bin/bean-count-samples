@@ -175,12 +175,16 @@ def main():
     parser = get_input_parser()
     args = parser.parse_args()
     args = check_arguments(args)
-    sample_tbl = pd.read_csv(args.input, header=None)
-
+    sample_tbl = pd.read_csv(args.input)  # R1_filepath, R2_filepath, sample_name
+    sample_tbl_input = sample_tbl.iloc[:, :3]
+    sample_info_tbl = sample_tbl.iloc[:, 3:].set_index(sample_tbl.columns[3])
     with Pool(processes=args.threads) as p:
         result = p.starmap(
             count_sample,
-            [list(tup) + [args] for tup in list(sample_tbl.to_records(index=False))],
+            [
+                list(tup) + [args]
+                for tup in list(sample_tbl_input.to_records(index=False))
+            ],
         )
         # result = p.starmap(count_sample, sample_tbl[0], sample_tbl[1], sample_tbl[2])
 
@@ -189,7 +193,7 @@ def main():
     output_path = os.path.join(
         os.path.abspath(args.output_folder), f"bean_count_{database_id}"
     )
-
+    screen.samples = screen.samples.join(sample_info_tbl, how="left")
     # screen.guides = result[0].guides.loc[screen.guides.index, :]
     screen.write(f"{output_path}.h5ad")
     screen.to_Excel(f"{output_path}.xlsx")

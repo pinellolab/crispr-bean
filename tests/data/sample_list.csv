@@ -1,7 +1,7 @@
 R1_fastq,R2_fastq,sample_id,replicate,condition,upper_quantile,lower_quantile
 Rep1_bot_R1.fastq.gz,Rep1_bot_R2.fastq.gz,1_bot,1,bot,0.2,0.0
 Rep1_low_R1.fastq.gz,Rep1_low_R2.fastq.gz,1_low,1,low,0.4,0.2
-Rep1_bulk_R1.fastq.gz,demuxed/18loci_Rep1_bulk_R2.fastq.gz,1_bulk,1,bulk,1.0,0.0
+Rep1_bulk_R1.fastq.gz,Rep1_bulk_R2.fastq.gz,1_bulk,1,bulk,1.0,0.0
 Rep1_high_R1.fastq.gz,Rep1_high_R2.fastq.gz,1_high,1,high,0.8,0.6
 Rep1_top_R1.fastq.gz,Rep1_top_R2.fastq.gz,1_top,1,top,1.0,0.8
 Rep2_bot_R1.fastq.gz,Rep2_bot_R2.fastq.gz,2_bot,2,bot,0.2,0.0

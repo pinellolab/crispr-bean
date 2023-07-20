@@ -869,7 +869,12 @@ def concat(screens: Collection[ReporterScreen], *args, axis=1, **kwargs):
         raise ValueError("Guide index doesn't match.")
 
     adata = ad.concat(screens, *args, axis=axis, **kwargs)
-    adata.obs = screens[0].guides
+    if axis == 1:
+        adata.obs = screens[0].guides
+    elif axis == 0:
+        adata.var = screens[0].samples
+    else:
+        raise ValueError(f"axis must be 0 or 1. Provided of invalid axis {axis}.")
     keys = set(screens[0].uns.keys())
     for screen in screens:
         keys.intersection(screen.uns.keys())

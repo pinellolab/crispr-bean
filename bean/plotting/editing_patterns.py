@@ -32,7 +32,6 @@ def _add_absent_edits(
     edits = []
     positions = []
     for editable_pos in editable_positions:
-
         if editable_pos not in observed_rel_pos:
             edits.append(
                 Edit(

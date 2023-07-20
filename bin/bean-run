@@ -21,6 +21,10 @@ from bean.preprocessing.data_class import (
     VariantSortingReporterScreenData,
     TilingSortingReporterScreenData,
 )
+from bean.preprocessing.utils import (
+    _obtain_effective_edit_rate,
+    _obtain_n_guides_alleles_per_variant,
+)
 
 import bean as be
 
@@ -386,7 +390,6 @@ def main(args):
     if args.cuda:
         os.environ["CUDA_VISIBLE_DEVICES"] = "1"
         torch.set_default_tensor_type(torch.cuda.FloatTensor)
-
     else:
         torch.set_default_tensor_type(torch.FloatTensor)
     prefix = (
@@ -427,6 +430,8 @@ def main(args):
             .rename(columns={"index": "edit"}),
             splice_sites=None if args.splice_site_path is None else splice_site,
         )
+        target_info_df["effective_edit_rate"] = _obtain_effective_edit_rate(ndata).cpu()
+        target_info_df["n_guides"] = _obtain_n_guides_alleles_per_variant(ndata).cpu()
 
     guide_info_df = ndata.screen.guides
     del bdata

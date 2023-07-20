@@ -91,8 +91,8 @@ def run_inference(
 def _get_guide_target_info(bdata):
     guide_info = bdata.guides.copy()
     edit_rate_info = (
-        guide_info[[args.target_column, "edit_rate"]]
-        .groupby(args.target_column, sort=False)
+        guide_info[[args.target_col, "edit_rate"]]
+        .groupby(args.target_col, sort=False)
         .agg({"edit_rate": ["mean", "std"]})
     )
     edit_rate_info.columns = edit_rate_info.columns.get_level_values(1)
@@ -101,18 +101,18 @@ def _get_guide_target_info(bdata):
     )
     target_info = (
         guide_info[
-            [args.target_column]
+            [args.target_col]
             + [
                 col
                 for col in guide_info.columns
                 if col.startswith("target_")
-                and len(guide_info[[args.target_column, col]].drop_duplicates())
-                == len(guide_info[args.target_column].unique())
-                and col != args.target_column
+                and len(guide_info[[args.target_col, col]].drop_duplicates())
+                == len(guide_info[args.target_col].unique())
+                and col != args.target_col
             ]
         ]
         .drop_duplicates()
-        .set_index(args.target_column, drop=True)
+        .set_index(args.target_col, drop=True)
     )
     target_info = target_info.join(edit_rate_info)
     return target_info
@@ -172,16 +172,16 @@ def parse_args():
         "--const-pi",
         default=False,
         action="store_true",
-        help="Use constant pi provided in --guide-activity-column (instead of fitting from reporter data)",
+        help="Use constant pi provided in --guide-activity-col (instead of fitting from reporter data)",
     )
     parser.add_argument(
-        "--condition-column",
+        "--condition-col",
         default="bin",
         type=str,
         help="Column key in `bdata.samples` that describes experimental condition.",
     )
     parser.add_argument(
-        "--target-column",
+        "--target-col",
         default="target",
         type=str,
         help="Column key in `bdata.guides` that describes the target element of each guide.",
@@ -207,20 +207,20 @@ def parse_args():
         help="Suffix of the output files",
     )
     parser.add_argument(
-        "--sorting-bin-upper-quantile-column",
+        "--sorting-bin-upper-quantile-col",
         "-uq",
         help="Column name with upper quantile values of each sorting bin in [Reporter]Screen.samples (or AnnData.var)",
         default="upper_quantile",
     )
     parser.add_argument(
-        "--sorting-bin-lower-quantile-column",
+        "--sorting-bin-lower-quantile-col",
         "-lq",
         help="Column name with lower quantile values of each sorting bin in [Reporter]Screen.samples (or AnnData var)",
         default="lower_quantile",
     )
     parser.add_argument("--cuda", action="store_true", default=False, help="run on GPU")
     parser.add_argument(
-        "--sample-mask-column",
+        "--sample-mask-col",
         type=str,
         default=None,
         help="Name of the column indicating the sample mask in [Reporter]Screen.samples (or AnnData.var). Sample is ignored if the value in this column is 0. This can be used to mask out low-quality samples.",
@@ -405,19 +405,23 @@ def main(args):
     bdata.samples["rep"] = bdata.samples["rep"].astype("category")
     bdata.guides = bdata.guides.loc[:, ~bdata.guides.columns.duplicated()].copy()
     if args.mode == "variant":
-        bdata = bdata[bdata.guides[args.target_column].argsort(), :]
+        if bdata.guides[args.target_col].isnull().any():
+            raise ValueError(
+                f"Some target column (bdata.guides[{args.target_col}]) value is null. Check your input file."
+            )
+        bdata = bdata[bdata.guides[args.target_col].argsort(), :]
     ndata = DATACLASS_DICT[model_label](
         screen=bdata,
         device=args.device,
         repguide_mask=args.repguide_mask,
-        sample_mask_column=args.sample_mask_column,
+        sample_mask_column=args.sample_mask_col,
         accessibility_col=args.acc_col,
         accessibility_bw_path=args.acc_bw_path,
         use_const_pi=args.const_pi,
-        condition_column=args.condition_column,
+        condition_column=args.condition_col,
         allele_df_key=args.allele_df_key,
         control_guide_tag=args.control_guide_tag,
-        target_col=args.target_column,
+        target_col=args.target_col,
     )
     if args.mode == "variant":
         target_info_df = _get_guide_target_info(ndata.screen)

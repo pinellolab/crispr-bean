@@ -8,5 +8,5 @@ def test_count():
 
 def test_count_samples():
     os.system(
-        "python ../../bin/bean-count-samples --input data/sample_list.csv -b A -f data/test_guide_info.csv -o test_res/ -r --guide-start-seq=CAGGGAAAGGACGAAACACCGTTCT"
+        "python ../../bin/bean-count-samples --input data/sample_list.csv -b A -f data/test_guide_info.csv -o test_res/ -r --guide-start-seq=GGAAAGGACGAAACACCG"
     )

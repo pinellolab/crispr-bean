@@ -117,7 +117,7 @@ def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
         counter.screen.write(f"{counter.output_dir}.h5ad")
         screen = counter.screen
         if screen.X.max() == 0:
-            raise ValueError(f"Nothing counted for {sample_id}. Check your input.")
+            warn(f"Nothing counted for {sample_id}. Check your input.")
         if counter.count_reporter_edits and match_target_pos:
             screen.uns["allele_counts"] = screen.uns["allele_counts"].loc[
                 screen.uns["allele_counts"].allele.map(str) != "", :
@@ -135,13 +135,13 @@ def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
 def check_arguments(args: argparse.Namespace) -> argparse.Namespace:
     """Checks the validity of the argument."""
     args = _check_arguments(args, info, warn, error)
-    sample_tbl = pd.read_csv(args.input, header=None)
-    if len(sample_tbl[2].unique()) != len(sample_tbl[2]):
+    sample_tbl = pd.read_csv(args.input)
+    if len(sample_tbl.iloc[:,2].unique()) != len(sample_tbl.iloc[:,2]):
         raise InputFileError(
             f"Sample ID not unique. Please check your input file {args.input}."
         )
     first_read_lengths = [
-        _get_first_read_length(fastq_R1) for fastq_R1 in sample_tbl[0]
+        _get_first_read_length(fastq_R1) for fastq_R1 in sample_tbl.iloc[:,0]
     ]
     for read_length in first_read_lengths:
         _check_read_length(args, read_length, warn)
@@ -177,7 +177,7 @@ def main():
     args = check_arguments(args)
     sample_tbl = pd.read_csv(args.input)  # R1_filepath, R2_filepath, sample_name
     sample_tbl_input = sample_tbl.iloc[:, :3]
-    sample_info_tbl = sample_tbl.iloc[:, 3:].set_index(sample_tbl.columns[3])
+    sample_info_tbl = sample_tbl.iloc[:, 2:].set_index(sample_tbl.columns[2])
     with Pool(processes=args.threads) as p:
         result = p.starmap(
             count_sample,
@@ -189,11 +189,17 @@ def main():
         # result = p.starmap(count_sample, sample_tbl[0], sample_tbl[1], sample_tbl[2])
 
     screen = bean.concat(result, axis=1)
-    database_id = args.name or args.input.split(".")[0]
+    database_id = args.name or os.path.basename(args.input).split(".")[0]
     output_path = os.path.join(
         os.path.abspath(args.output_folder), f"bean_count_{database_id}"
     )
-    screen.samples = screen.samples.join(sample_info_tbl, how="left")
+    if not os.path.exists(args.output_folder):
+        os.makedirs(args.output_folder)
+    try:
+        screen.samples = screen.samples.join(sample_info_tbl, how="left")
+    except TypeError:
+        print(screen.samples)
+        print(sample_info_tbl)
     # screen.guides = result[0].guides.loc[screen.guides.index, :]
     screen.write(f"{output_path}.h5ad")
     screen.to_Excel(f"{output_path}.xlsx")

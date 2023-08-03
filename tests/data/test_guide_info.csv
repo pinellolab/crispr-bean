@@ -1,4 +1,4 @@
-name,Target gene/variant,Target descriptor,Arbitrary number,gRNA position category,Target base position in gRNA,target_pos,BE,Group,sequence,Reporter,barcode,5-nt PAM,offset
+name,target,Target descriptor,Arbitrary number,gRNA position category,Target base position in gRNA,target_pos,BE,target_group,sequence,reporter,barcode,5-nt PAM,offset
 CONTROL_1_g1,CONTROL,,1,g1,4,10,ABE,NegCtrl,CCTACGCGGTAGGGAACTTT,CCAAGCCCTACGCGGTAGGGAACTTTGGGAGC,GTTT,GGGAG,0
 CONTROL_1_g2,CONTROL,,1,g2,5,11,ABE,NegCtrl,CCCTACGCGGTAGGGAACTT,TCCAAGCCCTACGCGGTAGGGAACTTTGGGAG,AACA,TGGGA,-1
 CONTROL_1_g3,CONTROL,,1,g3,5,12,ABE,NegCtrl,CCCTACGCGGTAGGGAACT,GTCCAAGCCCTACGCGGTAGGGAACTTTGGGA,CGCT,TTGGG,-2

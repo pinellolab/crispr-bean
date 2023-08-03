@@ -133,7 +133,7 @@ class Allele:
     # pos, ref, alt
     def __init__(self, edits: Iterable[Edit] = None):
         self.edits = set() if edits is None else set(edits)
-        if len(edits) > 0: self.chrom = edits[0].chrom
+        if edits and len(edits) > 0: self.chrom = next(iter(edits)).chrom
 
     @classmethod
     def from_str(cls, allele_str):  # pos:strand:start>end

@@ -1,12 +1,14 @@
 import numpy as np
 from setuptools import setup, Extension, find_packages
+from Cython.Build import cythonize
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+
 setup(
     name="crispr-bean",
-    version="0.2.2",
+    version="0.2.3",
     python_requires=">=3.8.0",
     author="Jayoung Ryu",
     author_email="jayoung_ryu@g.harvard.edu",
@@ -15,7 +17,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/pinellolab/crispr-bean",
     packages=find_packages(),
-    ext_modules=[Extension("bean", sources=["bean/mapping/CRISPResso2Align.pyx"])],
+    ext_modules=cythonize(["bean/mapping/CRISPResso2Align.pyx"]),
     include_dirs=np.get_include(),
     setup_requires=[
         "setuptools>=18.0",

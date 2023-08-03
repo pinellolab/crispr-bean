@@ -155,7 +155,7 @@ def _get_seq_pos_from_fasta(fasta_file_name: str) -> Tuple[List[str], List[int]]
                 continue
             translated_seq.append(nt)
             genomic_pos.append(exon_start + i)
-    return (chrom, translated_seq, genomic_pos)
+    return (exon_chrom, translated_seq, genomic_pos)
 
 
 def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
@@ -185,11 +185,11 @@ class CDS:
                 print("No fasta file provided as reference: using LDLR")
             fasta_file_name = os.path.dirname(be.__file__) + "/annotate/ldlr_exons.fa"
         try:
-            type(self).set_exon_fasta_name(fasta_file_name)
+            self.set_exon_fasta_name(fasta_file_name)
         except FileNotFoundError as e:
             print(os.getcwd())
             raise e
-        self.edited_nt = type(self).nt.copy()
+        self.edited_nt = self.nt.copy()
         self.edited_aa_pos = set()
         self.edits_noncoding = set()
         self.set_exon_fasta_name(fasta_file_name)
@@ -204,7 +204,7 @@ class CDS:
         self.aa = _translate(self.edited_nt, codon_map)
 
     def _get_relative_nt_pos(self, absolute_pos):
-        nt_relative_pos = np.where(type(self).pos == absolute_pos)[0]
+        nt_relative_pos = np.where(self.pos == absolute_pos)[0]
         assert len(nt_relative_pos) <= 1, nt_relative_pos
         return nt_relative_pos.astype(int).item() if nt_relative_pos else -1
 
@@ -225,10 +225,10 @@ class CDS:
             alt_base = edit.alt_base
         if rel_pos == -1:  # position outside CDS
             self.edits_noncoding.add(edit)
-        elif type(self).nt[rel_pos] != ref_base:
+        elif self.nt[rel_pos] != ref_base:
             if ref_base != "-":
                 raise RefBaseMismatchException(
-                    f"ref:{type(self).nt[rel_pos]} at pos {rel_pos}, got edit {edit}"
+                    f"ref:{self.nt[rel_pos]} at pos {rel_pos}, got edit {edit}"
                 )
         else:
             self.edited_nt[rel_pos] = alt_base
@@ -252,7 +252,7 @@ class CDS:
         mutations = CodingNoncodingAllele()
         mutations.nt_allele.update(self.edits_noncoding)
         for edited_aa_pos in self.edited_aa_pos:
-            ref_aa = _translate_single_codon(type(self).nt, edited_aa_pos)
+            ref_aa = _translate_single_codon(self.nt, edited_aa_pos)
             mt_aa = _translate_single_codon(self.edited_nt, edited_aa_pos)
             if mt_aa == "_":
                 return "translation error"
@@ -313,7 +313,7 @@ def get_allele_aa_change_single_gene(allele: Allele , fasta_file=None, include_s
     Obtain amino acid changes
     """
     cds = CDS(fasta_file_name=fasta_file)
-    return cds.get_aa_change(allele_str, include_synonymous)
+    return cds.get_aa_change(allele, include_synonymous)
 
 def get_allele_aa_change_multi_genes(allele: Allele, fasta_file_dict, include_synonymous=True):
     """
@@ -332,7 +332,7 @@ def translate_allele(
                 fasta_file_dict = fasta_file_dict,
                 include_synonymous = include_synonymous,
             )
-        return get_allele_aa_change(
+        return get_allele_aa_change_single_gene(
             allele, 
             fasta_file=fasta_file,
             include_synonymous=include_synonymouns, 

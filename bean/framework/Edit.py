@@ -168,13 +168,13 @@ class Allele:
     def get_uid(self):
         uid = None
         if (
-            len(nt_allele) > 0
-            and all(e.uid is not None for e in nt_allele.edits)
+            len(self) > 0
+            and all(e.uid is not None for e in self.edits)
             and len(
-                np.unique([e.uid for e in nt_allele.edits if e.uid is not None])
+                np.unique([e.uid for e in self.edits if e.uid is not None])
             )
         ):
-            uid = next(iter(nt_allele.edits)).uid
+            uid = next(iter(self.edits)).uid
         return uid
 
     def has_edit(self, ref_base, alt_base, pos=None, rel_pos=None):

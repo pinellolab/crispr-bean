@@ -14,7 +14,7 @@ This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The r
 `crispr-bean` supports the following functionalities.
 * [`bean-count`, `bean-count-sample`](#count-reporter-screen-data): Base-editing-aware mapping of guide, optionally with reporter from `.fastq` files.  
 * [`bean-qc`](#bean-qc-qc-of-reporter-screen-data): Quality control report and filtering out / masking of aberrant sample and guides  
-* `bean-filter`: Filter reporter alleles
+* [`bean-filter`](#bean-filter-filtering-and-optionally-translating-alleles): Filter reporter alleles
 * [`bean-run`](#bean-run-quantify-variant-effects): Quantify targeted variants' effect sizes from screen data.
 
 
@@ -116,6 +116,16 @@ Above command produces
 * `--posctrl-col` (default: `group`): Column name in .h5ad.guides DataFrame that specifies guide category.
 * `--posctrl-val` (default: `PosCtrl`): Value in .h5ad.guides[`posctrl_col`] that specifies guide will be used as the positive control in calculating log fold change.
 * `--lfc-thres` (default: `0.1`): Positive guides' correlation threshold to filter out.
+
+## `bean-filter`: Filtering (and optionally translating) alleles
+```
+bean-filter my_sorting_screen.h5ad -o my_sorting_screen_masked.h5ad [--translate [--translate-fasta gene_exon.fa, --translate-fastas-csv gene_exon_fas.csv]]
+```
+If you want to obtain amino acid level variant
+* When library covers single gene: Feed `--translate --translate-fasta gene_exon.fa` argument where `gene_exon.fa` is the FASTA file with exon sequence and range (following `range=` tag in the FASTA header line) for  OR
+* When library covers multiple genes: Feed `--translate --translate-fastas-csv gene_exon_fas.csv` where `gene_exon_fas.csv` is the csv file with lines `gene_id,gene_exon_fasta_path` without header.
+* Exon FASTA files can be downloaded from UCSC Genomic sequences / Table Browser: [see the instruction](https://www.youtube.com/watch?v=T4E0Ez5Vjz8)
+
 
 ## `bean-run`: Quantify variant effects
 ```

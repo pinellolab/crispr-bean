@@ -6,13 +6,34 @@ from scipy.special import logit, expit
 from statsmodels.stats.multitest import fdrcorrection
 
 
-def get_fdr(mu_z, plot=False):
+def get_fdr(mu_z):
+    """B-H FDR correction"""
     p_dec = norm.cdf(mu_z)
     p_inc = norm.cdf(-mu_z)
     _, fdr_dec = fdrcorrection(p_dec)
     _, fdr_inc = fdrcorrection(p_inc)
     fdr = np.minimum(fdr_dec, fdr_inc)
     return (fdr_dec, fdr_inc, fdr)
+
+
+def adjust_normal_params_by_control(
+    param_df: pd.DataFrame, mu0: pd.Series, sd0: pd.Series, suffix: str = "_adj"
+) -> pd.DataFrame:
+    """Adjust Normal distribution parameters mu, mu_sd, mu_z, sd by mu0, sd0."""
+    param_df[f"mu{suffix}"] = param_df["mu"] - mu0
+    param_df[f"mu_z{suffix}"] = param_df[f"mu{suffix}"] / param_df["mu_sd"] / sd0
+    param_df[f"sd{suffix}"] = param_df["sd"] / sd0
+    fdr_dec, fdr_inc, fdr = get_fdr(param_df[f"mu_z{suffix}"])
+    (
+        param_df[f"fdr_dec{suffix}"],
+        param_df[f"fdr_inc{suffix}"],
+        param_df[f"fdr{suffix}"],
+    ) = (
+        fdr_dec,
+        fdr_inc,
+        fdr,
+    )
+    return param_df
 
 
 def write_result_table(
@@ -59,16 +80,8 @@ def write_result_table(
             param_hist_dict["negctrl"]["params"]["sd_loc"].detach().exp().cpu().numpy()
         )
         print(f"Fitted mu0={mu0}, sd0={sd0}.")
-        fit_df["mu_adj"] = (mu - mu0) / sd0
-        fit_df["mu_sd_adj"] = mu_sd / sd0
-        fit_df["mu_z_adj"] = fit_df.mu_adj / fit_df.mu_sd_adj
-        fit_df["sd_adj"] = sd / sd0
-        fdr_dec, fdr_inc, fdr = get_fdr(fit_df.mu_z_adj)
-        fit_df["fdr_dec_adj"], fit_df["fdr_inc_adj"], fit_df["fdr_adj"] = (
-            fdr_dec,
-            fdr_inc,
-            fdr,
-        )
+        fit_df = adjust_normal_params_by_control(fit_df, mu0, sd0)
+
     fit_df = pd.concat(
         [target_info_df.reset_index(), fit_df.reset_index(drop=True)], axis=1
     )

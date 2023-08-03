@@ -54,18 +54,21 @@ def parse_args():
         "--plasmid-path",
         "-p",
         type=str,
+        default=None,
         help="Plasmid ReporterScreen object path. If provided, alleles are filtered based on if a nucleotide edit is more significantly enriched in sample compared to the plasmid data. Negative control data where no edit is expected can be fed in instead of plasmid library.",
     )
     parser.add_argument(
         "--edit-start-pos",
         "-s",
         type=int,
+        default=2,
         help="0-based start posiiton (inclusive) of edit relative to the start of guide spacer.",
     )
     parser.add_argument(
         "--edit-end-pos",
         "-e",
         type=int,
+        default=7,
         help="0-based end position (exclusive) of edit relative to the start of guide spacer.",
     )
     parser.add_argument(

@@ -14,11 +14,13 @@ class Edit:
         rel_pos: int,
         ref_base: chr,
         alt_base: chr,
+        chrom: str,
         offset: int = None,
         strand: int = 1,
         unique_identifier=None,
     ):
         assert strand in [+1, -1]
+        self.chrom = chrom
         self.rel_pos = rel_pos
         self.ref_base = ref_base  # TODO make it ref / alt instead of ref_base and alt_base for AAEdit comp. or make abstract class
         self.alt_base = alt_base
@@ -41,7 +43,11 @@ class Edit:
         if "!" in edit_str:
             uid, edit_str = edit_str.split("!")
 
-        pos, rel_pos, strand, base_change = edit_str.split(":")
+        if len(edit_str.split(":")) == 5:
+            chrom, pos, rel_pos, strand, base_change = edit_str.split(":")
+        else:
+            pos, rel_pos, strand, base_change = edit_str.split(":")
+            chrom = None
         pos = int(pos)
         rel_pos = int(rel_pos)
         assert strand in ["+", "-"]
@@ -52,6 +58,7 @@ class Edit:
             rel_pos,
             ref_base,
             alt_base,
+            chrom=chrom,
             offset=offset,
             strand=strand,
             unique_identifier=uid,
@@ -61,13 +68,13 @@ class Edit:
     def match_str(cls, edit_str):
         if isinstance(edit_str, Edit):
             return True
-        pattern = r"-?\d+:-?\d+:[+-]:[A-Z*-]>[A-Z*-]"
+        pattern = r"((chr)?\d+:)?-?\d+:-?\d+:[+-]:[A-Z*-]>[A-Z*-]"
         pattern2 = r"[\w*]!-?\d+:-?\d+:[+-]:[A-Z*-]>[A-Z*-]"
         return re.fullmatch(pattern, edit_str) or re.fullmatch(pattern2, edit_str)
 
     def get_abs_edit(self):
         """
-        Returns absolute edit representation regardless of the relative edit position by guide.
+        Returns edit representation in sense strand
         """
         if self.strand == "-":
             ref_base = type(self).reverse_map[self.ref_base]
@@ -76,8 +83,8 @@ class Edit:
             ref_base = self.ref_base
             alt_base = self.alt_base
         if self.uid is not None:
-            return f"{self.uid}!{int(self.rel_pos)}:{ref_base}>{alt_base}"
-        return f"{int(self.pos)}:{ref_base}>{alt_base}"
+            return f"{self.uid}!{f'{self.chrom}:' if self.chrom else ''}{int(self.rel_pos)}:{ref_base}>{alt_base}"
+        return f"{f'{self.chrom}:' if self.chrom else ''}{int(self.pos)}:{ref_base}>{alt_base}"
 
     def set_uid(self, uid):
         if "!" in uid:
@@ -117,15 +124,16 @@ class Edit:
 
     def __repr__(self):
         if self.uid is None:
-            return f"{int(self.pos)}:{int(self.rel_pos)}:{self.strand}:{self.ref_base}>{self.alt_base}"
+            return f"{f'{self.chrom}:' if self.chrom else ''}{int(self.pos)}:{int(self.rel_pos)}:{self.strand}:{self.ref_base}>{self.alt_base}"
 
-        return f"{self.uid}!{int(self.pos)}:{int(self.rel_pos)}:{self.strand}:{self.ref_base}>{self.alt_base}"
+        return f"{f'{self.chrom}:' if self.chrom else ''}{self.uid}!{int(self.pos)}:{int(self.rel_pos)}:{self.strand}:{self.ref_base}>{self.alt_base}"
 
 
 class Allele:
     # pos, ref, alt
     def __init__(self, edits: Iterable[Edit] = None):
         self.edits = set() if edits is None else set(edits)
+        if len(edits) > 0: self.chrom = edits[0].chrom
 
     @classmethod
     def from_str(cls, allele_str):  # pos:strand:start>end
@@ -149,6 +157,26 @@ class Allele:
             return True
         return all(map(Edit.match_str, allele_str.split(",")))
 
+    def get_range(self):
+        """Returns genomic range of the edits in the allele"""
+        return (
+            self.chrom,
+            min(edit.pos for edit in self.edits),
+            max(edit.pos for edit in self.edits),
+        )
+
+    def get_uid(self):
+        uid = None
+        if (
+            len(nt_allele) > 0
+            and all(e.uid is not None for e in nt_allele.edits)
+            and len(
+                np.unique([e.uid for e in nt_allele.edits if e.uid is not None])
+            )
+        ):
+            uid = next(iter(nt_allele.edits)).uid
+        return uid
+
     def has_edit(self, ref_base, alt_base, pos=None, rel_pos=None):
         if not (pos is None) + (rel_pos is None):
             raise ValueError("Either pos or rel_pos should be specified")
@@ -164,7 +192,7 @@ class Allele:
 
     def has_other_edit(self, ref_base, alt_base, pos=None, rel_pos=None):
         """
-        Has other edit than specified.
+        Returns if the allele other edit than specified in the argument.
         """
         if len(self.edits) == 0:
             return False

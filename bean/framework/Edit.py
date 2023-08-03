@@ -14,7 +14,7 @@ class Edit:
         rel_pos: int,
         ref_base: chr,
         alt_base: chr,
-        chrom: str,
+        chrom: str = None,
         offset: int = None,
         strand: int = 1,
         unique_identifier=None,

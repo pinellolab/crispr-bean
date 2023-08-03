@@ -630,6 +630,7 @@ class ReporterScreen(Screen):
                 )
             )
         else:
+            if not 'guide_len' in self.guides.columns: self.guides['guide_len'] = self.guides.sequence.map(len)
             guide_start_pos = (
                 32 - 6 - self.guides.loc[allele_count_df.guide, "guide_len"].values
             )

@@ -133,7 +133,8 @@ class Allele:
     # pos, ref, alt
     def __init__(self, edits: Iterable[Edit] = None):
         self.edits = set() if edits is None else set(edits)
-        if edits and len(edits) > 0: self.chrom = next(iter(edits)).chrom
+        if edits and len(edits) > 0:
+            self.chrom = next(iter(edits)).chrom
 
     @classmethod
     def from_str(cls, allele_str):  # pos:strand:start>end
@@ -170,9 +171,7 @@ class Allele:
         if (
             len(self) > 0
             and all(e.uid is not None for e in self.edits)
-            and len(
-                np.unique([e.uid for e in self.edits if e.uid is not None])
-            )
+            and len(np.unique([e.uid for e in self.edits if e.uid is not None]))
         ):
             uid = next(iter(self.edits)).uid
         return uid
@@ -185,7 +184,9 @@ class Allele:
             e.ref_base == ref_base
             and e.alt_base == alt_base
             and (
-                pos is not None and e.pos == pos or pos is None and e.rel_pos == rel_pos
+                (pos is not None and e.pos == pos)
+                or (rel_pos is not None and e.rel_pos == rel_pos)
+                or (rel_pos is None and pos is None)
             )
             for e in self.edits
         )
@@ -201,10 +202,9 @@ class Allele:
         for e in self.edits:
             if e.ref_base == ref_base and e.alt_base == alt_base:
                 if (
-                    pos is not None
-                    and e.pos != pos
-                    or pos is None
-                    and e.rel_pos != rel_pos
+                    (pos is not None and e.pos == pos)
+                    or (rel_pos is not None and e.rel_pos == rel_pos)
+                    or (rel_pos is None and pos is None)
                 ):
                     return True
             else:

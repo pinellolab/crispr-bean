@@ -15,6 +15,26 @@ def get_fdr(mu_z, plot=False):
     return (fdr_dec, fdr_inc, fdr)
 
 
+def adjust_normal_params_by_control(
+    param_df: pd.DataFrame, mu0: pd.Series, sd0: pd.Series, suffix: str = "_adj"
+) -> pd.DataFrame:
+    """Adjust Normal distribution parameters mu, mu_sd, mu_z, sd by mu0, sd0."""
+    param_df[f"mu{suffix}"] = param_df["mu"] - mu0
+    param_df[f"mu_z{suffix}"] = param_df[f"mu{suffix}"] / param_df["mu_sd"] / sd0
+    param_df[f"sd{suffix}"] = param_df["sd"] / sd0
+    fdr_dec, fdr_inc, fdr = get_fdr(param_df[f"mu_z{suffix}"])
+    (
+        param_df[f"fdr_dec{suffix}"],
+        param_df[f"fdr_inc{suffix}"],
+        param_df[f"fdr{suffix}"],
+    ) = (
+        fdr_dec,
+        fdr_inc,
+        fdr,
+    )
+    return param_df
+
+
 def write_result_table(
     target_info_df: pd.DataFrame,
     param_hist_dict,

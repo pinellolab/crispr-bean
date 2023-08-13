@@ -41,7 +41,7 @@ class MutationType(IntEnum):
 
 
 class AminoAcidEdit(Edit):
-    def __init__(self, pos: int, ref: str, alt: str, gene: str=None):
+    def __init__(self, pos: int, ref: str, alt: str, gene: str = None):
         self.gene = gene
         self.pos = pos
         assert ref in AA_SET, f"Invalid ref aa: {ref}"
@@ -89,27 +89,35 @@ class AminoAcidEdit(Edit):
 
     def __eq__(self, other):
         return (
-            self.chrom == other.chrom 
+            self.gene == other.gene
             and self.pos == other.pos
             and self.ref == other.ref
             and self.alt == other.alt
         )
 
     def __lt__(self, other):  # Implemented for pandas compatibility
-        if not self.chrom and other.chrom: return True
-        if self.chrom and not other.chrom: return False
-        if self.chrom == other.chrom: 
+        if not self.gene and other.gene:
+            return True
+        if self.gene and not other.gene:
+            return False
+        if self.gene == other.gene:
             return self.pos < other.pos
-        if self.chrom < other.chrom: return True
-        if self.chrom > other.chrom: return False
+        if self.gene < other.gene:
+            return True
+        if self.gene > other.gene:
+            return False
 
     def __gt__(self, other):  # Implemented for pandas compatibility
-        if self.chrom and not other.chrom: return True
-        if not self.chrom and other.chrom: return False
-        if self.chrom == other.chrom: 
+        if self.gene and not other.gene:
+            return True
+        if not self.gene and other.gene:
+            return False
+        if self.gene == other.gene:
             return self.pos > other.pos
-        if self.chrom > other.chrom: return True
-        if self.chrom < other.chrom: return False
+        if self.gene > other.gene:
+            return True
+        if self.gene < other.gene:
+            return False
 
 
 class AminoAcidAllele(Allele):
@@ -184,16 +192,22 @@ class CodingNoncodingAllele(Allele):
         return cls(aa_allele.edits, nt_allele.edits, nt_allele.get_uid())
 
     @classmethod
-    def from_alleles(cls, aa_allele: Optional[AminoAcidAllele] = None, nt_allele: Optional[Allele] = None):
-        if not aa_allele: aa_allele = AminoAcidAllele()
-        if not nt_allele: nt_allele = Allele()
+    def from_alleles(
+        cls,
+        aa_allele: Optional[AminoAcidAllele] = None,
+        nt_allele: Optional[Allele] = None,
+    ):
+        if not aa_allele:
+            aa_allele = AminoAcidAllele()
+        if not nt_allele:
+            nt_allele = Allele()
         return cls(aa_allele.edits, nt_allele.edits, nt_allele.get_uid())
 
     @classmethod
     def match_str(cls, allele_str):
         if isinstance(allele_str, CodingNoncodingAllele):
             return True
-        if allele_str.count('|') != 1:
+        if allele_str.count("|") != 1:
             return False
         aa_allele, nt_allele = allele_str.split("|")
         aa_match = AminoAcidAllele.match_str(aa_allele)

@@ -1,42 +1,36 @@
 from typing import Union, Sequence, Optional
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
+from statistics import NormalDist
 from scipy.special import logit, expit
-from statsmodels.stats.multitest import fdrcorrection
+from scipy.stats import norm
 
 
-def get_fdr(mu_z, plot=False):
-    p_dec = norm.cdf(mu_z)
-    p_inc = norm.cdf(-mu_z)
-    _, fdr_dec = fdrcorrection(p_dec)
-    _, fdr_inc = fdrcorrection(p_inc)
-    fdr = np.minimum(fdr_dec, fdr_inc)
-    return (fdr_dec, fdr_inc, fdr)
+def get_novl(df, mu_col, mu_sd_col):
+    return df.apply(
+        lambda row: 1
+        - NormalDist(mu=row[mu_col], sigma=row[mu_sd_col]).overlap(
+            NormalDist(mu=0, sigma=1)
+        ),
+        axis=1,
+    )
+
 
 
 def adjust_normal_params_by_control(
     param_df: pd.DataFrame,
-    mu0: pd.Series,
-    sd0: pd.Series,
+    sd0: float,
     suffix: str = "_adj",
     mu_adjusted_col="mu",
-    sd_adjusted_col="sd",
+    mu_sd_adjusted_col="mu_sd",
+    mu0: float = 0.0,
 ) -> pd.DataFrame:
-    """Adjust Normal distribution parameters mu, mu_sd, mu_z, sd by mu0, sd0."""
+    """Adjust the z-score by scaling by the standard deviation of negative variants sd0."""
     param_df[f"mu{suffix}"] = param_df[mu_adjusted_col] - mu0
-    param_df[f"mu_z{suffix}"] = param_df[f"mu{suffix}"] / param_df["mu_sd"] / sd0
-    param_df[f"sd{suffix}"] = param_df[sd_adjusted_col] / sd0
-    fdr_dec, fdr_inc, fdr = get_fdr(param_df[f"mu_z{suffix}"])
-    (
-        param_df[f"fdr_dec{suffix}"],
-        param_df[f"fdr_inc{suffix}"],
-        param_df[f"fdr{suffix}"],
-    ) = (
-        fdr_dec,
-        fdr_inc,
-        fdr,
-    )
+    param_df[f"mu_sd{suffix}"] = param_df[mu_sd_adjusted_col] * sd0
+    param_df[f"mu_z{suffix}"] = param_df[f"mu{suffix}"] / param_df[f"mu_sd{suffix}"]
+    param_df[f"novl{suffix}"] = get_novl(param_df, f"mu{suffix}", f"mu_sd{suffix}")
+
     return param_df
 
 
@@ -47,6 +41,8 @@ def write_result_table(
     prefix: str = "",
     suffix: str = "",
     write_fitted_eff: bool = True,
+    adjust_confidence_by_negative_control: bool = True,
+    adjust_confidence_negatives: np.ndarray = None,
     guide_index: Optional[Sequence[str]] = None,
     guide_acc: Optional[Sequence] = None,
     return_result: bool = False,
@@ -64,19 +60,15 @@ def write_result_table(
         raise ValueError(
             f'`mu_loc` has invalid shape of {param_hist_dict["params"]["mu_loc"].shape}'
         )
-    mu_z = mu / mu_sd
-    fdr_dec, fdr_inc, fdr = get_fdr(mu_z)
     fit_df = pd.DataFrame(
         {
             "mu": mu,
             "mu_sd": mu_sd,
             "mu_z": mu / mu_sd,
             "sd": sd,
-            "fdr_dec": fdr_dec,
-            "fdr_inc": fdr_inc,
-            "fdr": fdr,
         }
     )
+    fit_df["novl"] = get_novl(fit_df, "mu", "mu_sd")
     if "negctrl" in param_hist_dict.keys():
         print("Normalizing with common negative control distribution")
         mu0 = param_hist_dict["negctrl"]["params"]["mu_loc"].detach().cpu().numpy()
@@ -84,19 +76,36 @@ def write_result_table(
             param_hist_dict["negctrl"]["params"]["sd_loc"].detach().exp().cpu().numpy()
         )
         print(f"Fitted mu0={mu0}, sd0={sd0}.")
-        fit_df["mu_adj"] = (mu - mu0) / sd0
-        fit_df["mu_sd_adj"] = mu_sd / sd0
-        fit_df["mu_z_adj"] = fit_df.mu_adj / fit_df.mu_sd_adj
-        fit_df["sd_adj"] = sd / sd0
-        fdr_dec, fdr_inc, fdr = get_fdr(fit_df.mu_z_adj)
-        fit_df["fdr_dec_adj"], fit_df["fdr_inc_adj"], fit_df["fdr_adj"] = (
-            fdr_dec,
-            fdr_inc,
-            fdr,
-        )
+        fit_df["mu_scaled"] = (mu - mu0) / sd0
+        fit_df["mu_sd_scaled"] = mu_sd / sd0
+        fit_df["mu_z_scaled"] = fit_df.mu_scaled / fit_df.mu_sd_scaled
+        fit_df["sd_scaled"] = sd / sd0
+        fit_df["novl_scaled"] = get_novl(fit_df, "mu_scaled", "mu_sd_scaled")
+
     fit_df = pd.concat(
         [target_info_df.reset_index(), fit_df.reset_index(drop=True)], axis=1
     )
+
+    if adjust_confidence_by_negative_control:
+        assert adjust_confidence_negatives is not None
+        if len(adjust_confidence_negatives) < 10:
+            print(
+                f"Cannot adjust confidence by negative control due to too small number ({len(adjust_confidence_negatives)}) of negatives."
+            )
+        else:
+            ncvar = fit_df.iloc[adjust_confidence_negatives]
+            if "mu_z_scaled" in ncvar.columns:
+                print("Using mu_z_scaled for normalization input..")
+                _, std = norm.fit(ncvar.mu_z_scaled, floc=0)
+            else:
+                _, std = norm.fit(ncvar.mu_z, floc=0)
+            fit_df = adjust_normal_params_by_control(
+                fit_df,
+                std,
+                suffix="_adj",
+                mu_adjusted_col="mu_scaled",
+                mu_sd_adjusted_col="mu_sd_scaled",
+            )
 
     if write_fitted_eff or guide_acc is not None:
         if "alpha_pi" not in param_hist_dict["params"].keys():

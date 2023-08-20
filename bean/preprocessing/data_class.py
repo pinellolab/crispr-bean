@@ -259,6 +259,11 @@ class ReporterScreenData(ScreenData):
     def _post_init(
         self,
         screen,
+        use_const_pi,
+        impute_pi_popt,
+        pi_prior_count,
+        shrink_alpha,
+        pi_popt,
     ):
         screen.samples["size_factor_bcmatch"] = self.get_size_factor(
             screen.layers["X_bcmatch"]
@@ -284,6 +289,18 @@ class ReporterScreenData(ScreenData):
             self.screen_control.samples["size_factor_bcmatch"].to_numpy()
         ).reshape(self.n_reps, 1)
 
+        edited_control = self.transform_data(
+            self.screen_control.layers["edits"], n_bins=1
+        )
+        nonedited_control = self.X_bcmatch_control - edited_control
+        nonedited_control[nonedited_control < 0] = 0
+        if (
+            not hasattr(self, "allele_counts_control")
+            or self.allele_counts_control is None
+        ):
+            self.allele_counts_control = torch.stack(
+                [nonedited_control, edited_control], axis=-1
+            )  # (n_reps, n_bins, n_guides, n_alleles)
         # assert (self.allele_counts_control.sum(axis=-1) == self.X_bcmatch_control).all()
         a0_bcmatch = get_pred_alpha0(
             self.X_bcmatch.clone().cpu(),
@@ -293,14 +310,6 @@ class ReporterScreenData(ScreenData):
         )
         self.a0_bcmatch = torch.as_tensor(a0_bcmatch)
 
-    def set_pi(
-        self,
-        use_const_pi,
-        impute_pi_popt,
-        pi_prior_count,
-        shrink_alpha,
-        pi_popt,
-    ):
         if use_const_pi:
             self.pi = (self.allele_counts.sum(axis=(0, 1)) + pi_prior_count * 0.5) / (
                 self.allele_counts.sum(axis=(0, 1)).sum(axis=-1)[..., None]
@@ -309,9 +318,10 @@ class ReporterScreenData(ScreenData):
             self.allele_counts_control = (
                 self.X_bcmatch_control[:, :, :, None] * self.pi[None, None, :, :]
             )
-        self.set_fitted_pi_a0(
-            pi_popt=None, shrink_alpha=shrink_alpha, use_fitted_value=False
-        )
+            impute_pi_popt = True
+        if impute_pi_popt:
+            pi_popt = self.popt
+        self.set_fitted_pi_a0(pi_popt, shrink_alpha, use_fitted_value=True)
 
     def __getitem__(self, guide_idx):
         ndata = super().__getitem__(guide_idx)
@@ -343,13 +353,13 @@ class ReporterScreenData(ScreenData):
         use_fitted_value: use fitted value. If False, use raw and nan values are substituted to fitted values.
         """
         if pi_popt is not None:
-            self.pi_a0 = get_pred_pi_alpha0(
+            pi_a0 = get_pred_pi_alpha0(
                 self.allele_counts_control.clone().cpu(),
                 self.size_factor_control.clone().cpu(),
                 pi_popt,
             )
         else:
-            self.pi_a0, _pi_popt = get_fitted_pi_alpha0(
+            pi_a0, _pi_popt = get_fitted_pi_alpha0(
                 self.allele_counts_control.clone().cpu(),
                 self.size_factor_control.clone().cpu(),
                 fit_quantile=None,
@@ -994,33 +1004,15 @@ class VariantReporterScreenData(VariantScreenData, ReporterScreenData):
             accessibility_bw_path=accessibility_bw_path,
             **kwargs,
         )
-
         ReporterScreenData._post_init(
             self,
             screen,
-        )
-        ReporterScreenData.set_pi(
-            self,
             use_const_pi,
             impute_pi_popt,
             pi_prior_count,
             shrink_alpha,
             pi_popt,
         )
-
-    def _post_init(self):
-        edited_control = self.transform_data(
-            self.screen_control.layers["edits"], n_bins=1
-        )
-        nonedited_control = self.X_bcmatch_control - edited_control
-        nonedited_control[nonedited_control < 0] = 0
-        if (
-            not hasattr(self, "allele_counts_control")
-            or self.allele_counts_control is None
-        ):
-            self.allele_counts_control = torch.stack(
-                [nonedited_control, edited_control], axis=-1
-            )  # (n_reps, n_bins, n_guides, n_alleles)
 
 
 @dataclass
@@ -1082,10 +1074,6 @@ class VariantSortingReporterScreenData(VariantReporterScreenData, SortingScreenD
         ReporterScreenData._post_init(
             self,
             screen,
-        )
-        VariantReporterScreenData._post_init(self)
-        ReporterScreenData.set_pi(
-            self,
             use_const_pi,
             impute_pi_popt,
             pi_prior_count,
@@ -1139,9 +1127,6 @@ class TilingSortingReporterScreenData(TilingReporterScreenData, SortingScreenDat
         ReporterScreenData._post_init(
             self,
             screen,
-        )
-        ReporterScreenData.set_pi(
-            self,
             use_const_pi,
             impute_pi_popt,
             pi_prior_count,

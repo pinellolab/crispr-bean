@@ -343,15 +343,15 @@ class ReporterScreenData(ScreenData):
         use_fitted_value: use fitted value. If False, use raw and nan values are substituted to fitted values.
         """
         if pi_popt is not None:
-            pi_a0 = get_pred_pi_alpha0(
-                self.allele_counts.clone().cpu(),
-                self.size_factor.clone().cpu(),
+            self.pi_a0 = get_pred_pi_alpha0(
+                self.allele_counts_control.clone().cpu(),
+                self.size_factor_control.clone().cpu(),
                 pi_popt,
             )
         else:
-            pi_a0, _pi_popt = get_fitted_pi_alpha0(
-                self.allele_counts.clone().cpu(),
-                self.size_factor.clone().cpu(),
+            self.pi_a0, _pi_popt = get_fitted_pi_alpha0(
+                self.allele_counts_control.clone().cpu(),
+                self.size_factor_control.clone().cpu(),
                 fit_quantile=None,
                 shrink=shrink_alpha,
             )
@@ -360,8 +360,8 @@ class ReporterScreenData(ScreenData):
         if not use_fitted_value:
             pi_a0 = torch.as_tensor(
                 get_fitted_pi_alpha0(
-                    self.allele_counts.clone().cpu(),
-                    self.size_factor.clone().cpu(),
+                    self.allele_counts_control.clone().cpu(),
+                    self.size_factor_control.clone().cpu(),
                     fit=False,
                     fit_quantile=None,
                     shrink=shrink_alpha,

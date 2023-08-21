@@ -83,7 +83,7 @@ def parse_args():
         "--posctrl-col",
         help="Column name in .h5ad.guides DataFrame that specifies guide category.",
         type=str,
-        default="group",
+        default="target_group",
     )
     parser.add_argument(
         "--posctrl-val",

@@ -51,14 +51,20 @@ bean-count-samples \
 File should contain following columns.
 * `name`: gRNA ID column
 * `sequence`: gRNA sequence
-* `barcode`: R2 barcode to help match reporter to gRNA  
-* `strand [Optional]`: Specifies gRNA strand information relative to the reference genome. 
-* `start_pos [Optional]`: gRNA starting position in the genome. Required when you provide `strand` column. Should specify the smaller coordinate value among start and end position regardless of gRNA strandedness.
-* `offset [Optional]`: Specifies the absolute positional offset to be added to the edited position. Useful when you need amino acid translation results for ex. coding sequence tiling screens.
-* `target_pos [Optional]`: If `--match_target_pos` flag is used, input file needs `target_pos` which specifies 0-based relative position of targeted base within Reporter sequence.
+* `barcode`: R2 barcode to help match reporter to gRNA
 * In order to use accessibility in the [variant effect quantification](#bean-run-quantify-variant-effects), provide accessibility information in one of two options. (For non-targeting guides, provide NA values (empty cell).)   
   * Option 1: `chr` & `genomic_pos`: Chromosome (ex. `chr19`) and genomic position of guide sequence. You will have to provide the path to the bigwig file with matching reference version in `bean-run`. 
   * Option 2: `accessibility_signal`: ATAC-seq signal value of the target loci of each guide.  
+* For variant screen 
+  * Here, gRNAs are designed to target specific variants and ignores bystander edits.
+    
+    <img src="imgs/variant_screen_gRNA_design.svg" alt="variant screen design" width="500"/>
+  * `target_col` (default "target"): This column denotes which target variant/element of each gRNA. This is not used in `bean-count[-samples]` but required to run `bean-run` in later steps.
+  * `target_pos [Optional]`: If `--match_target_pos` flag is used, input file needs `target_pos` which specifies 0-based relative position of targeted base within Reporter sequence.
+* For tiling screen (gRNAs tile coding / noncoding sequences)
+  * `strand`: Specifies gRNA strand information relative to the reference genome.
+  * `chrom`: Chromosome of gRNA targeted locus.
+  * `start_pos`: gRNA starting position in the genome. Required when you provide `strand` column. Should specify the smaller coordinate value among start and end position regardless of gRNA strandedness.
 
 
 #### sample_list.csv

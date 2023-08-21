@@ -16,6 +16,18 @@ def get_novl(df, mu_col, mu_sd_col):
     )
 
 
+def get_quantile(mu, sd, q):
+    dist = norm(mu, sd)
+    return dist.ppf(q)
+
+
+def add_credible_interval(df, mu_col, mu_sd_col, alpha=0.05):
+    """Add credible interval to df"""
+    df = df.copy()
+    df[f"CI[{alpha/2}"] = get_quantile(df[mu_col], df[mu_sd_col], alpha / 2)
+    df[f"{1-alpha/2}]"] = get_quantile(df[mu_col], df[mu_sd_col], 1 - alpha / 2)
+    return df
+
 
 def adjust_normal_params_by_control(
     param_df: pd.DataFrame,
@@ -103,9 +115,14 @@ def write_result_table(
                 fit_df,
                 std,
                 suffix="_adj",
-                mu_adjusted_col="mu_scaled",
-                mu_sd_adjusted_col="mu_sd_scaled",
+                mu_adjusted_col="mu_scaled"
+                if "negctrl" in param_hist_dict.keys()
+                else "mu",
+                mu_sd_adjusted_col="mu_sd_scaled"
+                if "negctrl" in param_hist_dict.keys()
+                else "mu_sd",
             )
+            fit_df = add_credible_interval(fit_df, "mu_adj", "mu_sd_adjsnakem")
 
     if write_fitted_eff or guide_acc is not None:
         if "alpha_pi" not in param_hist_dict["params"].keys():

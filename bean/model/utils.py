@@ -45,7 +45,7 @@ def get_std_normal_prob(
     upper_thres[~inf_mask] = tdist.Normal(0, 1).icdf(upper_quantile[~inf_mask])
     lower_thres[~ninf_mask] = tdist.Normal(0, 1).icdf(lower_quantile[~ninf_mask])
 
-    if not mask is None:
+    if mask is not None:
         # Temporarily add mask value
         sd = sd + (~mask).long() * 100
     assert (sd > 0).all(), f"sd > 0 not met at {sd[~(sd > 0)]}"
@@ -62,7 +62,7 @@ def get_std_normal_prob(
         lower_thres[~ninf_mask]
     )
     res = cdf_upper - cdf_lower
-    if not mask is None:
+    if mask is not None:
         res[~mask] = 0
 
     return res
@@ -114,7 +114,7 @@ def scale_pi_by_accessibility(
     """
     pi_shape = pi.shape
     scaled_pi = _scale_edited_pi(pi[..., 1:], guide_accessibility)
-    ctrl_pi = torch.ones(pi[:, :, :, 0].shape) - scaled_pi.sum(axis=-1)
+    ctrl_pi = torch.ones(pi[..., 0].shape) - scaled_pi.sum(axis=-1)
     pi = torch.concat([ctrl_pi.unsqueeze(-1), scaled_pi], axis=-1)
     pi = pi / pi.sum(axis=-1).clamp(min=1.0)[..., None]
     assert pi.shape == pi_shape, (pi.shape, scaled_pi.shape, pi_shape)

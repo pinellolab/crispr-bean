@@ -131,7 +131,6 @@ def _get_edited_allele(
     start_pos: int = 0,
     end_pos: int = 100,
 ):
-
     allele = Allele()
 
     assert len(ref_seq) == len(query_seq), "reference and query seq length mismatch"
@@ -237,7 +236,7 @@ def _get_edited_allele_crispresso(
 ):
     aln_matrix = read_matrix(aln_mat_path)
     assert strand in [-1, +1]
-    gap_incentive = np.zeros(len(ref_seq) + 1, dtype=np.int)
+    gap_incentive = np.zeros(len(ref_seq) + 1, dtype=int)
     query_aligned, ref_aligned, score = global_align_base_editor(
         query_seq,
         ref_seq,

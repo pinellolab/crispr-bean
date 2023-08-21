@@ -1,6 +1,7 @@
 from typing import Tuple
 import gzip
 import logging
+from copy import deepcopy
 import os
 import sys
 from os import path
@@ -208,7 +209,7 @@ class GuideEditCounter:
         self.semimatch_R2_filename = self.R2_filename.replace(
             ".fastq", "_semimatch.fastq"
         )
-        if self.count_reporter_edits:
+        if self.count_reporter_edits or self.count_guide_edits:
             _write_alignment_matrix(
                 self.base_edited_from,
                 self.base_edited_to,
@@ -221,14 +222,6 @@ class GuideEditCounter:
         else:  # count both bc matched & unmatched guide counts
             self._get_guide_counts_bcmatch_semimatch()
 
-        if self.count_guide_edits:
-            self.screen.uns["guide_edit_counts"] = _multiindex_dict_to_df(
-                self.screen.uns["guide_edit_counts"], "edit", self.database_id
-            )
-            self.screen.uns["guide_edit_counts"].guide = self.screen.guides.index[
-                self.screen.uns["guide_edit_counts"].guide.to_numpy(dtype=int)
-            ]
-
         if self.count_reporter_edits:
             self.screen.uns["edit_counts"] = pd.DataFrame.from_dict(
                 self.screen.uns["edit_counts"]
@@ -236,6 +229,8 @@ class GuideEditCounter:
 
         if self.count_reporter_edits:
             self._write_reporter_alleles()
+        if self.count_guide_edits:
+            self._write_guide_self_alleles()
         if self.count_guide_reporter_alleles:
             self._write_guide_reporter_alleles()
         count_stat_path = self._jp("mapping_stats.txt")
@@ -313,6 +308,31 @@ class GuideEditCounter:
                 self.screen.uns["allele_counts"].guide
             ]
 
+    def _write_guide_self_alleles(self):
+        guides = []
+        alleles = []
+        counts = []
+        guide_edits = deepcopy(self.screen.uns["guide_edit_counts"])
+        for guide, allele_to_count in guide_edits.items():
+            if len(allele_to_count.keys()) == 0:
+                continue
+            guides.extend([guide] * len(allele_to_count.keys()))
+            for allele, count in allele_to_count.items():
+                alleles.append(allele)
+                counts.append(count)
+        if not (len(guides) == len(alleles) == len(counts)):
+            raise ValueError(
+                f"Guides:{len(guides)}, alleles:{len(alleles)}, counts:{len(counts)}"
+            )
+        self.screen.uns["guide_edit_counts"] = pd.DataFrame(
+            {"guide": guides, "allele": alleles, self.database_id: counts}
+        )
+
+        if "guide" in self.screen.uns["guide_edit_counts"].columns:
+            self.screen.uns["guide_edit_counts"].guide = self.screen.guides.index[
+                self.screen.uns["guide_edit_counts"].guide
+            ]
+
     def _get_guide_counts_bcmatch(self):
         NotImplemented
 
@@ -342,6 +362,9 @@ class GuideEditCounter:
             quality_thres=single_base_qual_cutoff,
             objectify_allele=self.objectify_allele,
         )
+
+        if not self.count_reporter_edits:
+            self._update_counted_guide_allele(matched_guide_idx, guide_edit_allele)
         return (guide_edit_allele, score)
 
     def _get_strand_offset_from_guide_index(self, guide_idx: int) -> Tuple[int, int]:
@@ -376,6 +399,16 @@ class GuideEditCounter:
                 self.guide_to_allele[guide_idx][allele] = 1
         else:
             self.guide_to_allele[guide_idx] = {allele: 1}
+
+    def _update_counted_guide_allele(self, guide_idx: int, allele: Allele) -> None:
+        """Add allele count to self.guide_to_allele dictionary."""
+        if guide_idx in self.screen.uns["guide_edit_counts"].keys():
+            if allele in self.screen.uns["guide_edit_counts"][guide_idx].keys():
+                self.screen.uns["guide_edit_counts"][guide_idx][allele] += 1
+            else:
+                self.screen.uns["guide_edit_counts"][guide_idx][allele] = 1
+        else:
+            self.screen.uns["guide_edit_counts"][guide_idx] = {allele: 1}
 
     def _update_counted_allele_and_guideAllele(
         self, guide_idx: int, allele: Allele, guide_allele: Allele
@@ -491,7 +524,9 @@ class GuideEditCounter:
                         matched_guide_idx = semimatch[0]
                         self.screen.layers[semimatch_layer][matched_guide_idx, 0] += 1
                         if self.count_guide_edits:
-                            self._count_guide_edits(matched_guide_idx, r1)
+                            guide_allele, _ = self._count_guide_edits(
+                                matched_guide_idx, r1
+                            )
                         self.semimatch += 1
 
                 elif len(bc_match) >= 2:  # duplicate mapping

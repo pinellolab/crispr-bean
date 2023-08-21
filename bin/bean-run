@@ -88,7 +88,7 @@ def run_inference(
     }
 
 
-def _get_guide_target_info(bdata):
+def _get_guide_target_info(bdata, cols_include=[]):
     guide_info = bdata.guides.copy()
     edit_rate_info = (
         guide_info[[args.target_col, "edit_rate"]]
@@ -99,15 +99,22 @@ def _get_guide_target_info(bdata):
     edit_rate_info = edit_rate_info.rename(
         columns={"mean": "edit_rate_mean", "std": "edit_rate_std"}
     )
+    print(guide_info.columns)
+    print(cols_include)
     target_info = (
         guide_info[
             [args.target_col]
             + [
                 col
                 for col in guide_info.columns
-                if col.startswith("target_")
-                and len(guide_info[[args.target_col, col]].drop_duplicates())
-                == len(guide_info[args.target_col].unique())
+                if (
+                    (
+                        (col.startswith("target_"))
+                        and len(guide_info[[args.target_col, col]].drop_duplicates())
+                        == len(guide_info[args.target_col].unique())
+                    )
+                    or col in cols_include
+                )
                 and col != args.target_col
             ]
         ]
@@ -175,6 +182,12 @@ def parse_args():
         help="Use constant pi provided in --guide-activity-col (instead of fitting from reporter data)",
     )
     parser.add_argument(
+        "--shrink-alpha",
+        default=False,
+        action="store_true",
+        help="Instead of using the trend-fitted alpha values, use estimated alpha values for each gRNA that are shrunk towards the fitted trend.",
+    )
+    parser.add_argument(
         "--condition-col",
         default="bin",
         type=str,
@@ -235,13 +248,13 @@ def parse_args():
         "--negctrl-col",
         type=str,
         default="target_group",
-        help="Column in bdata.obs specifying if a guide is negative control. If the `bdata.guides[negctrl_col].tolower() == negctrl_col_value`, it is treated as negative control guide.",
+        help="Column in bdata.obs specifying if a guide is negative control. If the `bdata.guides[negctrl_col].lower() == negctrl_col_value`, it is treated as negative control guide.",
     )
     parser.add_argument(
         "--negctrl-col-value",
         type=str,
         default="negctrl",
-        help="Column value in bdata.guides specifying if a guide is negative control. If the `bdata.guides[negctrl_col].tolower() == negctrl_col_value`, it is treated as negative control guide.",
+        help="Column value in bdata.guides specifying if a guide is negative control. If the `bdata.guides[negctrl_col].lower() == negctrl_col_value`, it is treated as negative control guide.",
     )
     parser.add_argument(
         "--repguide-mask",
@@ -284,6 +297,11 @@ def parse_args():
         action="store_true",
     )
     parser.add_argument(
+        "--dont-adjust-confidence-by-negative-control",
+        action="store_true",
+        help="Adjust confidence by negative controls. For variant mode, this uses negative control variants. For tiling mode, adjusts confidence by synonymous edits.",
+    )
+    parser.add_argument(
         "--load-existing",  # TODO: add check args
         action="store_true",
         help="Load existing .pkl file if present.",
@@ -293,6 +311,9 @@ def parse_args():
 
 
 def check_args(args):
+    args.adjust_confidence_by_negative_control = (
+        ~args.dont_adjust_confidence_by_negative_control
+    )
     if args.scale_by_acc:
         if args.acc_col is None and args.acc_bw_path is None:
             raise ValueError(
@@ -422,9 +443,19 @@ def main(args):
         allele_df_key=args.allele_df_key,
         control_guide_tag=args.control_guide_tag,
         target_col=args.target_col,
+        shrink_alpha=args.shrink_alpha,
     )
+    adj_negctrl_idx = None
     if args.mode == "variant":
-        target_info_df = _get_guide_target_info(ndata.screen)
+        target_info_df = _get_guide_target_info(
+            ndata.screen, cols_include=[args.negctrl_col]
+        )
+        print(target_info_df.columns)
+        if args.adjust_confidence_by_negative_control:
+            adj_negctrl_idx = np.where(
+                target_info_df[args.negctrl_col].map(lambda s: s.lower())
+                == args.negctrl_col_value.lower()
+            )[0]
     else:
         if args.splice_site_path is not None:
             splice_site = pd.read_csv(args.splice_site_path).pos
@@ -436,6 +467,8 @@ def main(args):
         )
         target_info_df["effective_edit_rate"] = _obtain_effective_edit_rate(ndata).cpu()
         target_info_df["n_guides"] = _obtain_n_guides_alleles_per_variant(ndata).cpu()
+        if args.adjust_confidence_by_negative_control:
+            adj_negctrl_idx = np.where(target_info_df.ref == target_info_df.alt)[0]
 
     guide_info_df = ndata.screen.guides
     del bdata
@@ -465,6 +498,8 @@ def main(args):
         f"{prefix}/bean_element[sgRNA]_result.{model_label}{args.result_suffix}.csv"
     )
     info(f"Done running inference. Writing result at {outfile_path}...")
+    if not os.path.exists(prefix):
+        os.makedirs(prefix)
     with open(f"{prefix}/{model_label}.result{args.result_suffix}.pkl", "wb") as handle:
         try:
             pkl.dump(param_history_dict, handle)
@@ -482,6 +517,8 @@ def main(args):
         if hasattr(ndata, "guide_accessibility")
         and ndata.guide_accessibility is not None
         else None,
+        adjust_confidence_by_negative_control=args.adjust_confidence_by_negative_control,
+        adjust_confidence_negatives=adj_negctrl_idx,
     )
     info("Done!")
 

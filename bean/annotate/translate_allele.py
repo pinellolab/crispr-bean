@@ -1,5 +1,5 @@
 import os
-from typing import List, Iterable, Dict, Tuple, Collection
+from typing import List, Iterable, Dict, Tuple, Collection, Optional
 from copy import deepcopy
 import numpy as np
 import pandas as pd
@@ -149,13 +149,13 @@ def _get_seq_pos_from_fasta(fasta_file_name: str) -> Tuple[List[str], List[int]]
     translated_seq = []
     genomic_pos = []
     for exon in exons:
-        _, exon_start, exon_end = _parse_description(exon.description)
+        exon_chrom, exon_start, exon_end = _parse_description(exon.description)
         for i, nt in enumerate(str(exon.seq)):
             if nt.islower():
                 continue
             translated_seq.append(nt)
             genomic_pos.append(exon_start + i)
-    return (translated_seq, genomic_pos)
+    return (exon_chrom, translated_seq, genomic_pos)
 
 
 def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
@@ -185,27 +185,26 @@ class CDS:
                 print("No fasta file provided as reference: using LDLR")
             fasta_file_name = os.path.dirname(be.__file__) + "/annotate/ldlr_exons.fa"
         try:
-            type(self).set_exon_fasta_name(fasta_file_name)
+            self.set_exon_fasta_name(fasta_file_name)
         except FileNotFoundError as e:
             print(os.getcwd())
             raise e
-        self.edited_nt = type(self).nt.copy()
+        self.edited_nt = self.nt.copy()
         self.edited_aa_pos = set()
         self.edits_noncoding = set()
         self.set_exon_fasta_name(fasta_file_name)
 
-    @classmethod
-    def set_exon_fasta_name(cls, fasta_file_name: str):
-        cls.fasta_file_name = fasta_file_name
-        cls.translated_seq, cls.genomic_pos = _get_seq_pos_from_fasta(fasta_file_name)
-        cls.nt = cls.translated_seq
-        cls.pos = np.array(cls.genomic_pos)
+    def set_exon_fasta_name(self, fasta_file_name: str):
+        self.fasta_file_name = fasta_file_name
+        self.chrom, self.translated_seq, self.genomic_pos = _get_seq_pos_from_fasta(fasta_file_name)
+        self.nt = self.translated_seq
+        self.pos = np.array(self.genomic_pos)
 
     def translate(self):
         self.aa = _translate(self.edited_nt, codon_map)
 
     def _get_relative_nt_pos(self, absolute_pos):
-        nt_relative_pos = np.where(type(self).pos == absolute_pos)[0]
+        nt_relative_pos = np.where(self.pos == absolute_pos)[0]
         assert len(nt_relative_pos) <= 1, nt_relative_pos
         return nt_relative_pos.astype(int).item() if nt_relative_pos else -1
 
@@ -226,16 +225,16 @@ class CDS:
             alt_base = edit.alt_base
         if rel_pos == -1:  # position outside CDS
             self.edits_noncoding.add(edit)
-        elif type(self).nt[rel_pos] != ref_base:
+        elif self.nt[rel_pos] != ref_base:
             if ref_base != "-":
                 raise RefBaseMismatchException(
-                    f"ref:{type(self).nt[rel_pos]} at pos {rel_pos}, got edit {edit}"
+                    f"ref:{self.nt[rel_pos]} at pos {rel_pos}, got edit {edit}"
                 )
         else:
             self.edited_nt[rel_pos] = alt_base
         if alt_base == "-":  # frameshift
             # self.edited_nt.pop(rel_pos)
-            self.edited_aa_pos.update(list(range(rel_pos, len(CDS.nt) // 3)))
+            self.edited_aa_pos.update(list(range(rel_pos, len(self.nt) // 3)))
 
     def edit_allele(self, allele_str):
         if isinstance(allele_str, Allele):
@@ -247,37 +246,96 @@ class CDS:
         if "-" in self.edited_nt:
             self.edited_nt.remove("-")
 
-    def get_aa_change(self, include_synonymous=True) -> List[str]:
+    def get_aa_change(self, allele_str, include_synonymous=True) -> CodingNoncodingAllele:
         """1-based amino acid editing result"""
+        self.edit_allele(allele_str)
         mutations = CodingNoncodingAllele()
         mutations.nt_allele.update(self.edits_noncoding)
         for edited_aa_pos in self.edited_aa_pos:
-            ref_aa = _translate_single_codon(type(self).nt, edited_aa_pos)
+            ref_aa = _translate_single_codon(self.nt, edited_aa_pos)
             mt_aa = _translate_single_codon(self.edited_nt, edited_aa_pos)
             if mt_aa == "_":
                 return "translation error"
             if not include_synonymous and ref_aa == mt_aa:
                 continue
             mutations.aa_allele.add(AminoAcidEdit(edited_aa_pos + 1, ref_aa, mt_aa))
-
         return mutations
 
+class CDSCollection:
+    def __init__(self, gene_ids: List[str] = None, fasta_file_names : List[str] = None, suppressMessage=True):
+        if len(gene_ids) != len(fasta_file_names):
+            raise ValueError("gene_ids and fasta_file_names have different lengths")
+        self.cds_dict = {}
+        for gid, fasta_file in zip(fasta_file_names, gene_ids):
+            self.cds_dict[gid] = CDS(fasta_file)
+        self.cds_ranges = self.get_cds_ranges()
 
-def get_allele_aa_change(allele_str, include_synonymous=True, fasta_file=None):
+    def get_cds_ranges(self):
+        gids = []
+        seqnames = []
+        starts = []
+        ends = []
+        for gene_id, cds in self.cds_dict.items():
+            gids.append(gene_id)
+            seqnames.append(cds.chrom)
+            starts.append(cds.start)
+            ends.append(cds.end)
+
+        return pd.DataFrame(
+            {
+                "chrom": seqnames,
+                "start": starts,
+                "end": ends,
+            },
+            index=gids,
+        )
+
+    def find_overlap(self, chrom: str, start: int, end: int, range_df: pd.DataFrame) -> Optional[str]:
+        """Find overlap between query range and range_df and return ID of overlapping region in range_df.
+        """
+        if not chrom in range_df.chrom: return None
+        overlap = range_df.loc[(range_df.chrom == chrom) & ((start <= range_df.end) | (end >= range_df.start))]
+        if len(overlap) == 0: return None
+        if len(overlap) > 2: raise ValueError("We cannot handle overlapping genes.")
+        return overlap.index.tolist()[0]
+
+    def get_aa_change(self, allele: Allele, include_synonymous: bool=True) -> CodingNoncodingAllele:
+        """Finds overlapping CDS and call the same function for the CDS, else return CodingNonCodingAllele with no translated allele."""
+        chrom, start, end = allele.get_range()
+        overlapping_cds = find_overlap(chrom, start, end, self.cds_ranges)
+        if overlapping_cds: 
+            return self.cds_dict[overlapping_cds].get_aa_change(allele, include_synonymous)
+        else:
+            return CodingNonCodingAllele.from_alleles(nt_allele = allele)
+
+def get_allele_aa_change_single_gene(allele: Allele , fasta_file=None, include_synonymous=True):
     """
     Obtain amino acid changes
     """
     cds = CDS(fasta_file_name=fasta_file)
-    cds.edit_allele(allele_str)
-    return cds.get_aa_change(include_synonymous)
+    return cds.get_aa_change(allele, include_synonymous)
 
+def get_allele_aa_change_multi_genes(allele: Allele, fasta_file_dict, include_synonymous=True):
+    """
+    Obtain amino acid changes for multiple provided gene exon sequences
+    """
+    cdss = CDSCollection(gene_ids = fasta_file_dict.keys(), fasta_file_list = fasta_file_dict.values())
+    return cdss.get_aa_change(allele_str, include_synonymous)
 
 def translate_allele(
-    allele: Allele, include_synonymouns=True, allow_ref_mismatch=True, fasta_file=None
+    allele: Allele, include_synonymouns=True, allow_ref_mismatch=True, fasta_file: str=None, fasta_file_dict: Dict[str, str] = None,
 ):
     try:
-        return get_allele_aa_change(
-            allele, include_synonymous=include_synonymouns, fasta_file=fasta_file
+        if fasta_file_dict:
+            return get_allele_aa_change_multi_genes(
+                allele,
+                fasta_file_dict = fasta_file_dict,
+                include_synonymous = include_synonymous,
+            )
+        return get_allele_aa_change_single_gene(
+            allele, 
+            fasta_file=fasta_file,
+            include_synonymous=include_synonymouns, 
         )
     except RefBaseMismatchException as e:
         if not allow_ref_mismatch:
@@ -287,8 +345,10 @@ def translate_allele(
 
 
 def translate_allele_df(
-    allele_df, include_synonymouns=True, allow_ref_mismatch=True, fasta_file=None
+    allele_df, include_synonymouns=True, allow_ref_mismatch=True, fasta_file=None, fasta_file_dict: Dict[str, str] = None,
 ):
+    if fasta_file and fasta_file_dict: 
+        raise ValueError("Both fasta file and fasta file dict provided.")
     allele_df = allele_df.copy()
     translated_alleles = allele_df.allele.map(
         lambda a: be.translate_allele(
@@ -296,6 +356,7 @@ def translate_allele_df(
             include_synonymouns=include_synonymouns,
             allow_ref_mismatch=allow_ref_mismatch,
             fasta_file=fasta_file,
+            fasta_file_dict=fasta_file_dict,
         )
     )
     allele_df.insert(2, "cn_allele", translated_alleles)

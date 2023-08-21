@@ -24,11 +24,11 @@ def _add_absent_edits(
     editable_positions = np.where(
         (np.array(list(bdata.guides.loc[guide, "Reporter"])) == edited_base)
     )[0]
-    if guide not in edit_tbl.guide:
+    if guide not in edit_tbl.guide.tolist():
         observed_rel_pos = []
     else:
         edited_db = edit_tbl.loc[edit_tbl.guide == guide, :]
-        observed_rel_pos = edited_db.rel_pos
+        observed_rel_pos = edited_db.rel_pos.tolist()
     edits = []
     positions = []
     for editable_pos in editable_positions:
@@ -353,6 +353,7 @@ def plot_by_pos_pam(
         fig, ax = plt.subplots(figsize=figsize)
     sns.heatmap(pos_by_pam, ax=ax, cmap="Blues")
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+    return pos_by_pam
 
 
 def plot_by_pos_pam_and_context(bdata, edit_rates_df, figsize=(6, 6)):

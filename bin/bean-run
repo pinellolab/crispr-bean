@@ -63,9 +63,7 @@ def run_inference(
         optim=pyro.optim.ClippedAdam({"lr": initial_lr, "lrd": lrd}),
         loss=pyro.infer.Trace_ELBO(),
     )
-
     losses = []
-
     try:
         for t in tqdm(range(num_steps)):
             loss = svi.step(data)

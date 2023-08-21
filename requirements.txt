@@ -14,3 +14,4 @@ pyBigWig>=0.3.18
 pyro-ppl==1.8.1
 scikit-learn
 statsmodels>=0.12.1
+ipykernel

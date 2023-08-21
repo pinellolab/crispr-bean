@@ -107,6 +107,7 @@ def parse_args():
 
 def main():
     args = parse_args()
+    os.system("python3 -m ipykernel install --user --name bean_python3")
     pm.execute_notebook(
         f"{os.path.dirname(be.__file__)}/../notebooks/sample_quality_report.ipynb",
         f"{args.out_report_prefix}.ipynb",
@@ -124,7 +125,7 @@ def main():
             lfc_thres=args.lfc_thres,
             condition_label=args.condition_label,
         ),
-        kernel_name=os.environ["CONDA_DEFAULT_ENV"],
+        kernel_name="bean_python3",
     )
     os.system(f"jupyter nbconvert --to html {args.out_report_prefix}.ipynb")
 

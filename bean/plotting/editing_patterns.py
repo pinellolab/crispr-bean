@@ -353,6 +353,7 @@ def plot_by_pos_pam(
         fig, ax = plt.subplots(figsize=figsize)
     sns.heatmap(pos_by_pam, ax=ax, cmap="Blues")
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+    return pos_by_pam
 
 
 def plot_by_pos_pam_and_context(bdata, edit_rates_df, figsize=(6, 6)):

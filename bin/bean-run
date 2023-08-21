@@ -498,6 +498,8 @@ def main(args):
         f"{prefix}/bean_element[sgRNA]_result.{model_label}{args.result_suffix}.csv"
     )
     info(f"Done running inference. Writing result at {outfile_path}...")
+    if not os.path.exists(prefix):
+        os.makedirs(prefix)
     with open(f"{prefix}/{model_label}.result{args.result_suffix}.pkl", "wb") as handle:
         try:
             pkl.dump(param_history_dict, handle)

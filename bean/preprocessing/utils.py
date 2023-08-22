@@ -78,13 +78,17 @@ def get_accessibility_guides(
             lambda row: _get_accessibility_single(
                 row.genomic_pos,
                 acc,
-                chrom=row.chr,
+                chrom=row.chrom if "chrom" in row.index else "chr19",
                 guide_start_pos=0,
                 half_window_size=half_window_size,
             ),
             axis=1,
         )
     )
+    if (torch.isnan(guide_accessibility)).all():
+        raise ValueError(
+            "Cannot retrieve guide accessibility from the bigWig file. Check your inputs."
+        )
     guide_accessibility[torch.isnan(guide_accessibility)] = torch.nanmedian(
         guide_accessibility
     )

@@ -150,11 +150,16 @@ def main(args, bdata):
         control_guide_tag=args.control_guide_tag,
         target_col=args.target_col,
         shrink_alpha=args.shrink_alpha,
+        replicate_col=args.replicate_col,
     )
     adj_negctrl_idx = None
     if args.mode == "variant":
+        if "edit_rate" not in bdata.guides.columns:
+            bdata.get_edit_from_allele()
+            bdata.get_edit_mat_from_uns(rel_pos_is_reporter=True)
+            bdata.get_guide_edit_rate()
         target_info_df = _get_guide_target_info(
-            ndata.screen, cols_include=[args.negctrl_col]
+            ndata.screen, args, cols_include=[args.negctrl_col]
         )
         print(target_info_df.columns)
         if args.adjust_confidence_by_negative_control:

@@ -12,11 +12,11 @@ This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The r
 
 ## Overview
 `crispr-bean` supports the following functionalities.
-* [`bean-count`, `bean-count-sample`](#count-reporter-screen-data): Base-editing-aware mapping of guide, optionally with reporter from `.fastq` files.  
-* [`bean-qc`](#bean-qc-qc-of-reporter-screen-data): Quality control report and filtering out / masking of aberrant sample and guides  
-* [`bean-filter`](#bean-filter-filtering-and-optionally-translating-alleles): Filter reporter alleles
-* [`bean-run`](#bean-run-quantify-variant-effects): Quantify targeted variants' effect sizes from screen data.
-
+* 1. [`bean-count`, `bean-count-sample`](#count-reporter-screen-data): Base-editing-aware mapping of guide, optionally with reporter from `.fastq` files.  
+* 2. [`bean-qc`](#bean-qc-qc-of-reporter-screen-data): Quality control report and filtering out / masking of aberrant sample and guides  
+* 3. [`bean-filter`](#bean-filter-filtering-and-optionally-translating-alleles): Filter reporter alleles
+* 4. [`bean-run`](#bean-run-quantify-variant-effects): Quantify targeted variants' effect sizes from screen data.
+We provide example 
 
 ## Installation 
 ### Full installation
@@ -25,6 +25,8 @@ Then download from PyPI:
 ```
 pip install crispr-bean[model]
 ```
+This takes 26.3 mins to install from scratch, 14.4 mins with pytorch in Dell XPS 13 Ubuntu WSL.
+
 ### Mapping and data wrangling, without variant effect quantification
 ```
 pip install crispr-bean
@@ -55,11 +57,10 @@ File should contain following columns.
 * In order to use accessibility in the [variant effect quantification](#bean-run-quantify-variant-effects), provide accessibility information in one of two options. (For non-targeting guides, provide NA values (empty cell).)   
   * Option 1: `chr` & `genomic_pos`: Chromosome (ex. `chr19`) and genomic position of guide sequence. You will have to provide the path to the bigwig file with matching reference version in `bean-run`. 
   * Option 2: `accessibility_signal`: ATAC-seq signal value of the target loci of each guide.  
-* For variant screen 
-  * Here, gRNAs are designed to target specific variants and ignores bystander edits.
-    
+* For variant screen (gRNAs are designed to target specific variants and ignores bystander edits)
     <img src="imgs/variant_screen_gRNA_design.svg" alt="variant screen design" width="500"/>
-  * `target_col` (default "target"): This column denotes which target variant/element of each gRNA. This is not used in `bean-count[-samples]` but required to run `bean-run` in later steps.
+  * `target` : This column denotes which target variant/element of each gRNA. This is not used in `bean-count[-samples]` but required to run `bean-run` in later steps.
+  * `target_group [Optional]`: If negative/positive control gRNA will be considered in `bean-qc` and/or `bean-run`, specify as "NegCtrl"/"PosCtrl" in this column. 
   * `target_pos [Optional]`: If `--match_target_pos` flag is used, input file needs `target_pos` which specifies 0-based relative position of targeted base within Reporter sequence.
 * For tiling screen (gRNAs tile coding / noncoding sequences)
   * `strand`: Specifies gRNA strand information relative to the reference genome.

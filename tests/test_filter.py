@@ -1,8 +1,10 @@
+import pytest
 import subprocess
 
 
+@pytest.mark.order(5)
 def test_filter_varscreen():
-    cmd = "bean-filter tests/data/var_mini_screen.h5ad -o tmp -s 0 -e 19 -w -b -t -ap 0.1 -sp 0.3"
+    cmd = "bean-filter tests/data/var_mini_screen_masked.h5ad -o tests/data/var_mini_screen_annotated -s 0 -e 19 -w -b -t -ap 0.1 -sp 0.3"
     try:
         subprocess.check_output(
             cmd,
@@ -14,7 +16,7 @@ def test_filter_varscreen():
 
 
 def test_filter_tiling_screen():
-    cmd = "bean-filter tests/data/tiling_mini_screen.h5ad -o tmp -s 0 -e 19 -w -b -t -ap 0.1 -sp 0.3"
+    cmd = "bean-filter tests/data/tiling_mini_screen_masked.h5ad -o tests/data/tiling_mini_screen_annotated -s 0 -e 19 -w -b -t -ap 0.1 -sp 0.3"
     try:
         subprocess.check_output(
             cmd,

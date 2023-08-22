@@ -1,6 +1,8 @@
+import pytest
 from bean import Edit
 
 
+@pytest.mark.order(18)
 def test_hash():
     e1 = Edit(1, "A", "G")
     d = {e1: 1}

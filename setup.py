@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="crispr-bean",
-    version="0.2.3",
+    version="0.2.5",
     python_requires=">=3.8.0",
     author="Jayoung Ryu",
     author_email="jayoung_ryu@g.harvard.edu",

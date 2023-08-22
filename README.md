@@ -20,12 +20,12 @@ We provide example scripts in `tests/`. Running `pytest --sparse-ordering` gener
 
 ## Installation 
 ### Full installation
-First install [pytorch](https://pytorch.org/).
+First install [pytorch](https://pytorch.org/) >=12.1,<2.
 Then download from PyPI:
 ```
 pip install crispr-bean[model]
 ```
-**(takes 26.3 mins to install from scratch, 14.4 mins with pytorch in Dell XPS 13 Ubuntu WSL.)*
+**(takes 14.4 mins after pytorch installation with pytorch in Dell XPS 13 Ubuntu WSL.)*
 
 ### Mapping and data wrangling, without variant effect quantification
 ```

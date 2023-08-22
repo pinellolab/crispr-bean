@@ -32,7 +32,7 @@ setup(
     ],
     install_requires=[
         "numpy",
-        "perturb-tools>=0.2.3",
+        "perturb-tools>=0.2.5",
         "anndata>=0.8.0",
         "Bio>=1.5",
         "matplotlib",

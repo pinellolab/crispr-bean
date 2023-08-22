@@ -106,8 +106,16 @@ def get_fitted_alpha0(
         return (a0, np.nan)
 
     x, y = get_valid_vals(n.log(), a0.log())
-    popt, pcov = curve_fit(linear, x, y)
-    print("Linear fit of log(pi_a0) ~ log(q): [b0, b1]={}, cov={}".format(popt, pcov))
+    if len(y) < 10:
+        popt = [-3.214, 0.9873]
+        print(
+            f"Cannot fit log(a0) ~ log(q): data too sparse! Using pre-fitted values [b0, b1]={popt}"
+        )
+    else:
+        popt, pcov = curve_fit(linear, x, y)
+        print(
+            "Linear fit of log(pi_a0) ~ log(q): [b0, b1]={}, cov={}".format(popt, pcov)
+        )
     if not fit_quantile is None:
         print(f"Using lowest {fit_quantile} residual to fit again")
         sel_idx = np.where(

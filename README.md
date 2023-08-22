@@ -12,11 +12,11 @@ This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The r
 
 ## Overview
 `crispr-bean` supports the following functionalities.
-* [`bean-count`, `bean-count-sample`](#count-reporter-screen-data): Base-editing-aware mapping of guide, optionally with reporter from `.fastq` files.  
-* [`bean-qc`](#bean-qc-qc-of-reporter-screen-data): Quality control report and filtering out / masking of aberrant sample and guides  
-* [`bean-filter`](#bean-filter-filtering-and-optionally-translating-alleles): Filter reporter alleles
-* [`bean-run`](#bean-run-quantify-variant-effects): Quantify targeted variants' effect sizes from screen data.
-
+* 1. [`bean-count`, `bean-count-sample`](#count-reporter-screen-data): Base-editing-aware mapping of guide, optionally with reporter from `.fastq` files.  
+* 2. [`bean-qc`](#bean-qc-qc-of-reporter-screen-data): Quality control report and filtering out / masking of aberrant sample and guides  
+* 3. [`bean-filter`](#bean-filter-filtering-and-optionally-translating-alleles): Filter reporter alleles
+* 4. [`bean-run`](#bean-run-quantify-variant-effects): Quantify targeted variants' effect sizes from screen data.
+We provide example 
 
 ## Installation 
 ### Full installation
@@ -25,6 +25,8 @@ Then download from PyPI:
 ```
 pip install crispr-bean[model]
 ```
+This takes 26.3 mins to install from scratch, 14.4 mins with pytorch in Dell XPS 13 Ubuntu WSL.
+
 ### Mapping and data wrangling, without variant effect quantification
 ```
 pip install crispr-bean

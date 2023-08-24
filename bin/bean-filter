@@ -150,7 +150,9 @@ def check_args(args):
                 "--filter-window option set but none of --edit-end-pos not provided. Using 20 as its value."
             )
             args.edit_end_pos = 20
-    if args.filter_allele_proportion < 0 or args.filter_allele_proportion > 1:
+    if args.filter_allele_proportion is not None and (
+        args.filter_allele_proportion < 0 or args.filter_allele_proportion > 1
+    ):
         raise ValueError(
             "Invalid arguments: filter-allele-proportion should be in range [0, 1]."
         )
@@ -163,14 +165,20 @@ def check_args(args):
             "Invalid arguments: You can only specify one of --translate-fasta (single gene) or --translate-fastas-csv (multiple genes)."
         )
     if args.translate_fastas_csv:
-        tbl = pd.read_csv(args.translate_fastas_csv, header = None,)
+        tbl = pd.read_csv(
+            args.translate_fastas_csv,
+            header=None,
+        )
         if len(tbl) == 0 or len(tbl.columns != 2):
             raise ValueError(
                 "Invalid arguments: Table should have two columns and more than 0 entry"
-                )
-        for path in tbl.iloc[:,2].tolist():
+            )
+        for path in tbl.iloc[:, 2].tolist():
             if not os.path.isfile(path):
-                raise FileNotFoundError(f"Invalid input file: {path} does not exist. Check your input in {args.translate_fastas_csv}")
+                raise FileNotFoundError(
+                    f"Invalid input file: {path} does not exist. Check your input in {args.translate_fastas_csv}"
+                )
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -220,9 +228,7 @@ if __name__ == "__main__":
         info(
             f"Filtering out edits based on relatvie position in spacer: 0-based [{args.edit_start_pos},{args.edit_end_pos})..."
         )
-        filtered_key = (
-            f"{allele_df_keys[-1]}_{args.edit_start_pos}_{args.edit_end_pos}"
-        )
+        filtered_key = f"{allele_df_keys[-1]}_{args.edit_start_pos}_{args.edit_end_pos}"
         bdata.uns[filtered_key] = bdata.filter_allele_counts_by_pos(
             rel_pos_start=args.edit_start_pos,
             rel_pos_end=args.edit_end_pos,
@@ -250,8 +256,11 @@ if __name__ == "__main__":
 
     if len(bdata.uns[allele_df_keys[-1]]) > 0 and args.translate:
         if args.translate_fastas_csv:
-            fasta_df = pd.read_csv(args.translate_fastas_csv, header = None,)
-            fasta_dict = {row[0]:row[1] for i, row in fasta_df.iterrows()}
+            fasta_df = pd.read_csv(
+                args.translate_fastas_csv,
+                header=None,
+            )
+            fasta_dict = {row[0]: row[1] for i, row in fasta_df.iterrows()}
         else:
             fasta_dict = None
         info(
@@ -259,12 +268,17 @@ if __name__ == "__main__":
         )  # TODO: Check & document custom fasta file for translation
         filtered_key = f"{allele_df_keys[-1]}_translated"
         bdata.uns[filtered_key] = be.translate_allele_df(
-            bdata.uns[allele_df_keys[-1]], fasta_file=args.translate_fasta, fasta_file_dict = fasta_dict,
+            bdata.uns[allele_df_keys[-1]],
+            fasta_file=args.translate_fasta,
+            fasta_file_dict=fasta_dict,
         ).rename(columns={"allele": "aa_allele"})
         allele_df_keys.append(filtered_key)
         info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
 
-    if len(bdata.uns[allele_df_keys[-1]]) > 0 and args.filter_allele_proportion is not None:
+    if (
+        len(bdata.uns[allele_df_keys[-1]]) > 0
+        and args.filter_allele_proportion is not None
+    ):
         info(
             f"Filtering alleles for those have allele fraction {args.filter_allele_proportion} in at least {args.filter_sample_proportion*100}% of samples..."
         )
@@ -284,9 +298,7 @@ if __name__ == "__main__":
         allele_df_keys.append(filtered_key)
         info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
         info("Done filtering!")
-    info(
-        f"Saving ReporterScreen with filtered alleles at {args.output_prefix}.h5ad..."
-    )
+    info(f"Saving ReporterScreen with filtered alleles at {args.output_prefix}.h5ad...")
     bdata.write(f"{args.output_prefix}.h5ad")
 
     info("Plotting allele stats for each filtering step...")

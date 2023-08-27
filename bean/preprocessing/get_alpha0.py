@@ -56,7 +56,7 @@ def linear(x, b0, b1):
 
 
 def estimate_variance(y, y_est):
-    return (y - y_est) ** 2 / (len(y) - 1)
+    return ((y - y_est) ** 2).sum() / (len(y) - 1)
 
 
 def shrink_normal_normal(y, y_est, shrink_prior_var: float = 1.0):

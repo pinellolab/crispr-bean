@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 import logging
+import pandas as pd
 import bean as be
 from bean.plotting.allele_stats import plot_n_alleles_per_guide, plot_n_guides_per_edit
 import matplotlib.pyplot as plt

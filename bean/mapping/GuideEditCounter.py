@@ -69,13 +69,13 @@ class GuideEditCounter:
 
         self.guides_info_df = pd.read_csv(kwargs["sgRNA_filename"])
         self.guides_has_strands = (
-            "strand" in self.guides_info_df.columns
+            "strand" in self.guides_info_df.columns.tolist()
         )  # @TODO: fix this?
         if self.guides_has_strands:
             info("Considering `strand` column in sgRNA info file")
-            if "start_pos" not in self.guides_info_df.columns:
+            if "start_pos" not in self.guides_info_df.columns.tolist():
                 raise InputFileError("Guide `start_pos` not in sgRNA info file.")
-            if "guide_len" not in self.guides_info_df.columns:
+            if "guide_len" not in self.guides_info_df.columns.tolist():
                 self.guides_info_df["guide_len"] = self.guides_info_df.sequence.map(len)
         else:
             info("Ignoring guide strands, all guides are considered positive")

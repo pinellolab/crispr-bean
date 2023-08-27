@@ -106,6 +106,7 @@ class GuideEditCounter:
             target_base_change=f"{self.base_edited_from}>{self.base_edited_to}",
             tiling=kwargs["tiling"],
         )
+        self.screen.guides["guide_len"] = self.screen.guides.sequence.map(len)
         self.count_guide_edits = kwargs["count_guide_edits"]
         if self.count_guide_edits:
             self.screen.uns["guide_edit_counts"] = {}

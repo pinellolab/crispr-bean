@@ -186,4 +186,6 @@ See the [**ReporterScreen API tutorial**](docs/ReporterScreen_api.ipynb) for mor
 
 ## Run time
 * Installation takes 14.4 mins after pytorch installation with pytorch in Dell XPS 13 Ubuntu WSL.
+* `bean-run` takes 4.6 mins with `--scale-by-acc` tag in Dell XPS 13 Ubuntu WSL for variant screen dataset with 3455 guides and 6 replicates with 4 sorting bins.
 * Full pipeline takes 90.1s in GitHub Action for toy dataset of 2 replicates and 30 guides.
+

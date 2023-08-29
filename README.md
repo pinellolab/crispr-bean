@@ -25,7 +25,6 @@ Then download from PyPI:
 ```
 pip install crispr-bean[model]
 ```
-**(takes 14.4 mins after pytorch installation with pytorch in Dell XPS 13 Ubuntu WSL.)*
 
 ### Mapping and data wrangling, without variant effect quantification
 ```
@@ -138,6 +137,7 @@ If you want to obtain amino acid level variant
 ```
 bean-run variant[tiling] my_sorting_screen_masked.h5ad --scale-by-acc --acc-bw-path accessibility_signal.bw -o output_prefix/ --fit-negctrl
 ```
+
 ### Output
 Above command produces
 * `output_prefix/bean_element_result.[model_type].csv` with following columns:
@@ -182,5 +182,8 @@ When negative control is provided, above columns with `_adj` suffix are provided
 import crispr_bean as be
 cdata = be.read_h5ad("bean_counts_sample.h5ad")
 ```
-
 See the [**ReporterScreen API tutorial**](docs/ReporterScreen_api.ipynb) for more detail.
+
+## Run time
+* Installation takes 14.4 mins after pytorch installation with pytorch in Dell XPS 13 Ubuntu WSL.
+* Full pipeline takes 90.1s in GitHub Action for toy dataset of 2 replicates and 30 guides.

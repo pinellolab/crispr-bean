@@ -73,6 +73,11 @@ def get_accessibility_guides(
     half_window_size: For each guide, accessibility signal its position padded by this half_window_size upstream and downstream
     """
     acc = pyBigWig.open(accessibility_bw_path)
+    if (
+        "chr" in guide_info.columns.tolist()
+        and "chrom" not in guide_info.columns.tolist()
+    ):
+        guide_info = guide_info.rename(columns={"chr": "chrom"})
     guide_accessibility = torch.as_tensor(
         guide_info.apply(
             lambda row: _get_accessibility_single(

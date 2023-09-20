@@ -116,7 +116,6 @@ def NormalModel(
                         dist.DirichletMultinomial(a_bcmatch, validate_args=False),
                         obs=data.X_bcmatch_masked.permute(0, 2, 1),
                     )
-
     return alleles_p_bin
 
 

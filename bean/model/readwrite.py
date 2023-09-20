@@ -122,7 +122,7 @@ def write_result_table(
                 if "negctrl" in param_hist_dict.keys()
                 else "mu_sd",
             )
-            fit_df = add_credible_interval(fit_df, "mu_adj", "mu_sd_adjsnakem")
+            fit_df = add_credible_interval(fit_df, "mu_adj", "mu_sd_adj")
 
     if write_fitted_eff or guide_acc is not None:
         if "alpha_pi" not in param_hist_dict["params"].keys():

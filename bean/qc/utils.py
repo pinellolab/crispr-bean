@@ -1,4 +1,8 @@
+import numpy as np
+import pandas as pd
+from copy import deepcopy
 import argparse
+from ..framework.ReporterScreen import ReporterScreen, concat
 
 
 def parse_args():
@@ -22,6 +26,12 @@ def parse_args():
         "--out-screen-path",
         help="Path where quality-filtered ReporterScreen object to be written to",
         type=str,
+    )
+    parser.add_argument(
+        "-i",
+        "--ignore-missing-samples",
+        help="If the flag is not provided, if the ReporterScreen object does not contain all condiitons for each replicate, make fake empty samples. If the flag is provided, don't add dummy samples.",
+        action="store_true",
     )
     parser.add_argument(
         "-r",
@@ -99,3 +109,58 @@ def parse_args():
     if args.out_report_prefix is None:
         args.out_report_prefix = f"{args.bdata_path.rsplit('.h5ad', 1)[0]}.qc_report"
     return args
+
+
+def _add_dummy_sample(bdata, rep, cond, condition_label: str, replicate_label: str):
+    sample_id = f"{rep}_{cond}"
+    cond_df = deepcopy(bdata.samples)
+    cond_df[replicate_label] = np.nan
+    cond_df = cond_df.drop_duplicates()
+    cond_row = cond_df.loc[cond_df[condition_label] == cond, :]
+    if not len(cond_row) == 1:
+        raise ValueError(
+            f"Non-unique condition specification in ReporterScreen.samples: {cond_row}"
+        )
+    cond_row.index = [sample_id]
+    cond_row.loc[:, replicate_label] = rep
+    dummy_sample_bdata = ReporterScreen(
+        X=np.zeros((bdata.n_obs, 1)),
+        X_bcmatch=np.zeros((bdata.n_obs, 1)),
+        guides=bdata.guides,
+        samples=cond_row,
+    )
+    for k in bdata.uns.keys():
+        if isinstance(bdata.uns[k], pd.DataFrame):
+            dummy_sample_bdata.uns[k] = pd.DataFrame(
+                columns=bdata.uns[k].columns.tolist()[:2] + [sample_id]
+            )
+        else:
+            dummy_sample_bdata.uns[k] = bdata.uns[k]
+    bdata = concat([bdata, dummy_sample_bdata])
+    return bdata
+
+
+def fill_in_missing_samples(bdata, condition_label: str, replicate_label: str):
+    """If not all condition exists for every replicate in bdata, fill in fake sample"""
+    added_dummy = False
+    for rep in bdata.samples[replicate_label].unique():
+        for cond in bdata.samples[condition_label].unique():
+            if (
+                len(
+                    np.where(
+                        (bdata.samples[replicate_label] == rep)
+                        & (bdata.samples[condition_label] == cond)
+                    )[0]
+                )
+                != 1
+            ):
+                bdata = _add_dummy_sample(
+                    bdata, rep, cond, condition_label, replicate_label
+                )
+                if not added_dummy:
+                    added_dummy = True
+    if added_dummy:
+        bdata = bdata[
+            :, bdata.samples.sort_values([replicate_label, condition_label]).index
+        ]
+    return bdata

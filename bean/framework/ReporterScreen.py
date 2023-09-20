@@ -400,13 +400,13 @@ class ReporterScreen(Screen):
                 + "Call .get_edit_from_allele(allele_count_key, allele_key)"
             )
         edits = self.uns[edit_count_key].copy()
-        if self.layers["edits"] is not None:
+        if "edits" in self.layers:
             old_edits = self.layers["edits"].copy()
-            self.layers["edits"] = np.zeros_like(
-                self.X,
-            )
         else:
             old_edits = None
+        self.layers["edits"] = np.zeros_like(
+            self.X,
+        ).astype(float)
         edits["ref_base"] = edits.edit.map(lambda e: e.ref_base)
         edits["alt_base"] = edits.edit.map(lambda e: e.alt_base)
         edits = edits.loc[
@@ -487,18 +487,20 @@ class ReporterScreen(Screen):
 
         if prior_weight is None:
             prior_weight = 1
-        n_edits = self.layers[edit_layer][:, bulk_idx].sum(axis=1)
-        n_counts = self.layers[count_layer][:, bulk_idx].sum(axis=1)
+        n_edits = self.layers[edit_layer].copy()[:, bulk_idx].sum(axis=1)
+        n_counts = self.layers[count_layer].copy()[:, bulk_idx].sum(axis=1)
         edit_rate = (n_edits + prior_weight / 2) / (
             (n_counts * num_targetable_sites) + prior_weight / 2
         )
         edit_rate[n_counts < bcmatch_thres] = np.nan
         if normalize_by_editable_base:
+            print("normalize by editable counts")
             edit_rate[num_targetable_sites == 0] = np.nan
         if return_result:
             return edit_rate
         else:
             self.guides["edit_rate"] = edit_rate
+            print(self.guides.edit_rate)
 
     def get_edit_rate(
         self,
@@ -630,7 +632,8 @@ class ReporterScreen(Screen):
                 )
             )
         else:
-            if not 'guide_len' in self.guides.columns.tolist(): self.guides['guide_len'] = self.guides.sequence.map(len)
+            if not "guide_len" in self.guides.columns.tolist():
+                self.guides["guide_len"] = self.guides.sequence.map(len)
             guide_start_pos = (
                 32 - 6 - self.guides.loc[allele_count_df.guide, "guide_len"].values
             )

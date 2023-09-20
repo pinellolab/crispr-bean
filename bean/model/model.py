@@ -74,6 +74,9 @@ def NormalModel(
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
             a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
+            print(a)
+            print(a.max())
+            print(a.min())
             a_bcmatch = get_alpha(
                 expected_guide_p,
                 data.size_factor_bcmatch,

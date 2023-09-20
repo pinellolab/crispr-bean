@@ -2,7 +2,7 @@ import pytest
 import subprocess
 
 
-@pytest.mark.order(5)
+@pytest.mark.order(7)
 def test_filter_varscreen():
     cmd = "bean-filter tests/data/var_mini_screen_masked.h5ad -o tests/data/var_mini_screen_annotated -s 0 -e 19 -w -b -t -ap 0.1 -sp 0.3"
     try:

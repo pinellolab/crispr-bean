@@ -152,6 +152,7 @@ def main(args, bdata):
         shrink_alpha=args.shrink_alpha,
         replicate_col=args.replicate_col,
     )
+    print(ndata.a0)
     adj_negctrl_idx = None
     if args.mode == "variant":
         if "edit_rate" not in bdata.guides.columns:

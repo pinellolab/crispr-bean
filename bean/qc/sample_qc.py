@@ -47,9 +47,9 @@ def set_sample_edit_rates(
         )
     if agg_method == "median":
         bdata.samples[f"{agg_method}_editing_rate"] = np.nanmedian(
-            bdata.layers["edit_rate"], axis=0
+            bdata.layers["edit_rate"].copy(), axis=0
         )
     if agg_method == "mean":
         bdata.samples[f"{agg_method}_editing_rate"] = np.nanmean(
-            bdata.layers["edit_rate"], axis=0
+            bdata.layers["edit_rate"].copy(), axis=0
         )

@@ -7,7 +7,6 @@ from bean.qc.utils import parse_args
 
 def main():
     args = parse_args()
-    check_args(args)
     os.system(
         "python -m ipykernel install --user --name bean_python3 --display-name bean_python3"
     )

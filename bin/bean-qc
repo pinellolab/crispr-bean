@@ -2,11 +2,12 @@
 import os
 import papermill as pm
 import bean as be
-from bean.qc.utils import parse_args
+from bean.qc.utils import parse_args, check_args
 
 
 def main():
     args = parse_args()
+    args = check_args(args)
     os.system(
         "python -m ipykernel install --user --name bean_python3 --display-name bean_python3"
     )
@@ -25,7 +26,12 @@ def main():
             posctrl_col=args.posctrl_col,
             posctrl_val=args.posctrl_val,
             lfc_thres=args.lfc_thres,
+            replicate_label=args.replicate_label,
             condition_label=args.condition_label,
+            comp_cond1=args.lfc_cond1,
+            comp_cond2=args.lfc_cond2,
+            exp_id=args.out_report_prefix,
+            recalculate_edits=args.recalculate_edits,
         ),
         kernel_name="bean_python3",
     )

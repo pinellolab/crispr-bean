@@ -462,11 +462,13 @@ class ReporterScreen(Screen):
         return_result=False,
         count_layer="X_bcmatch",
         edit_layer="edits",
+        unsorted_condition_label="bulk",
     ):
         """
         prior_weight:
         Considering the edit rate to have prior of beta distribution with mean 0.5,
         prior weight to use when calculating posterior edit rate.
+        unsorted_condition_label: Editing rate is calculated only for the samples that have this string in the sample index.
         """
         if edited_base is None:
             edited_base = self.base_edited_from
@@ -482,7 +484,7 @@ class ReporterScreen(Screen):
                 lambda s: s[editable_base_start:editable_base_end].count(edited_base)
             )
         bulk_idx = np.where(
-            self.samples.reset_index()["index"].map(lambda s: "bulk" in s)
+            self.samples.index.astype(str).map(lambda s: unsorted_condition_label in s)
         )[0]
 
         if prior_weight is None:

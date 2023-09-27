@@ -97,9 +97,13 @@ Optional columns are not required but can be provided for compatibility with `be
 <br/><br/>
 
 ## `bean-qc`: QC of reporter screen data
+```bash
+bean-count-samples \
+  my_sorting_screen.h5ad    `# Input ReporterScreen .h5ad file path` \
+  -o my_sorting_screen_masked.h5ad   `# Output ReporterScreen .h5ad file path` \
+  -r qc_report_my_sorting_screen   `# Prefix for QC report` 
 ```
-bean-qc my_sorting_screen.h5ad -o my_sorting_screen_masked.h5ad -r qc_report_my_sorting_screen
-```
+
 `bean-qc` supports following quality control and masks samples with low quality. Specifically:
 * Plots guide coverage and the uniformity of coverage
 * Guide count correlation between samples
@@ -114,7 +118,7 @@ Above command produces
 * `qc_report_my_sorting_screen.[html,ipynb]` as QC report.  
 
 
-#### Additional parameters
+#### Additional Parameters
 * `--replicate-label` (default: `"rep"`): Label of column in `bdata.samples` that describes replicate ID.
 * `--condition-label` (default: `"bin"`)": Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.).
 * `--target-pos-col` (default: `"target_pos"`): Target position column in `bdata.guides` specifying target edit position in reporter.

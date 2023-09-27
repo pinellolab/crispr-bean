@@ -87,13 +87,13 @@ def parse_args():
     )
     parser.add_argument(
         "--posctrl-col",
-        help="Column name in .h5ad.guides DataFrame that specifies guide category.",
+        help="Column name in ReporterScreen.guides DataFrame that specifies guide category.",
         type=str,
         default="target_group",
     )
     parser.add_argument(
         "--posctrl-val",
-        help="Value in .h5ad.guides[`posctrl_col`] that specifies guide will be used as the positive control in calculating log fold change.",
+        help="Value in ReporterScreen.guides[`posctrl_col`] that specifies guide will be used as the positive control in calculating log fold change.",
         type=str,
         default="PosCtrl",
     )
@@ -103,11 +103,33 @@ def parse_args():
         type=float,
         default=-0.1,
     )
+    parser.add_argument(
+        "--lfc-conds",
+        help="Values in of column in `ReporterScreen.samples[condition_label]` for LFC will be calculated between, delimited by comma",
+        type=str,
+        default="top,bot",
+    )
+    parser.add_argument(
+        "--recalculate-edits",
+        help="Even when ReporterScreen.layers['edit_count'] exists, recalculate the edit counts from ReporterScreen.uns['allele_count'].",
+        action="store_true",
+    )
     args = parser.parse_args()
     if args.out_screen_path is None:
         args.out_screen_path = f"{args.bdata_path.rsplit('.h5ad', 1)[0]}.filtered.h5ad"
     if args.out_report_prefix is None:
         args.out_report_prefix = f"{args.bdata_path.rsplit('.h5ad', 1)[0]}.qc_report"
+    return args
+
+
+def check_args(args):
+    lfc_conds = args.lfc_conds.split(",")
+    if not len(lfc_conds) == 2:
+        raise ValueError(
+            f"lfc_conds must be two condition labels delimited by comma. Provided {args.lfc_conds}"
+        )
+    args.lfc_cond1 = lfc_conds[0]
+    args.lfc_cond2 = lfc_conds[1]
     return args
 
 

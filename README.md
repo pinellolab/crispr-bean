@@ -58,7 +58,7 @@ bean-count-samples \
 
 ### Input file format
 #### 1. gRNA_library.csv
-File should contain following columns. Also see [example](crispr-bean/tests/test_guide_info.csv).
+File should contain following columns. Also see examples for [variant library](crispr-bean/tests/data/test_guide_info.csv) and [tiling library](crispr-bean/tests/data/test_guide_info_tiling.csv).
 * `name`: gRNA ID column
 * `sequence`: gRNA sequence
 * `barcode`: R2 barcode to help match reporter to gRNA

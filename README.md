@@ -58,7 +58,7 @@ bean-count-samples \
 
 ### Input file format
 #### 1. gRNA_library.csv
-File should contain following columns.
+File should contain following columns. Also see [example](crispr-bean/tests/test_guide_info.csv).
 * `name`: gRNA ID column
 * `sequence`: gRNA sequence
 * `barcode`: R2 barcode to help match reporter to gRNA
@@ -86,7 +86,7 @@ File should contain following columns with header.
 * `upper_quantile [Optional]`: FACS sorting upper quantile
 * `lower_quantile [Optional]`: FACS sorting lower quantile  
 
-Optional columns are not required but can be provided for compatibility with `bean-qc` and `bean-run`. 
+Optional columns are not required but can be provided for compatibility with `bean-qc` and `bean-run`. See [example](tests/data/sample_list.csv).
   
 ### Output file format
 `count` or `count-samples` produces `.h5ad` and `.xlsx` file with guide and per-guide allele counts.  

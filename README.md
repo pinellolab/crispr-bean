@@ -74,6 +74,7 @@ File should contain following columns.
   * `strand`: Specifies gRNA strand information relative to the reference genome.
   * `chrom`: Chromosome of gRNA targeted locus.
   * `start_pos`: gRNA starting position in the genome. Required when you provide `strand` column. Should specify the smaller coordinate value among start and end position regardless of gRNA strandedness.
+
 Also see examples for [variant library](tests/data/test_guide_info.csv) and [tiling library](tests/data/test_guide_info_tiling.csv).
 
 #### 2. sample_list.csv

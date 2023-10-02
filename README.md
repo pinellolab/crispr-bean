@@ -274,3 +274,7 @@ Python package `bean` supports multiple data wrangling functionalities for `Repo
 * Installation takes 14.4 mins after pytorch installation with pytorch in Dell XPS 13 Ubuntu WSL.
 * `bean-run` takes 4.6 mins with `--scale-by-acc` tag in Dell XPS 13 Ubuntu WSL for variant screen dataset with 3455 guides and 6 replicates with 4 sorting bins.
 * Full pipeline takes 90.1s in GitHub Action for toy dataset of 2 replicates and 30 guides.
+
+## Citation
+If you have used BEAN, please cite
+Ryu, J. et al. Joint genotypic and phenotypic outcome modeling improves base editing variant effect quantification. medRxiv (2023) doi:10.1101/2023.09.08.23295253

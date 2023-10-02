@@ -276,5 +276,5 @@ Python package `bean` supports multiple data wrangling functionalities for `Repo
 * Full pipeline takes 90.1s in GitHub Action for toy dataset of 2 replicates and 30 guides.
 
 ## Citation
-If you have used BEAN, please cite
+If you have used BEAN, please cite:  
 Ryu, J. et al. Joint genotypic and phenotypic outcome modeling improves base editing variant effect quantification. medRxiv (2023) doi:10.1101/2023.09.08.23295253

@@ -371,13 +371,13 @@ class GuideEditCounter:
     def _get_strand_offset_from_guide_index(self, guide_idx: int) -> Tuple[int, int]:
         """Returns guide starnd and offset for a given guide index."""
         if self.guides_has_strands:
-            strand = self.screen.guides.strand[guide_idx]
+            strand = self.screen.guides.strand.iloc[guide_idx]
             if strand in strand_str_to_int:
                 guide_strand = strand_str_to_int[strand]
                 offset = _get_stranded_guide_offset(
                     strand=guide_strand,
-                    start_pos=self.screen.guides.start_pos[guide_idx],
-                    guide_len=self.screen.guides.guide_len[guide_idx],
+                    start_pos=self.screen.guides.start_pos.iloc[guide_idx],
+                    guide_len=self.screen.guides.guide_len.iloc[guide_idx],
                 )
             else:
                 guide_strand = 1
@@ -448,7 +448,7 @@ class GuideEditCounter:
         single_base_qual_cutoff: Ignore this base if the Phread quality score is less than this threshold
         guide_allele: Allele from baseedit in gRNA spacer sequence when paired with guide allele.
         """
-        ref_reporter_seq = self.screen.guides.reporter[matched_guide_idx]
+        ref_reporter_seq = self.screen.guides.reporter.iloc[matched_guide_idx]
         read_reporter_seq, read_reporter_qual = self.get_reporter_seq_qual(R2_record)
 
         guide_strand, offset = self._get_strand_offset_from_guide_index(

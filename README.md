@@ -11,16 +11,30 @@ This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The r
 <img src="imgs/reporter.jpg" alt="Reporter construct" width="700"/>
 
 ## Overview
-`crispr-bean` supports end-to-end analysis of pooled sorting screens, with or without reporter.
-<img src="imgs/dag_bean.png" alt="dag_bean.svg" width="700"/>
+`crispr-bean` supports end-to-end analysis of pooled sorting screens, with or without reporter.  
+
+<img src="imgs/dag_bean.png" alt="dag_bean.svg" width="700"/>  
+
 1. [`bean-count-sample`](#bean-count-samples-count-reporter-screen-data): Base-editing-aware **mapping** of guide, optionally with reporter from `.fastq` files.  
 2. [`bean-qc`](#bean-qc-qc-of-reporter-screen-data): Quality control report and filtering out / masking of aberrant sample and guides  
 3. [`bean-filter`](#bean-filter-filtering-and-optionally-translating-alleles): Filter reporter alleles; essential for `tiling` mode that allows for all alleles generated from gRNA.
 4. [`bean-run`](#bean-run-quantify-variant-effects): Quantify targeted variants' effect sizes from screen data.  
 
+### Data structure
 BEAN stores mapped gRNA and allele counts in `ReporterScreen` object which is compatible with [AnnData](https://anndata.readthedocs.io/en/latest/index.html). See [Data Structure](#data-structure) section for more information.
 
+### Examples
 We provide example scripts in `tests/`. Running `pytest --sparse-ordering` generates example input/output files from running 1 and 2-4 sequentially.
+
+### Pipeline run options by library design
+The `bean-filter` and `bean-run` steps depend on the type of gRNA library design, where BEAN supports two modes of running.
+1. `variant` library: Several gRNAs tile each of the targeted variants  
+  Ex)  
+  <img src="imgs/variant.png" alt="variant library design" width="700"/>  
+
+2. `tiling` library: gRNA densely tiles a long region (e.g. gene(s), exon(s), coding sequence(s))  
+  Ex)  
+  <img src="imgs/tiling.png" alt="tiling library design" width="450"/>  
 
 <br/><br/>
 
@@ -66,7 +80,6 @@ File should contain following columns.
   * Option 1: `chr` & `genomic_pos`: Chromosome (ex. `chr19`) and genomic position of guide sequence. You will have to provide the path to the bigwig file with matching reference version in `bean-run`. 
   * Option 2: `accessibility_signal`: ATAC-seq signal value of the target loci of each guide.  
 * For variant library (gRNAs are designed to target specific variants and ignores bystander edits)
-    <img src="imgs/variant_screen_gRNA_design.svg" alt="variant screen design" width="500"/>
   * `target` : This column denotes which target variant/element of each gRNA. This is not used in `bean-count[-samples]` but required to run `bean-run` in later steps.
   * `target_group [Optional]`: If negative/positive control gRNA will be considered in `bean-qc` and/or `bean-run`, specify as "NegCtrl"/"PosCtrl" in this column. 
   * `target_pos [Optional]`: If `--match_target_pos` flag is used, input file needs `target_pos` which specifies 0-based relative position of targeted base within Reporter sequence.
@@ -180,8 +193,15 @@ Above command produces
 <br/><br/>
 
 ## `bean-run`: Quantify variant effects
-BEAN uses Bayesian network to incorporate gRNA editing outcome to provide posterior estimate of variant phenotype.  
-<img src="imgs/bean.gif" alt="model" width="700"/>
+BEAN uses Bayesian network to incorporate gRNA editing outcome to provide posterior estimate of variant phenotype. The Bayesian network reflects data generation process. Briefly,  
+1. Cellular phenotype is modeled as the Gaussian mixture distribution of wild-type phenotype and variant phenotype.
+2. The weight of the mixture components are inferred from the reporter editing outcome and the chromatin accessibility of the loci.
+3. Cells with each gRNA, formulated as the mixture distribution, is sorted by the phenotypic quantile to produce the gRNA counts.
+
+For the full detail, see the method section of the [BEAN manuscript](https://www.medrxiv.org/content/10.1101/2023.09.08.23295253v1).
+
+<img src="imgs/bean.gif" alt="model" width="700"/>  
+
 ```
 bean-run variant[tiling] my_sorting_screen_filtered.h5ad --scale-by-acc --acc-bw-path accessibility_signal.bw -o output_prefix/ --fit-negctrl
 ```
@@ -254,4 +274,3 @@ Python package `bean` supports multiple data wrangling functionalities for `Repo
 * Installation takes 14.4 mins after pytorch installation with pytorch in Dell XPS 13 Ubuntu WSL.
 * `bean-run` takes 4.6 mins with `--scale-by-acc` tag in Dell XPS 13 Ubuntu WSL for variant screen dataset with 3455 guides and 6 replicates with 4 sorting bins.
 * Full pipeline takes 90.1s in GitHub Action for toy dataset of 2 replicates and 30 guides.
-

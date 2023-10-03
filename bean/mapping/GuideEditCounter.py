@@ -341,11 +341,15 @@ class GuideEditCounter:
         self, matched_guide_idx, R1_record: SeqIO.SeqRecord, single_base_qual_cutoff=30
     ):
         if self.guides_has_strands:
-            strand = self.screen.guides.strand[matched_guide_idx]
+            strand = self.screen.guides.strand.iloc[matched_guide_idx]
             guide_strand = strand_str_to_int.get(strand, 1)
         else:
             guide_strand = 1
-        ref_guide_seq = self.screen.guides.sequence[matched_guide_idx]
+        ref_guide_seq = self.screen.guides.sequence.iloc[matched_guide_idx]
+        if "chrom" in self.screen.guides.columns.tolist():
+            chrom = self.screen.guides.chrom.iloc[matched_guide_idx]
+        else:
+            chrom = None
         read_guide_seq, read_guide_qual = self.get_guide_seq_qual(
             R1_record, len(ref_guide_seq)
         )
@@ -357,6 +361,7 @@ class GuideEditCounter:
             aln_mat_path=self.output_dir + "/.aln_mat.txt",
             offset=0,
             strand=guide_strand,
+            chrom=chrom,
             start_pos=0,
             end_pos=len(ref_guide_seq),
             positionwise_quality=np.array(read_guide_qual),
@@ -454,7 +459,10 @@ class GuideEditCounter:
         guide_strand, offset = self._get_strand_offset_from_guide_index(
             matched_guide_idx
         )
-
+        if "chrom" in self.screen.guides.columns.tolist():
+            chrom = self.screen.guides.chrom.iloc[matched_guide_idx]
+        else:
+            chrom = None
         allele, score = _get_edited_allele_crispresso(
             ref_seq=ref_reporter_seq,
             query_seq=read_reporter_seq,
@@ -463,6 +471,7 @@ class GuideEditCounter:
             aln_mat_path=self.output_dir + "/.aln_mat.txt",
             offset=offset,
             strand=guide_strand,
+            chrom=chrom,
             positionwise_quality=np.array(read_reporter_qual),
             quality_thres=single_base_qual_cutoff,
             objectify_allele=self.objectify_allele,

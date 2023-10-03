@@ -79,7 +79,7 @@ def _get_input_parser():
     )
     parser.add_argument(
         "-q",
-        "--min_average_read_quality",
+        "--min-average-read-quality",
         type=int,
         help="Minimum average quality score (phred33) to keep a read",
         default=30,

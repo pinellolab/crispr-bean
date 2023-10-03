@@ -491,7 +491,7 @@ def _map_alleles_to_filtered(
             # prioritize allele with most mean counts
             merge_priority = guide_filtered_allele_counts.mean(
                 axis=1, numeric_only=True
-            )
+            ).values
             if is_cn_allele:
                 guide_raw_counts["allele_mapped"] = guide_raw_counts[allele_col].map(
                     lambda allele: allele.map_to_closest(

@@ -187,13 +187,20 @@ Above command produces
 
 ## `bean-filter`: Filtering (and optionally translating) alleles
 As `tiling` mode of `bean-run` accounts for any robustly observed alleles, `bean-filter` filters for such alleles.
-```
-bean-filter my_sorting_screen_masked.h5ad -o my_sorting_screen_filtered.h5ad 
+```bash
+bean-filter my_sorting_screen_masked.h5ad \
+-o my_sorting_screen_filtered.h5ad  `# Output file path` \
 ```
 
 If you want to obtain **amino acid level variant** for coding sequence tiling screens, provide coding sequence positions which variants occuring within the coding sequence will be translated. 
-```
-bean-filter my_sorting_screen.h5ad -o my_sorting_screen_masked.h5ad --translate [--translate-fasta gene_exon.fa, --translate-fastas-csv gene_exon_fas.csv]
+```bash
+bean-filter my_sorting_screen.h5ad \
+-o my_sorting_screen_masked.h5ad \
+--translate   `# Translate coding variants` \
+[ --translate-gene-name GENE_SYMBOL OR
+  --translate-gene-names path_to_gene_names_file.txt OR
+  --translate-fasta gene_exon.fa, OR
+  --translate-fastas-csv gene_exon_fas.csv]
 ```
 * When library covers single gene: Feed `--translate --translate-fasta gene_exon.fa` argument where `gene_exon.fa` is the FASTA file with exon sequence and range (following `range=` tag in the FASTA header line) 
 * When library covers multiple genes: Feed `--translate --translate-fastas-csv gene_exon_fas.csv` where `gene_exon_fas.csv` is the csv file with lines `gene_id,gene_exon_fasta_path` without header.

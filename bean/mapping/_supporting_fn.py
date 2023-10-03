@@ -177,6 +177,7 @@ def _get_allele_from_alignment(
     strand: int,
     start_pos: int,
     end_pos: int,
+    chrom: str = None,
     positionwise_quality: np.ndarray = None,
     quality_thres: float = -1,
 ):
@@ -210,6 +211,7 @@ def _get_allele_from_alignment(
         if alt_base_is_good_quality and ref_pos >= start_pos and ref_pos < end_pos:
             allele.add(
                 Edit(
+                    chrom=chrom,
                     rel_pos=ref_pos,
                     ref_base=ref_base,
                     alt_base=alt_base,
@@ -228,6 +230,7 @@ def _get_edited_allele_crispresso(
     aln_mat_path: str,
     offset: int,
     strand: int = 1,
+    chrom: str = None,
     start_pos: int = 0,
     end_pos: int = 100,
     positionwise_quality: np.ndarray = None,
@@ -255,6 +258,7 @@ def _get_edited_allele_crispresso(
             strand,
             start_pos,
             end_pos,
+            chrom,
             positionwise_quality,
             quality_thres,
         )

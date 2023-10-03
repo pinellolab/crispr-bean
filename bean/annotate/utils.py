@@ -267,7 +267,7 @@ def check_args(args):
         + int(args.translate_fastas_csv is not None)
         + int(args.translate_gene is not None)
         + int(args.translate_genes_list is not None)
-        != 1
+        > 1
     ):
         raise ValueError(
             "Invalid arguments: You should specify exactly one of --translate-fasta, --translate-fastas-csv, --translate-gene, translate-genes-list to translate alleles."

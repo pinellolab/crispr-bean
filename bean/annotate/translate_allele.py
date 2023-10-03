@@ -419,7 +419,7 @@ def translate_allele(
                 )
             return get_allele_aa_change_multi_genes(
                 allele,
-                gene_names=fasta_file_dict,
+                gene_names=gene_names,
                 include_synonymous=include_synonymous,
             )
         elif fasta_file:
@@ -432,11 +432,19 @@ def translate_allele(
                 fasta_file=fasta_file,
                 include_synonymous=include_synonymous,
             )
-        return get_allele_aa_change_multi_genes(
-            allele,
-            fasta_file_dict=fasta_file_dict,
-            include_synonymous=include_synonymous,
-        )
+        elif fasta_file_dict:
+            return get_allele_aa_change_multi_genes(
+                allele,
+                fasta_file_dict=fasta_file_dict,
+                include_synonymous=include_synonymous,
+            )
+        else:
+            fasta_file_name = os.path.dirname(be.__file__) + "/annotate/ldlr_exons.fa"
+            return get_allele_aa_change_single_gene(
+                allele,
+                fasta_file=fasta_file_name,
+                include_synonymous=include_synonymous,
+            )
     except RefBaseMismatchException as e:
         if not allow_ref_mismatch:
             raise e
@@ -446,7 +454,7 @@ def translate_allele(
 
 def translate_allele_df(
     allele_df,
-    include_synonymouns=True,
+    include_synonymous=True,
     allow_ref_mismatch=True,
     fasta_file=None,
     fasta_file_dict: Dict[str, str] = None,
@@ -457,7 +465,7 @@ def translate_allele_df(
     translated_alleles = allele_df.allele.map(
         lambda a: be.translate_allele(
             a,
-            include_synonymouns=include_synonymouns,
+            include_synonymous=include_synonymous,
             allow_ref_mismatch=allow_ref_mismatch,
             fasta_file=fasta_file,
             fasta_file_dict=fasta_file_dict,

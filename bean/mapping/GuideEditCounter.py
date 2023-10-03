@@ -743,7 +743,7 @@ class GuideEditCounter:
             )
 
         R1, R2 = self._get_seq_records()
-
+        info("Done loading reads for quality filtering")
         _check_readname_match(R1, R2)
         if filter_by_qual:
             self.n_reads_after_filtering = self._filter_read_quality(R1, R2)

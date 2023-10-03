@@ -77,7 +77,7 @@ File should contain following columns.
 * `sequence`: gRNA sequence
 * `barcode`: R2 barcode to help match reporter to gRNA
 * In order to use accessibility in the [variant effect quantification](#bean-run-quantify-variant-effects), provide accessibility information in one of two options. (For non-targeting guides, provide NA values (empty cell).)   
-  * Option 1: `chr` & `genomic_pos`: Chromosome (ex. `chr19`) and genomic position of guide sequence. You will have to provide the path to the bigwig file with matching reference version in `bean-run`. 
+  * Option 1: `chrom` & `genomic_pos`: Chromosome (ex. `chr19`) and genomic position of guide sequence. You will have to provide the path to the bigwig file with matching reference version in `bean-run`. 
   * Option 2: `accessibility_signal`: ATAC-seq signal value of the target loci of each guide.  
 * For variant library (gRNAs are designed to target specific variants and ignores bystander edits)
   * `target` : This column denotes which target variant/element of each gRNA. This is not used in `bean-count[-samples]` but required to run `bean-run` in later steps.
@@ -106,6 +106,41 @@ Optional columns are not required but can be provided for compatibility with `be
 `count` or `count-samples` produces `.h5ad` and `.xlsx` file with guide and per-guide allele counts.  
 * `.h5ad`: This output file follows annotated matrix format compatible with `AnnData` and is based on `Screen` object in [purturb_tools](https://github.com/pinellolab/perturb-tools). See [Data Structure](#data-structure) section for more information.  
 * `.xlsx`: This output file contains `.guides`, `.samples`, `.X[_bcmatch,_edits]`. (`allele_tables` are often too large to write into an Excel!)  
+
+### Parameters
+* `-b`, `--edited-base` (`str`, default: `None`): For base editors, the base that should be ignored when matching the gRNA sequence 
+* `-f`, `--sgRNA-filename` (`str`, default: `None`): sgRNA description file. (See above)
+* `--guide-start-seq`: Guide starts after this sequence in R1 (default: '')
+* `--guide-end-seq`: Guide ends after this sequence in R1 (default: '')
+* `-r`, `--count-reporter` (default: `False`): Count edited alleles in reporters.
+* `-q`, `--min-average-read-quality` (default: `30`): Minimum average quality score (phred33) to keep a read
+* `-s`, `--min-single-bp-quality` (default: `0`): Minimum single bp score (phred33) to keep a read (default: 0)
+* `-n`, `--name`: Name of the output file will be `bean_count_{name}.h5ad`.
+* `-o`, `--output-folder`: Output folder
+* `-l`, `--reporter-length` (default: `32`): Length of the reporter sequence.
+* `--keep-intermediate` (default: `False`): Keep all intermediate files generated from filtering.
+* `--qstart-R1` (default: `0`): Start position of the read when filtering for quality score of the read 1 
+* `--qend-R1` (default: `47`): End position of the read when filtering for quality score of the read 1 
+* `--qstart-R2` (default: `0`): Start position of the read when filtering for quality score of the read 2 
+* `--qend-R2` (default: `36`): End position of the read when filtering for quality score of the read 2 
+* `--gstart-reporter` (default: `6`): Start position of the guide sequence in the reporter
+* `--match-target-pos` (default: `False`): Count the edit in the exact target position.
+* `--target-pos-col` (default: `target_pos`): Column name specifying the relative target position within *reporter* sequence. 
+* `--guide-bc` (default: `True`): Construct has guide barcode 
+* `--guide-bc-len` (default: `4`): Guide barcode sequence length at the beginning of the R2
+* `--offset` (default: `False`): Guide file has `offest` column that will be added to the relative position of reporters. 
+* `--align-fasta` (default: ''): gRNA is aligned to this sequence to infer the offset. Can be used when the exact offset is not provided.
+* `--string-allele` (default: `False`): Store allele as quality filtered string instead of Allele object
+* `-g`, `--count-guide-edits` (default: `False`): count the self editing of guides (default: False)
+* `-m`, `--count-guide-reporter-alleles`: count the matched allele of guide and reporter edit
+* `--tiling`: Specify that the guide library is tiling library 
+* `-i`, `--input`: List of fastq and sample ids. See above for the format.
+* `-t`, `--threads` (default: `10`): Number of threads to use
+* `--guide-start-seqs-file` (default: `None`): CSV file path with per-sample `guide_start_seq` to be used, if provided. Formatted as `sample_id, guide_start_seq` 
+* `--guide-end-seqs-file` (default: `None`): CSV file path with per-sample `guide_end_seq` to be used, if provided. Formatted as `sample_id,guide_end_seq` 
+* `--rerun` (default: `False`): Recount each sample. If `False`, existing count for each sample is taken.
+
+
 
 
 <br/><br/>

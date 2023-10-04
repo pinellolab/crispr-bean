@@ -1,7 +1,7 @@
 import os
 import sys
 import requests
-
+from typing import Optional
 import argparse
 import pandas as pd
 import logging
@@ -17,6 +17,22 @@ error = logging.critical
 warn = logging.warning
 debug = logging.debug
 info = logging.info
+
+
+def find_overlap(
+    chrom: str, start: int, end: int, range_df: pd.DataFrame
+) -> Optional[str]:
+    """Find overlap between query range and range_df and return ID of overlapping region in range_df."""
+    if chrom not in range_df.chrom:
+        return None
+    overlap = range_df.loc[
+        (range_df.chrom == chrom) & ((start <= range_df.end) | (end >= range_df.start))
+    ]
+    if len(overlap) == 0:
+        return None
+    if len(overlap) > 2:
+        raise ValueError("We cannot handle overlapping genes.")
+    return overlap.index.tolist()[0]
 
 
 def get_mane_transcript_id(gene_name: str):
@@ -35,10 +51,10 @@ def get_mane_transcript_id(gene_name: str):
     mane_df = pd.DataFrame.from_records(mane_json)
     mane_transcript_id = mane_df.loc[
         mane_df.ens_gene_name == gene_name, "ens_stable_id"
-    ]
+    ].values[0]
     id_version = mane_df.loc[
         mane_df.ens_gene_name == gene_name, "ens_stable_id_version"
-    ]
+    ].values[0]
     return mane_transcript_id, id_version
 
 
@@ -67,15 +83,28 @@ def get_exons_from_transcript_id(transcript_id: str, id_version: int):
     return exons_list, cds_start, cds_end
 
 
-def get_cds_pos_seq(exon_id, id_version, cds_start, cds_end):
+def get_cds_pos_seq(exon_id, id_version, cds_start, cds_end, ref_version="GRCh38"):
     seq = []
     genomic_pos = []
     api_url = f"http://tark.ensembl.org/api/exon/?stable_id={exon_id}&stable_id_version={id_version}&expand=sequence"
     response = requests.get(api_url, headers={"Content-Type": "application/json"})
     exon_json = response.json()
-    if exon_json["count"] != 0:
-        raise ValueError(f"Non-unique entry for exon ID and version:\n{exon_json}")
-    exon_record = exon_json["results"][0]
+    if exon_json["count"] != 1:
+        if exon_json["count"] > 1:
+            exon_record = None
+            for record in exon_json["results"]:
+                if record["assembly"] == ref_version:
+                    if exon_record is not None:
+                        raise ValueError(
+                            f"Non-unique entry for exon ID and version:\n{exon_json}"
+                        )
+                    exon_record = record
+            if exon_record is None or exon_json["count"] == 0:
+                raise ValueError(
+                    f"Non-unique entry for exon ID and version:\n{exon_json}"
+                )
+    else:
+        exon_record = exon_json["results"][0]
     sequence = exon_record["sequence"]["sequence"]
     start_pos = exon_record["loc_start"]
     end_pos = exon_record["loc_end"]
@@ -87,23 +116,35 @@ def get_cds_pos_seq(exon_id, id_version, cds_start, cds_end):
             warn(f"Exon {exon_id} doesn't have coding sequence.")
             return chrom, seq, genomic_pos
         else:
-            sequence = sequence[cds_start - start_pos + 1 :]
+            sequence = sequence[cds_start - start_pos :]
             start_pos = cds_start
     if cds_end > start_pos and cds_end < end_pos:
-        end_pos = cds_end
         sequence = sequence[: (cds_end - end_pos)]
-    assert len(sequence) == end_pos - start_pos + 1
+        end_pos = cds_end
+
+    assert len(sequence) == end_pos - start_pos + 1, (
+        len(sequence),
+        cds_start,
+        cds_end,
+        end_pos,
+        start_pos,
+        (end_pos - start_pos + 1),
+        sequence,
+    )
     return chrom, list(sequence), list(range(start_pos, end_pos + 1))
 
 
 def get_cds_seq_pos_from_gene_name(gene_name: str):
     transcript_id, id_version = get_mane_transcript_id(gene_name)
-    exons_list, cds_start = get_exons_from_transcript_id(transcript_id, id_version)
+    print(f"MANE transcript ID {transcript_id} for {gene_name} will be used.")
+    exons_list, cds_start, cds_end = get_exons_from_transcript_id(
+        transcript_id, id_version
+    )
     cds_seq = []
     cds_pos = []
     for exon_dict in exons_list:
         cds_chrom, _cds_seq, _cds_pos = get_cds_pos_seq(
-            exon_dict, id_version, cds_start
+            exon_dict["stable_id"], exon_dict["stable_id_version"], cds_start, cds_end
         )
         cds_seq.extend(_cds_seq)
         cds_pos.extend(_cds_pos)

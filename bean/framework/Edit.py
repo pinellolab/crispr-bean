@@ -235,7 +235,9 @@ class Allele:
                         raise ValueError(
                             f"merge_priority length {len(merge_priority)} is not the same as allele_list length {len(allele_list)}"
                         )
-                    nt_max_idx = nt_max_idx[np.nanargmax(merge_priority[nt_max_idx])]
+                    nt_max_idx = nt_max_idx[
+                        np.nanargmax(merge_priority.iloc[nt_max_idx])
+                    ]
                 else:
                     nt_max_idx = nt_max_idx[0]
                 if nt_jaccards[nt_max_idx] > jaccard_threshold:

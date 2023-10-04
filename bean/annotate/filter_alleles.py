@@ -435,7 +435,9 @@ def filter_allele_prop(
                 guide_df = aa_prop.loc[
                     aa_prop.index.get_level_values("guide") == guide,
                 ]
-                max_frequency_idx = np.argmax(guide_df.mean(axis=1))
+                max_frequency_idx = np.nanargmax(
+                    guide_df.mean(axis=1, numeric_only=True).fillna(0)
+                )
                 append_rows.append(guide_df.iloc[[max_frequency_idx], :])
         aa_prop_filtered = pd.concat([aa_prop_filtered] + append_rows, axis=0)
 

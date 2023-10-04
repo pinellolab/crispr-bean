@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import os
 import sys
 
 import logging
@@ -113,6 +112,8 @@ if __name__ == "__main__":
         filtered_key = f"{allele_df_keys[-1]}_translated"
         bdata.uns[filtered_key] = be.translate_allele_df(
             bdata.uns[allele_df_keys[-1]],
+            gene_name=args.translate_gene,
+            gene_names=args.translate_genes_list,
             fasta_file=args.translate_fasta,
             fasta_file_dict=fasta_dict,
         ).rename(columns={"allele": "aa_allele"})

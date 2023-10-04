@@ -18,7 +18,6 @@ from ._supporting_fn import (
     _check_readname_match,
     _get_edited_allele_crispresso,
     _get_fastq_handle,
-    _multiindex_dict_to_df,
     _read_count_match,
     _read_is_good_quality,
     _write_alignment_matrix,

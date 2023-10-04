@@ -1,5 +1,5 @@
 import os
-from typing import List, Iterable, Dict, Tuple, Collection, Optional
+from typing import List, Iterable, Dict, Tuple, Collection
 from copy import deepcopy
 import numpy as np
 import pandas as pd
@@ -10,7 +10,7 @@ from bean.framework.AminoAcidEdit import (
     AminoAcidEdit,
     CodingNoncodingAllele,
 )
-from bean.annotate.utils import get_cds_seq_pos_from_gene_name
+from bean.annotate.utils import get_cds_seq_pos_from_gene_name, find_overlap
 import logging
 import sys
 
@@ -180,6 +180,8 @@ def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
 
 
 class CDS:
+    gene_info_dict = {}
+
     def __init__(self):
         self.edited_aa_pos = set()
         self.edits_noncoding = set()
@@ -202,11 +204,22 @@ class CDS:
     @classmethod
     def from_gene_name(cls, gene_name):
         cds = cls()
-        cds.chrom, cds.translated_seq, cds.genomic_pos = get_cds_seq_pos_from_gene_name(
-            gene_name
-        )
+        if gene_name not in cls.gene_info_dict:
+            chrom, translated_seq, genomic_pos = get_cds_seq_pos_from_gene_name(
+                gene_name
+            )
+            cls.gene_info_dict[gene_name] = {
+                "chrom": chrom,
+                "translated_seq": translated_seq,
+                "genomic_pos": genomic_pos,
+            }
+        cds.chrom = cls.gene_info_dict[gene_name]["chrom"]
+        cds.translated_seq = cls.gene_info_dict[gene_name]["translated_seq"]
+        cds.genomic_pos = cls.gene_info_dict[gene_name]["genomic_pos"]
         cds.nt = cds.translated_seq
         cds.pos = np.array(cds.genomic_pos)
+        cds.edited_nt = cds.nt.copy()
+        return cds
 
     def set_exon_fasta_name(self, fasta_file_name: str):
         self.fasta_file_name = fasta_file_name
@@ -324,25 +337,9 @@ class CDSCollection:
             index=gids,
         )
 
-    def find_overlap(
-        self, chrom: str, start: int, end: int, range_df: pd.DataFrame
-    ) -> Optional[str]:
-        """Find overlap between query range and range_df and return ID of overlapping region in range_df."""
-        if not chrom in range_df.chrom:
-            return None
-        overlap = range_df.loc[
-            (range_df.chrom == chrom)
-            & ((start <= range_df.end) | (end >= range_df.start))
-        ]
-        if len(overlap) == 0:
-            return None
-        if len(overlap) > 2:
-            raise ValueError("We cannot handle overlapping genes.")
-        return overlap.index.tolist()[0]
-
     def get_aa_change(
         self, allele: Allele, include_synonymous: bool = True
-    ) -> CodingNoncodingAllele:
+    ) -> CodingNoncodingAllele:  # sourcery skip: use-named-expression
         """Finds overlapping CDS and call the same function for the CDS, else return CodingNonCodingAllele with no translated allele."""
         chrom, start, end = allele.get_range()
         overlapping_cds = find_overlap(chrom, start, end, self.cds_ranges)
@@ -351,7 +348,7 @@ class CDSCollection:
                 allele, include_synonymous
             )
         else:
-            return CodingNonCodingAllele.from_alleles(nt_allele=allele)
+            return CodingNoncodingAllele.from_alleles(nt_allele=allele)
 
 
 def get_allele_aa_change_single_gene(
@@ -456,6 +453,8 @@ def translate_allele_df(
     allele_df,
     include_synonymous=True,
     allow_ref_mismatch=True,
+    gene_name=None,
+    gene_names=None,
     fasta_file=None,
     fasta_file_dict: Dict[str, str] = None,
 ):
@@ -467,6 +466,8 @@ def translate_allele_df(
             a,
             include_synonymous=include_synonymous,
             allow_ref_mismatch=allow_ref_mismatch,
+            gene_name=gene_name,
+            gene_names=gene_names,
             fasta_file=fasta_file,
             fasta_file_dict=fasta_file_dict,
         )

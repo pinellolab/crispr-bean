@@ -1,4 +1,3 @@
-from turtle import position
 from typing import List, Union
 import subprocess as sb
 import numpy as np
@@ -6,7 +5,6 @@ import pandas as pd
 import gzip
 from Bio import SeqIO
 from Bio.Seq import Seq
-from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from .CRISPResso2Align import read_matrix, global_align_base_editor
 from ..framework.Edit import Allele, Edit
 
@@ -89,7 +87,6 @@ def _check_readname_match(R1: List[SeqIO.SeqRecord], R2: List[SeqIO.SeqRecord]):
 
 def _get_guide_to_reporter_df(sgRNA_filename: str) -> pd.DataFrame:
     """Returns a gRNA name to reporter sequence mapping."""
-    guide_to_reporter = {}
 
     with open(sgRNA_filename) as infile:
         sgRNA_df = pd.read_csv(infile)

@@ -87,9 +87,9 @@ def parse_args():
     )
     parser.add_argument(
         "--posctrl-col",
-        help="Column name in ReporterScreen.guides DataFrame that specifies guide category.",
+        help="Column name in ReporterScreen.guides DataFrame that specifies guide category. To use all gRNAs, feed empty string ''.",
         type=str,
-        default="target_group",
+        default="target_col",
     )
     parser.add_argument(
         "--posctrl-val",

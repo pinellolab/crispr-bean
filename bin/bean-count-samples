@@ -128,7 +128,7 @@ def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
             f"Done for {sample_id}. \n\
             Output written at {counter.output_dir}.h5ad"
         )
-
+    del counter
     return screen
 
 
@@ -178,7 +178,7 @@ def main():
     sample_tbl = pd.read_csv(args.input)  # R1_filepath, R2_filepath, sample_name
     sample_tbl_input = sample_tbl.iloc[:, :3]
     sample_info_tbl = sample_tbl.iloc[:, 2:].set_index(sample_tbl.columns[2])
-    with Pool(processes=args.threads) as p:
+    with Pool(processes=args.threads, maxtasksperchild=1) as p:
         result = p.starmap(
             count_sample,
             [

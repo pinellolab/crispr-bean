@@ -744,10 +744,7 @@ class GuideEditCounter:
             )
 
         R1_iter, R2_iter = self._get_fastq_iterators()
-        (
-            self.n_reads_after_filtering,
-            self.n_total_reads,
-        ) = self._check_readname_match_and_filter_quality(
+        (self.n_reads_after_filtering) = self._check_readname_match_and_filter_quality(
             R1_iter, R2_iter, filter_by_qual
         )
 
@@ -768,9 +765,9 @@ class GuideEditCounter:
         R2_filtered = gzip.open(self.filtered_R2_filename, "wt+")
 
         n_reads_after_filtering = 0
-        n_total_reads = 0
-        for R1_record, R2_record in zip(R1_iter, R2_iter):
-            n_total_reads += 1
+        for R1_record, R2_record in tqdm(
+            zip(R1_iter, R2_iter), total=self.n_total_reads
+        ):
             if R1_record.name != R2_record.name:
                 raise InputFileError(
                     "R1 and R2 read discordance in read {} and {}".format(
@@ -798,7 +795,7 @@ class GuideEditCounter:
                 R1_filtered.write(R1_record.format("fastq"))
                 R2_filtered.write(R2_record.format("fastq"))
 
-        return n_reads_after_filtering, n_total_reads
+        return n_reads_after_filtering
 
     def _write_start_log(self):
         try:

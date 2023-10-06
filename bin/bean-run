@@ -47,7 +47,7 @@ info = logging.info
 pyro.set_rng_seed(101)
 
 DATACLASS_DICT = {
-    "Normal": VariantSortingReporterScreenData,
+    "Normal": VariantSortingScreenData,
     "MixtureNormal": VariantSortingReporterScreenData,
     "_MixtureNormal+Acc": VariantSortingReporterScreenData,  # TODO: old
     "MixtureNormal+Acc": VariantSortingReporterScreenData,
@@ -65,7 +65,7 @@ def identify_model_guide(args):
             partial(
                 m.MultiMixtureNormalModel,
                 scale_by_accessibility=args.scale_by_acc,
-                use_bcmatch=~args.ignore_bcmatch,
+                use_bcmatch=(not args.ignore_bcmatch,),
             ),
             partial(
                 m.MultiMixtureNormalGuide,
@@ -81,7 +81,7 @@ def identify_model_guide(args):
         info("Using Normal model...")
         return (
             "Normal",
-            partial(m.NormalModel, use_bcmatch=~args.ignore_bcmatch),
+            partial(m.NormalModel, use_bcmatch=(not args.ignore_bcmatch)),
             m.NormalGuide,
         )
     elif args.const_pi:
@@ -92,7 +92,7 @@ def identify_model_guide(args):
         info("Using Mixture Normal model with constant weight ...")
         return (
             "MixtureNormalConstPi",
-            partial(m.MixtureNormalConstPiModel, use_bcmatch=~args.ignore_bcmatch),
+            partial(m.MixtureNormalConstPiModel, use_bcmatch=(not args.ignore_bcmatch)),
             m.MixtureNormalGuide,
         )
     else:
@@ -104,12 +104,12 @@ def identify_model_guide(args):
             partial(
                 m.MixtureNormalModel,
                 scale_by_accessibility=args.scale_by_acc,
-                use_bcmatch=~args.ignore_bcmatch,
+                use_bcmatch=(not args.ignore_bcmatch,),
             ),
             partial(
                 m.MixtureNormalGuide,
                 scale_by_accessibility=args.scale_by_acc,
-                fit_noise=~args.dont_fit_noise,
+                fit_noise=(not args.dont_fit_noise),
             ),
         )
 
@@ -129,7 +129,9 @@ def main(args, bdata):
     model_label, model, guide = identify_model_guide(args)
     guide_index = bdata.guides.index
     info("Done loading data. Preprocessing...")
-    bdata.samples["rep"] = bdata.samples["rep"].astype("category")
+    bdata.samples[args.replicate_col] = bdata.samples[args.replicate_col].astype(
+        "category"
+    )
     bdata.guides = bdata.guides.loc[:, ~bdata.guides.columns.duplicated()].copy()
     if args.mode == "variant":
         if bdata.guides[args.target_col].isnull().any():
@@ -152,17 +154,16 @@ def main(args, bdata):
         shrink_alpha=args.shrink_alpha,
         replicate_col=args.replicate_col,
     )
-    print(ndata.a0)
     adj_negctrl_idx = None
     if args.mode == "variant":
-        if "edit_rate" not in bdata.guides.columns:
-            bdata.get_edit_from_allele()
-            bdata.get_edit_mat_from_uns(rel_pos_is_reporter=True)
-            bdata.get_guide_edit_rate()
+        if not args.uniform_edit:
+            if "edit_rate" not in bdata.guides.columns:
+                bdata.get_edit_from_allele()
+                bdata.get_edit_mat_from_uns(rel_pos_is_reporter=True)
+                bdata.get_guide_edit_rate()
         target_info_df = _get_guide_target_info(
             ndata.screen, args, cols_include=[args.negctrl_col]
         )
-        print(target_info_df.columns)
         if args.adjust_confidence_by_negative_control:
             adj_negctrl_idx = np.where(
                 target_info_df[args.negctrl_col].map(lambda s: s.lower())

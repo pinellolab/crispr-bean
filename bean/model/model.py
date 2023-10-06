@@ -74,20 +74,10 @@ def NormalModel(
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
             a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
-            a_bcmatch = get_alpha(
-                expected_guide_p,
-                data.size_factor_bcmatch,
-                data.sample_mask,
-                data.a0_bcmatch,
-            )
-            assert (
-                data.X.shape
-                == data.X_bcmatch.shape
-                == (
-                    data.n_reps,
-                    data.n_condits,
-                    data.n_guides,
-                )
+            assert data.X.shape == (
+                data.n_reps,
+                data.n_condits,
+                data.n_guides,
             )
             with poutine.mask(
                 mask=torch.logical_and(
@@ -101,6 +91,13 @@ def NormalModel(
                     obs=data.X_masked.permute(0, 2, 1),
                 )
             if use_bcmatch:
+                print(f"Use_bcmatch:{use_bcmatch}")
+                a_bcmatch = get_alpha(
+                    expected_guide_p,
+                    data.size_factor_bcmatch,
+                    data.sample_mask,
+                    data.a0_bcmatch,
+                )
                 with poutine.mask(
                     mask=torch.logical_and(
                         data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1)
@@ -161,12 +158,7 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
             a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
-            a_bcmatch = get_alpha(
-                expected_guide_p,
-                data.size_factor_bcmatch,
-                data.sample_mask,
-                data.a0_bcmatch,
-            )
+
             assert (
                 data.X.shape
                 == data.X_bcmatch.shape
@@ -188,6 +180,12 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
                     obs=data.X_masked.permute(0, 2, 1),
                 )
             if use_bcmatch:
+                a_bcmatch = get_alpha(
+                    expected_guide_p,
+                    data.size_factor_bcmatch,
+                    data.sample_mask,
+                    data.a0_bcmatch,
+                )
                 with poutine.mask(
                     mask=torch.logical_and(
                         data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1)

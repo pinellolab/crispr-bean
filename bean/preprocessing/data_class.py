@@ -1025,14 +1025,28 @@ class VariantSortingScreenData(VariantScreenData, SortingScreenData):
         upper_quantile_column="upper_quantile",
         replicate_column="rep",
         condition_column="bin",
+        target_col="target",
+        sample_mask_column="mask",
+        shrink_alpha: bool = False,
         **kwargs,
     ):
+        ScreenData.__init__(
+            self,
+            screen,
+            *args,
+            sample_mask_column=sample_mask_column,
+            replicate_column="rep",
+            condition_column="bin",
+            shrink_alpha=shrink_alpha,
+            **kwargs,
+        )
         SortingScreenData._pre_init(
             self,
             lower_quantile_column,
             upper_quantile_column,
         )
-        VariantScreenData.__init__(self, *args, **kwargs)
+        ScreenData._post_init(self)
+        VariantScreenData._post_init(self, target_col)
 
 
 @dataclass

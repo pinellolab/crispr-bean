@@ -61,17 +61,6 @@ def run_inference(
 
 def _get_guide_target_info(bdata, args, cols_include=[]):
     guide_info = bdata.guides.copy()
-    edit_rate_info = (
-        guide_info[[args.target_col, "edit_rate"]]
-        .groupby(args.target_col, sort=False)
-        .agg({"edit_rate": ["mean", "std"]})
-    )
-    edit_rate_info.columns = edit_rate_info.columns.get_level_values(1)
-    edit_rate_info = edit_rate_info.rename(
-        columns={"mean": "edit_rate_mean", "std": "edit_rate_std"}
-    )
-    print(guide_info.columns)
-    print(cols_include)
     target_info = (
         guide_info[
             [args.target_col]
@@ -92,7 +81,17 @@ def _get_guide_target_info(bdata, args, cols_include=[]):
         .drop_duplicates()
         .set_index(args.target_col, drop=True)
     )
-    target_info = target_info.join(edit_rate_info)
+    if "edit_rate" in guide_info.columns.tolist():
+        edit_rate_info = (
+            guide_info[[args.target_col, "edit_rate"]]
+            .groupby(args.target_col, sort=False)
+            .agg({"edit_rate": ["mean", "std"]})
+        )
+        edit_rate_info.columns = edit_rate_info.columns.get_level_values(1)
+        edit_rate_info = edit_rate_info.rename(
+            columns={"mean": "edit_rate_mean", "std": "edit_rate_std"}
+        )
+        target_info = target_info.join(edit_rate_info)
     return target_info
 
 

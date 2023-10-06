@@ -147,7 +147,7 @@ Optional columns are not required but can be provided for compatibility with `be
 
 ## `bean-qc`: QC of reporter screen data
 ```bash
-bean-count-samples \
+bean-qc \
   my_sorting_screen.h5ad    `# Input ReporterScreen .h5ad file path` \
   -o my_sorting_screen_masked.h5ad   `# Output ReporterScreen .h5ad file path` \
   -r qc_report_my_sorting_screen   `# Prefix for QC report` 

@@ -1028,6 +1028,7 @@ class VariantSortingScreenData(VariantScreenData, SortingScreenData):
         target_col="target",
         sample_mask_column="mask",
         shrink_alpha: bool = False,
+        use_bcmatch=False,
         **kwargs,
     ):
         ScreenData.__init__(
@@ -1047,6 +1048,43 @@ class VariantSortingScreenData(VariantScreenData, SortingScreenData):
         )
         ScreenData._post_init(self)
         VariantScreenData._post_init(self, target_col)
+        if use_bcmatch:
+            self.set_bcmatch(
+                self,
+                screen,
+            )
+
+    def set_bcmatch(self, screen):
+        screen.samples["size_factor_bcmatch"] = self.get_size_factor(
+            screen.layers["X_bcmatch"]
+        )
+        self.screen_selected.samples["size_factor_bcmatch"] = screen.samples.loc[
+            self.screen_selected.samples.index, "size_factor_bcmatch"
+        ]
+        self.screen_control.samples["size_factor_bcmatch"] = screen.samples.loc[
+            self.screen_control.samples.index, "size_factor_bcmatch"
+        ]
+        self.X_bcmatch = self.transform_data(self.screen_selected.layers["X_bcmatch"])
+        self.X_bcmatch_masked = self.X_bcmatch * self.sample_mask[:, :, None]
+        self.X_bcmatch_control = self.transform_data(
+            self.screen_control.layers["X_bcmatch"], 1
+        )
+        self.X_bcmatch_control_masked = (
+            self.X_bcmatch_control * self.bulk_sample_mask[:, None, None]
+        )
+        self.size_factor_bcmatch = torch.as_tensor(
+            self.screen_selected.samples["size_factor_bcmatch"].to_numpy()
+        ).reshape(self.n_reps, self.n_condits)
+        self.size_factor_bcmatch_control = torch.as_tensor(
+            self.screen_control.samples["size_factor_bcmatch"].to_numpy()
+        ).reshape(self.n_reps, 1)
+        a0_bcmatch = get_pred_alpha0(
+            self.X_bcmatch.clone().cpu(),
+            self.size_factor_bcmatch.clone().cpu(),
+            self.popt,
+            self.sample_mask.cpu(),
+        )
+        self.a0_bcmatch = torch.as_tensor(a0_bcmatch)
 
 
 @dataclass

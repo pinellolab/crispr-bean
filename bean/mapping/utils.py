@@ -252,7 +252,7 @@ def _check_arguments(args, info_logger, warn_logger, error_logger):
             raise InputFileError(
                 f"Specified target position column '{args.target_pos_col}' not in the input file {args.sgRNA_filename}."
             )
-        if args.count_reporter_edits:
+        if args.count_reporter:
             if "reporter" not in sgRNA_info_tbl.columns:
                 raise InputFileError(
                     f"Offset option is set but the input file doesn't contain the `reporter` column: Provided {sgRNA_info_tbl.columns}"

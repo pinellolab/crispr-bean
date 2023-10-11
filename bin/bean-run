@@ -153,6 +153,7 @@ def main(args, bdata):
         target_col=args.target_col,
         shrink_alpha=args.shrink_alpha,
         replicate_col=args.replicate_col,
+        use_bcmatch=(not args.ignore_bcmatch),
     )
     adj_negctrl_idx = None
     if args.mode == "variant":

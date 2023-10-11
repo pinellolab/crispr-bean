@@ -240,7 +240,7 @@ def _check_arguments(args, info_logger, warn_logger, error_logger):
         if args.offset:
             if "offset" not in sgRNA_info_tbl.columns:
                 raise InputFileError(
-                    "Offset option is set but the input file doesn't contain the `offset` column."
+                    f"Offset option is set but the input file doesn't contain the `offset` column: Provided {sgRNA_info_tbl.columns}"
                 )
             if len(args.align_fasta) > 0:
                 error_logger("Can't have --offset and --align_fasta option together.")
@@ -252,12 +252,17 @@ def _check_arguments(args, info_logger, warn_logger, error_logger):
             raise InputFileError(
                 f"Specified target position column '{args.target_pos_col}' not in the input file {args.sgRNA_filename}."
             )
+        if args.count_reporter_edits:
+            if "reporter" not in sgRNA_info_tbl.columns:
+                raise InputFileError(
+                    f"Offset option is set but the input file doesn't contain the `reporter` column: Provided {sgRNA_info_tbl.columns}"
+                )
 
     _check_sgrna_info_table(args, sgRNA_info_tbl)
 
     if args.match_target_pos and (args.target_pos_col not in sgRNA_info_tbl.columns):
         raise InputFileError(
-            "Target position option is set but the input file doesn't contain the target position column."
+            f"Target position option is set as `{args.target_pos_col}` but the input file doesn't contain the target position column: provided {sgRNA_info_tbl.columns}"
         )
 
     info_logger("Done checking input arguments.")

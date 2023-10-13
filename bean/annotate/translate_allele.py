@@ -304,17 +304,18 @@ class CDSCollection:
 
     def __init__(
         self,
-        gene_ids: List[str] = None,
+        gene_names: List[str] = None,
         fasta_file_names: List[str] = None,
         suppressMessage=True,
     ):
         if fasta_file_names is None:
-            self.cds_dict = get_cds_dict(gene_ids)
-        elif len(gene_ids) != len(fasta_file_names):
-            raise ValueError("gene_ids and fasta_file_names have different lengths")
-        self.cds_dict = {}
-        for gid, fasta_file in zip(fasta_file_names, gene_ids):
-            self.cds_dict[gid] = CDS(fasta_file)
+            self.cds_dict = get_cds_dict(gene_names)
+        elif len(gene_names) != len(fasta_file_names):
+            raise ValueError("gene_names and fasta_file_names have different lengths")
+        else:
+            self.cds_dict = {}
+            for gid, fasta_file in zip(fasta_file_names, gene_names):
+                self.cds_dict[gid] = CDS(fasta_file)
         self.cds_ranges = self.get_cds_ranges()
 
     def get_cds_ranges(self):
@@ -325,8 +326,12 @@ class CDSCollection:
         for gene_id, cds in self.cds_dict.items():
             gids.append(gene_id)
             seqnames.append(cds.chrom)
-            starts.append(cds.start)
-            ends.append(cds.end)
+            starts.append(cds.genomic_pos[0])
+            try:
+                ends.append(cds.genomic_pos[-1])
+            except:
+                print(cds.genomic_pos)
+                exit(1)
 
         return pd.DataFrame(
             {

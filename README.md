@@ -198,7 +198,7 @@ bean-filter my_sorting_screen.h5ad \
 -o my_sorting_screen_masked.h5ad \
 --translate   `# Translate coding variants` \
 [ --translate-gene-name GENE_SYMBOL OR
-  --translate-gene-names path_to_gene_names_file.txt OR
+  --translate-genes-list path_to_gene_names_file.txt OR
   --translate-fasta gene_exon.fa, OR
   --translate-fastas-csv gene_exon_fas.csv]
 ```
@@ -211,7 +211,9 @@ bean-filter my_sorting_screen.h5ad \
 ### Output
 Above command produces 
 * `my_sorting_screen_filtered.h5ad` with filtered alleles stored in `.uns`,   
-* `my_sorting_screen_filtered.filtered_allele_stats.pdf`, and `my_sorting_screen_filtered.filter_log.txt` that report allele count stats in each filtering step.
+* `my_sorting_screen_filtered.filtered_allele_stats.pdf`, and `my_sorting_screen_filtered.filter_log.txt` that report allele count stats in each filtering step.  
+
+You may want to adjust the flitering parameters to obtain optimal balance between # guides per variant & # variants that are scored. See example outputs of filtering step [here](docs/example_filtering_outputs/).
 
 
 ### Additional parameters
@@ -227,6 +229,8 @@ Above command produces
 * `--translate` (default: `False`): Translate nucleotide-level variants prior to allele proportion filtering.
 * `-f`, `--translate-fasta` (defulat: `None`): fasta file path with exon positions. If not provided and `--translate` flag is provided, LDLR hg19 coordinates will be used.
 * `-fs`, `--translate-fastas-csv` (defulat: `None`): .csv with two columns with gene IDs and FASTA file path corresponding to each gene.
+* `-g`, `--translate-gene-name` (default: `None`): Gene symbol for translation
+* `-gs`, `--translate-genes-list` (default: `None`): Path to the text file with gene symbols in each line
 * `-ap`, `--filter-allele-proportion` (default: `0.05`): If provided, only the alleles that exceed `filter_allele_proportion` in `filter-sample-proportion` will be retained.
 * `-ac`, `--filter-allele-count` (default: `5`): If provided, alleles that exceed `filter_allele_proportion` AND `filter_allele_count` in `filter-sample-proportion` will be retained.
 * `sp`, `--filter-sample-proportion` (default: `0.2`): "If `filter_allele_proportion` is provided, alleles that exceed `filter_allele_proportion` in `filter-sample-proportion` will be retained.

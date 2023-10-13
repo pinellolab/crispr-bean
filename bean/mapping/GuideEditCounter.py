@@ -122,8 +122,8 @@ class GuideEditCounter:
         self.align_score_threshold = 80
         self.target_pos_col = kwargs["target_pos_col"]
 
-        self.guide_start_seq = kwargs["guide_start_seq"]
-        self.guide_end_seq = kwargs["guide_end_seq"]
+        self.guide_start_seq = kwargs["guide_start_seq"].upper()
+        self.guide_end_seq = kwargs["guide_end_seq"].upper()
         if not self.guide_start_seq == "":
             info(
                 f"{self.name}: Using guide_start_seq={self.guide_start_seq} for {self.output_dir}"

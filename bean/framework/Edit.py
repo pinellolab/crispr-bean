@@ -25,7 +25,7 @@ class Edit:
         self.ref_base = ref_base  # TODO make it ref / alt instead of ref_base and alt_base for AAEdit comp. or make abstract class
         self.alt_base = alt_base
         self.uid = unique_identifier
-        if type(strand) == int:
+        if isinstance(strand, int):
             strand_to_symbol = {1: "+", -1: "-"}
             self.strand = strand_to_symbol[strand]
         else:
@@ -92,6 +92,10 @@ class Edit:
         self.uid = uid
         return self
 
+    def set_chrom(self, chrom):
+        self.chrom = chrom
+        return self
+
     def get_abs_base_change(self):
         if self.strand == "-":
             ref_base = type(self).reverse_map[self.ref_base]
@@ -135,6 +139,8 @@ class Allele:
         self.edits = set() if edits is None else set(edits)
         if edits and len(edits) > 0:
             self.chrom = next(iter(edits)).chrom
+        else:
+            self.chrom = None
 
     @classmethod
     def from_str(cls, allele_str):  # pos:strand:start>end
@@ -212,10 +218,15 @@ class Allele:
         return False
 
     def get_jaccard(self, other):
+        if self.chrom != other.chrom:
+            return 0
         return jaccard(set(map(str, self.edits)), set(map(str, other.edits)))
 
     def get_jaccards(self, allele_list: Iterable[Allele]):
         return np.array(list(map(lambda o: self.get_jaccard(o), allele_list)))
+
+    def set_chrom(self, chrom: str):
+        self.edits = {edit.set_chrom(chrom) for edit in self.edits}
 
     def map_to_closest(
         self, allele_list, jaccard_threshold=0.5, merge_priority: np.ndarray = None

@@ -49,12 +49,18 @@ def get_mane_transcript_id(gene_name: str):
     response = requests.get(api_url, headers={"Content-Type": "application/json"})
     mane_json = response.json()
     mane_df = pd.DataFrame.from_records(mane_json)
-    mane_transcript_id = mane_df.loc[
-        mane_df.ens_gene_name == gene_name, "ens_stable_id"
-    ].values[0]
-    id_version = mane_df.loc[
-        mane_df.ens_gene_name == gene_name, "ens_stable_id_version"
-    ].values[0]
+    try:
+        mane_transcript_id = mane_df.loc[
+            mane_df.ens_gene_name == gene_name, "ens_stable_id"
+        ].values[0]
+        id_version = mane_df.loc[
+            mane_df.ens_gene_name == gene_name, "ens_stable_id_version"
+        ].values[0]
+    except IndexError as e:
+        print(
+            f"Cannot find {gene_name} from MANE database: check http://tark.ensembl.org/api/transcript/manelist/ or use custom fasta."
+        )
+        exit(1)
     return mane_transcript_id, id_version
 
 
@@ -313,6 +319,11 @@ def check_args(args):
         raise ValueError(
             "Invalid arguments: You should specify exactly one of --translate-fasta, --translate-fastas-csv, --translate-gene, translate-genes-list to translate alleles."
         )
+    if args.translate_genes_list is not None:
+        args.translate_genes_list = (
+            pd.read_csv(args.translate_genes_list, header=None).values[:, 0].tolist()
+        )
+        info(f"Using {args.translate_genes_list} as genes for translation.")
     if args.translate_fastas_csv:
         tbl = pd.read_csv(
             args.translate_fastas_csv,

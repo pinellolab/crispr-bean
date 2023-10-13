@@ -5,7 +5,11 @@ import sys
 import logging
 import pandas as pd
 import bean as be
-from bean.plotting.allele_stats import plot_n_alleles_per_guide, plot_n_guides_per_edit
+from bean.plotting.allele_stats import (
+    plot_n_alleles_per_guide,
+    plot_n_guides_per_edit,
+    plot_allele_stats,
+)
 from bean.annotate.utils import parse_args, check_args
 import matplotlib.pyplot as plt
 
@@ -147,13 +151,9 @@ if __name__ == "__main__":
     bdata.write(f"{args.output_prefix}.h5ad")
 
     info("Plotting allele stats for each filtering step...")
-    fig, ax = plt.subplots(len(allele_df_keys), 2, figsize=(6, 3 * len(allele_df_keys)))
-    for i, key in enumerate(allele_df_keys):
-        if len(bdata.uns[key]) > 0:
-            plot_n_alleles_per_guide(bdata, key, bdata.uns[key].columns[1], ax[i, 0])
-            plot_n_guides_per_edit(bdata, key, bdata.uns[key].columns[1], ax[i, 1])
-    plt.tight_layout()
-    plt.savefig(f"{args.output_prefix}.filtered_allele_stats.pdf", bbox_inches="tight")
+    plot_allele_stats(
+        bdata, allele_df_keys, f"{args.output_prefix}.filtered_allele_stats.pdf"
+    )
     info(
         f"Saving plotting result and log at {args.output_prefix}.[filtered_allele_stats.pdf, filter_log.txt]."
     )

@@ -906,7 +906,10 @@ def concat(screens: Collection[ReporterScreen], *args, axis=1, **kwargs):
 
             if max(len(screen_uns_df) for screen_uns_df in screen_uns_dfs) == 0:
                 continue
-            merge_on = screen[0].uns[k].columns[:2].tolist()
+            if "guide_reporter_allele" in k:
+                merge_on = screen[0].uns[k].columns[:3].tolist()
+            else:
+                merge_on = screen[0].uns[k].columns[:2].tolist()
             try:
                 edit_cls = type(screens[0].uns[k][merge_on[1]][0])
             except IndexError:
@@ -920,7 +923,7 @@ def concat(screens: Collection[ReporterScreen], *args, axis=1, **kwargs):
             for i, screen in enumerate(screens):
                 if screen.uns[k][merge_on].duplicated().any():
                     raise ValueError(
-                        f"{i}-th ReporterScreen .uns['{k}'] has duplicated row. Aborting."
+                        f"{i}-th ReporterScreen .uns['{k}'] has duplicated row. Aborting.: {screen.uns[k][merge_on].loc[screen.uns[k][merge_on].duplicated()]}"
                     )
                 if i == 0:
                     adata.uns[k] = screen.uns[k]

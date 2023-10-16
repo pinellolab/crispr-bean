@@ -68,7 +68,7 @@ class Edit:
     def match_str(cls, edit_str):
         if isinstance(edit_str, Edit):
             return True
-        pattern = r"((chr)?\d+:)?-?\d+:-?\d+:[+-]:[A-Z*-]>[A-Z*-]"
+        pattern = r"(((chr)?\d+|nan):)?-?\d+:-?\d+:[+-]:[A-Z*-]>[A-Z*-]"
         pattern2 = r"[\w*]!-?\d+:-?\d+:[+-]:[A-Z*-]>[A-Z*-]"
         return re.fullmatch(pattern, edit_str) or re.fullmatch(pattern2, edit_str)
 
@@ -151,9 +151,11 @@ class Allele:
             for edit_str in allele_str.split(","):
                 edit = Edit.from_str(edit_str)
                 edits.add(edit)
-        except ValueError:
+        except ValueError as e:
             if allele_str.strip() == "":
                 return cls(None)
+            else:
+                raise e
         return cls(edits)
 
     @classmethod

@@ -302,6 +302,8 @@ class CDSCollection:
     Represents a collection of coding sequences (CDS) for multiple genes.
     """
 
+    cds_dict = {}
+
     def __init__(
         self,
         gene_names: List[str] = None,
@@ -309,21 +311,23 @@ class CDSCollection:
         suppressMessage=True,
     ):
         if fasta_file_names is None:
-            self.cds_dict = get_cds_dict(gene_names)
+            if not CDSCollection.cds_dict:
+                CDSCollection.cds_dict = get_cds_dict(gene_names)
         elif len(gene_names) != len(fasta_file_names):
             raise ValueError("gene_names and fasta_file_names have different lengths")
         else:
-            self.cds_dict = {}
-            for gid, fasta_file in zip(fasta_file_names, gene_names):
-                self.cds_dict[gid] = CDS(fasta_file)
-        self.cds_ranges = self.get_cds_ranges()
+            if not CDSCollection.cds_dict:
+                for gid, fasta_file in zip(fasta_file_names, gene_names):
+                    CDSCollection.cds_dict[gid] = CDS(fasta_file)
+        CDSCollection.cds_ranges = CDSCollection.get_cds_ranges()
 
-    def get_cds_ranges(self):
+    @classmethod
+    def get_cds_ranges(cls):
         gids = []
         seqnames = []
         starts = []
         ends = []
-        for gene_id, cds in self.cds_dict.items():
+        for gene_id, cds in cls.cds_dict.items():
             gids.append(gene_id)
             seqnames.append(cds.chrom)
             starts.append(cds.genomic_pos[0])
@@ -552,7 +556,10 @@ def annotate_edit(
     edit_info["group"] = ""
     edit_info["int_pos"] = -1
     if "pos" not in edit_info.columns:
-        edit_info["chrom"], edit_info["pos"], edit_info["ref"], edit_info["alt"] = zip(*(edit_info[edit_col].map(strsplit_edit)))
+        edit_info["chrom"], edit_info["pos"], edit_info["ref"], edit_info["alt"] = zip(
+            *(edit_info[edit_col].map(strsplit_edit))
+        )
+    edit_info["coding"] = ""
     edit_info.loc[edit_info.pos.map(lambda s: s.startswith("A")), "coding"] = "coding"
     edit_info.loc[
         edit_info.pos.map(lambda s: not s.startswith("A")), "coding"

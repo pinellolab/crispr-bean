@@ -41,7 +41,7 @@ def find_overlap(
     chrom: str, start: int, end: int, range_df: pd.DataFrame
 ) -> Optional[str]:
     """Find overlap between query range and range_df and return ID of overlapping region in range_df."""
-    if chrom not in range_df.chrom:
+    if chrom not in range_df.chrom.tolist():
         return None
     overlap = range_df.loc[
         (range_df.chrom == chrom) & ((start <= range_df.end) | (end >= range_df.start))

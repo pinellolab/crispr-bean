@@ -295,7 +295,7 @@ def parse_args():
 
 def check_args(args, bdata):
     args.adjust_confidence_by_negative_control = (
-        ~args.dont_adjust_confidence_by_negative_control
+        not args.dont_adjust_confidence_by_negative_control
     )
     if args.scale_by_acc:
         if args.acc_col is None and args.acc_bw_path is None:

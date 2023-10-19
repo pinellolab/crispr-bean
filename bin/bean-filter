@@ -70,6 +70,7 @@ if __name__ == "__main__":
             f"Filtered down to {len(bdata.uns[f'{allele_df_keys[-1]}_spacer'])} alleles."
         )
         allele_df_keys.append(f"{allele_df_keys[-1]}_spacer")
+        bdata.write(f"{args.output_prefix}.tmp.h5ad")
 
     if len(bdata.uns[allele_df_keys[-1]]) > 0 and args.filter_window:
         info(

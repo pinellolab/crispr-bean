@@ -346,6 +346,8 @@ class CDSCollection:
         self, allele: Allele, include_synonymous: bool = True
     ) -> CodingNoncodingAllele:  # sourcery skip: use-named-expression
         """Finds overlapping CDS and call the same function for the CDS, else return CodingNonCodingAllele with no translated allele."""
+        if len(allele.edits) == 0:
+            return CodingNoncodingAllele.from_alleles(nt_allele=allele)
         chrom, start, end = allele.get_range()
         overlapping_cds = find_overlap(chrom, start, end, self.cds_ranges)
         if overlapping_cds:
@@ -520,6 +522,18 @@ def filter_nt_alleles(cn_allele_df: pd.DataFrame, pos_include: Iterable[int]):
     return alleles
 
 
+def strsplit_edit(edit_str):
+    if len(edit_str.split(":")) == 3:
+        chrom, pos, transition = edit_str.split(":")
+    elif len(edit_str.split(":")) == 2:
+        pos, transition = edit_str.split(":")
+        chrom = None
+    else:
+        raise ValueError(f"{edit_str} is not in the correct format.")
+    ref, alt = transition.split(">")
+    return chrom, pos, ref, alt
+
+
 def annotate_edit(
     edit_info: pd.DataFrame,
     edit_col="edit",
@@ -538,10 +552,7 @@ def annotate_edit(
     edit_info["group"] = ""
     edit_info["int_pos"] = -1
     if "pos" not in edit_info.columns:
-        edit_info["pos"], transition = zip(*(edit_info[edit_col].str.split(":")))
-        edit_info["ref"], edit_info["alt"] = zip(
-            *(pd.Series(transition).str.split(">"))
-        )
+        edit_info["chrom"], edit_info["pos"], edit_info["ref"], edit_info["alt"] = zip(*(edit_info[edit_col].map(strsplit_edit)))
     edit_info.loc[edit_info.pos.map(lambda s: s.startswith("A")), "coding"] = "coding"
     edit_info.loc[
         edit_info.pos.map(lambda s: not s.startswith("A")), "coding"

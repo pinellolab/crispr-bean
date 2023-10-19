@@ -168,6 +168,8 @@ class Allele:
 
     def get_range(self):
         """Returns genomic range of the edits in the allele"""
+        if len(self.edits) == 0:
+            return None
         return (
             self.chrom,
             min(edit.pos for edit in self.edits),

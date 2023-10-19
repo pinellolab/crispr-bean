@@ -1,9 +1,10 @@
 import os
 import sys
 import requests
-from typing import Optional
+from typing import Optional, List
 import argparse
 import pandas as pd
+from itertools import chain
 import logging
 
 logging.basicConfig(
@@ -17,6 +18,23 @@ error = logging.critical
 warn = logging.warning
 debug = logging.debug
 info = logging.info
+
+
+def fast_flatten(input_list):
+    return list(chain.from_iterable(input_list))
+
+
+def fast_concat(df_list: List[pd.DataFrame]):
+    """Faster concatenation of many dataframes from
+    https://gist.github.com/TariqAHassan/fc77c00efef4897241f49e61ddbede9e
+    """
+    colnames = df_list[0].columns
+    df_dict = dict.fromkeys(colnames, [])
+    for col in colnames:
+        extracted = (df[col] for df in df_list)
+        # Flatten and save to df_dict
+        df_dict[col] = fast_flatten(extracted)
+    return pd.DataFrame.from_dict(df_dict)[colnames]
 
 
 def find_overlap(

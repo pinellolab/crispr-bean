@@ -60,7 +60,11 @@ def _add_absent_edits(
 
 
 def get_edit_rates(
-    bdata, edit_count_key="edit_counts", add_absent=True, adjust_spacer_pos: bool = True
+    bdata,
+    edit_count_key="edit_counts",
+    add_absent=True,
+    adjust_spacer_pos: bool = True,
+    reporter_column: str = "reporter",
 ):
     """
     Obtain position- and context-wise editing rate (context: base preceding the target base position).
@@ -113,7 +117,7 @@ def get_edit_rates(
         )
         edit_rates_agg.rel_pos = edit_rates_agg.rel_pos.astype(int)
         edit_rates_agg["context"] = edit_rates_agg.apply(
-            lambda row: bdata.guides.loc[row.guide, "Reporter"][
+            lambda row: bdata.guides.loc[row.guide, reporter_column][
                 row.rel_pos - 1 : row.rel_pos + 1
             ],
             axis=1,

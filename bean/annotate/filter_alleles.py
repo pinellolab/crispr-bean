@@ -9,6 +9,7 @@ from scipy.special import softmax
 from ..framework.Edit import Allele
 from ..framework.AminoAcidEdit import CodingNoncodingAllele
 from ._supporting_fn import map_alleles_to_filtered
+from .utils import fast_concat
 
 
 def sum_column_groups(mat, column_index_list):
@@ -517,10 +518,10 @@ def _map_alleles_to_filtered(
                 .rename(columns={"allele_mapped": allele_col})
                 .groupby(["guide", allele_col])
                 .sum()
-            )
+            ).reset_index()
 
             mapped_allele_counts.append(guide_raw_counts)
-    res = pd.concat(mapped_allele_counts).reset_index()
+    res = fast_concat(mapped_allele_counts).reset_index(drop=True)
     res = res.loc[res[allele_col].map(bool), :]
     return res
 
@@ -579,8 +580,10 @@ def _distribute_alleles_to_filtered(
             res,
             index=guide_filtered_counts.index,
             columns=guide_filtered_counts.columns,
-        )
+        ).reset_index()
         mapped_allele_counts.append(added_counts)
-    res = pd.concat(mapped_allele_counts).reset_index()
+    # @TODO: these lines are taking very long?
+    print("Contatenating allele counts...")
+    res = fast_concat(mapped_allele_counts).reset_index(drop=True)
     res = res.loc[res[allele_col].map(bool), :]
     return res

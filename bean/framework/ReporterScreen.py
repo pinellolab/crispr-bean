@@ -850,9 +850,14 @@ class ReporterScreen(Screen):
                     adata.uns[k]["edit"].iloc[0], Edit
                 ):
                     adata.uns[k].edit = adata.uns[k].edit.map(str)
-                for c in [colname for colname in v.columns if "allele" in colname]:
-                    if isinstance(v[c].iloc[0], (Allele, CodingNoncodingAllele)):
-                        adata.uns[k].loc[:, c] = adata.uns[k][c].map(str)
+                try:
+                    for c in [
+                        colname for colname in v.columns if "allele" in str(colname)
+                    ]:
+                        if isinstance(v[c].iloc[0], (Allele, CodingNoncodingAllele)):
+                            adata.uns[k].loc[:, c] = adata.uns[k][c].map(str)
+                except TypeError as e:
+                    raise TypeError(f"error with {e}: {k, v} cannot be written")
         super(ReporterScreen, adata).write(out_path)
 
 

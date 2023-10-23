@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Iterable
+from typing import Iterable, Optional
 from enum import IntEnum
 import warnings
 import numpy as np
@@ -121,7 +121,8 @@ class AminoAcidEdit(Edit):
 
 
 class AminoAcidAllele(Allele):
-    def __init__(self, edits: Iterable[AminoAcidEdit] = None):
+    def __init__(self, edits: Iterable[AminoAcidEdit] = None, gene=None):
+        self.gene = None
         self.edits = set() if edits is None else set(edits)
 
     @classmethod

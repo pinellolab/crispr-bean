@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 import requests
 from typing import Optional, List
 import argparse
@@ -18,6 +19,13 @@ error = logging.critical
 warn = logging.warning
 debug = logging.debug
 info = logging.info
+
+complement_base = {"A": "T", "T": "A", "C": "G", "G": "C"}
+
+
+def revcomp(nt_list: List[str]):
+    rev_list = nt_list[::-1]
+    return list(map(complement_base, rev_list))
 
 
 def fast_flatten(input_list):
@@ -44,12 +52,18 @@ def find_overlap(
     if chrom not in range_df.chrom.tolist():
         return None
     overlap = range_df.loc[
-        (range_df.chrom == chrom) & ((start <= range_df.end) | (end >= range_df.start))
+        (range_df.chrom == chrom)
+        & (
+            ((start <= range_df.end) & (end >= range_df.start))
+            | ((end >= range_df.start) & (start <= range_df.end))
+        )
     ]
     if len(overlap) == 0:
         return None
     if len(overlap) > 2:
-        raise ValueError("We cannot handle overlapping genes.")
+        raise ValueError(
+            f"We cannot handle overlapping genes for {chrom}, {start}, {end} with : {overlap}"
+        )
     return overlap.index.tolist()[0]
 
 
@@ -78,6 +92,7 @@ def get_mane_transcript_id(gene_name: str):
         print(
             f"Cannot find {gene_name} from MANE database: check http://tark.ensembl.org/api/transcript/manelist/ or use custom fasta."
         )
+        print(e)
         exit(1)
     return mane_transcript_id, id_version
 
@@ -102,9 +117,16 @@ def get_exons_from_transcript_id(transcript_id: str, id_version: int):
         )
     transcript_record = transcript_json["results"][0]
     exons_list = transcript_record["exons"]
-    cds_start = transcript_record["five_prime_utr_end"] + 1
-    cds_end = transcript_record["three_prime_utr_start"] - 1
-    return exons_list, cds_start, cds_end
+    strand = transcript_record["loc_strand"]  # +1/-1
+    if strand == 1:
+        cds_start = transcript_record["five_prime_utr_end"] + 1
+        cds_end = transcript_record["three_prime_utr_start"] - 1
+    else:
+        assert strand == -1, f"Invalid loc_strand returned from {api_url}: {strand}"
+        cds_start = transcript_record["three_prime_utr_start"] + 1
+        cds_end = transcript_record["five_prime_utr_end"] - 1
+
+    return exons_list, cds_start, cds_end, strand
 
 
 def get_cds_pos_seq(exon_id, id_version, cds_start, cds_end, ref_version="GRCh38"):
@@ -161,7 +183,7 @@ def get_cds_pos_seq(exon_id, id_version, cds_start, cds_end, ref_version="GRCh38
 def get_cds_seq_pos_from_gene_name(gene_name: str):
     transcript_id, id_version = get_mane_transcript_id(gene_name)
     print(f"MANE transcript ID {transcript_id} for {gene_name} will be used.")
-    exons_list, cds_start, cds_end = get_exons_from_transcript_id(
+    exons_list, cds_start, cds_end, strand = get_exons_from_transcript_id(
         transcript_id, id_version
     )
     cds_seq = []
@@ -172,7 +194,7 @@ def get_cds_seq_pos_from_gene_name(gene_name: str):
         )
         cds_seq.extend(_cds_seq)
         cds_pos.extend(_cds_pos)
-    return cds_chrom, cds_seq, cds_pos
+    return cds_chrom, cds_seq, cds_pos, strand
 
 
 def parse_args():
@@ -295,6 +317,11 @@ def parse_args():
         default=0.2,
         help="If `filter_allele_proportion` is provided, alleles that exceed `filter_allele_proportion` in `filter-sample-proportion` will be retained.",
     )
+    parser.add_argument(
+        "--load-tmp",
+        action="store_true",
+        help="Load temporary file and work from there.",
+    )
     return parser.parse_args()
 
 
@@ -302,6 +329,7 @@ def check_args(args):
     if args.output_prefix is None:
         args.output_prefix = args.bdata_path.rsplit(".h5ad", 1)[0] + "_alleleFiltered"
     info(f"Saving results to {args.output_prefix}")
+    Path(os.path.dirname(args.output_prefix)).mkdir(parents=True, exist_ok=True)
     if args.filter_window:
         if args.edit_start_pos is None and args.edit_end_pos is None:
             raise ValueError(

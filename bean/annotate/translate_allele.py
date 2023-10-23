@@ -10,7 +10,7 @@ from bean.framework.AminoAcidEdit import (
     AminoAcidEdit,
     CodingNoncodingAllele,
 )
-from bean.annotate.utils import get_cds_seq_pos_from_gene_name, find_overlap
+from bean.annotate.utils import get_cds_seq_pos_from_gene_name, find_overlap, revcomp
 import logging
 import sys
 
@@ -103,7 +103,7 @@ class RefBaseMismatchException(Exception):
 
 # This function is adopted from https://github.com/gpp-rnd/be-validation-pipeline/blob/main/notebooks/01_BEV_allele_frequencies.ipynb
 def _translate(seq: str, codon_map: Dict[str, str]):
-    """Translate seq"""
+    """Translate seq as is."""
     #     if not seq: # if remove_introns returned False -> possible splice site mutation
     if seq == "UTR":
         return "Possible UTR mutation"
@@ -181,13 +181,14 @@ def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
 
 class CDS:
     gene_info_dict = {}
+    mismatch_tuples = []  # (gene, pos, ref, edit)
 
     def __init__(self):
         self.edited_aa_pos = set()
         self.edits_noncoding = set()
 
     @classmethod
-    def from_fasta(cls, fasta_file_name, suppressMessage=True):
+    def from_fasta(cls, fasta_file_name, gene_name, suppressMessage=True):
         cds = cls()
         if fasta_file_name is None:
             if not suppressMessage:
@@ -205,20 +206,23 @@ class CDS:
     def from_gene_name(cls, gene_name):
         cds = cls()
         if gene_name not in cls.gene_info_dict:
-            chrom, translated_seq, genomic_pos = get_cds_seq_pos_from_gene_name(
+            chrom, translated_seq, genomic_pos, strand = get_cds_seq_pos_from_gene_name(
                 gene_name
             )
             cls.gene_info_dict[gene_name] = {
                 "chrom": chrom,
                 "translated_seq": translated_seq,
                 "genomic_pos": genomic_pos,
+                "strand": strand,
             }
+        cds.gene_name = gene_name
+        cds.strand = cls.gene_info_dict[gene_name]["strand"]
         cds.chrom = cls.gene_info_dict[gene_name]["chrom"]
-        cds.translated_seq = cls.gene_info_dict[gene_name]["translated_seq"]
+        cds.translated_seq = deepcopy(cls.gene_info_dict[gene_name]["translated_seq"])
         cds.genomic_pos = cls.gene_info_dict[gene_name]["genomic_pos"]
-        cds.nt = cds.translated_seq
+        cds.nt = cds.gene_info_dict[gene_name]["translated_seq"]
         cds.pos = np.array(cds.genomic_pos)
-        cds.edited_nt = cds.nt.copy()
+        cds.edited_nt = deepcopy(cds.nt)
         return cds
 
     def set_exon_fasta_name(self, fasta_file_name: str):
@@ -230,6 +234,8 @@ class CDS:
         self.pos = np.array(self.genomic_pos)
 
     def translate(self):
+        if self.strand == -1:
+            self.edited_nt = revcomp(self.edited_nt)
         self.aa = _translate(self.edited_nt, codon_map)
 
     def _get_relative_nt_pos(self, absolute_pos):
@@ -256,8 +262,16 @@ class CDS:
             self.edits_noncoding.add(edit)
         elif self.nt[rel_pos] != ref_base:
             if ref_base != "-":
+                CDS.mismatch_tuples.append(
+                    (
+                        (self.gene_name if hasattr(self, "gene_name") else ""),
+                        rel_pos,
+                        self.nt[rel_pos],
+                        edit,
+                    )
+                )
                 raise RefBaseMismatchException(
-                    f"ref:{self.nt[rel_pos]} at pos {rel_pos}, got edit {edit}"
+                    f"{self.gene_name + ';' if hasattr(self, 'gene_name') else ''}ref:{self.nt[rel_pos]} at pos {rel_pos}, got edit {edit}"
                 )
         else:
             self.edited_nt[rel_pos] = alt_base
@@ -289,12 +303,32 @@ class CDS:
                 return "translation error"
             if not include_synonymous and ref_aa == mt_aa:
                 continue
-            mutations.aa_allele.add(AminoAcidEdit(edited_aa_pos + 1, ref_aa, mt_aa))
+            mutations.aa_allele.add(
+                AminoAcidEdit(edited_aa_pos + 1, ref_aa, mt_aa, gene=self.gene_name)
+            )
         return mutations
+
+
+def get_mismatch_df():
+    return pd.DataFrame.from_records(
+        CDS.mismatch_tuples, columns=["gene", "rel_pos", "ref", "edit"]
+    ).drop_duplicates()
 
 
 def get_cds_dict(gene_names):
     return {gname: CDS.from_gene_name(gname) for gname in gene_names}
+
+
+def export_gene_info_to_json(gene_dict, write_path=".tmp_gene_info.csv"):
+    gene_dfs = []
+    for k, v in gene_dict.items():
+        gene_df = pd.DataFrame(
+            {"translated_seq": v["translated_seq"], "genomic_pos": v["genomic_pos"]}
+        )
+        gene_df["gene"] = k
+        gene_df["chrom"] = v["chrom"]
+        gene_dfs.append(gene_df)
+    pd.concat(gene_dfs).to_csv(write_path)
 
 
 class CDSCollection:
@@ -302,7 +336,7 @@ class CDSCollection:
     Represents a collection of coding sequences (CDS) for multiple genes.
     """
 
-    cds_dict = {}
+    unedited_cds_dict = {}
 
     def __init__(
         self,
@@ -311,15 +345,18 @@ class CDSCollection:
         suppressMessage=True,
     ):
         if fasta_file_names is None:
-            if not CDSCollection.cds_dict:
-                CDSCollection.cds_dict = get_cds_dict(gene_names)
+            if not CDSCollection.unedited_cds_dict:
+                CDSCollection.unedited_cds_dict = get_cds_dict(gene_names)
         elif len(gene_names) != len(fasta_file_names):
             raise ValueError("gene_names and fasta_file_names have different lengths")
         else:
-            if not CDSCollection.cds_dict:
+            if not CDSCollection.unedited_cds_dict:
                 for gid, fasta_file in zip(fasta_file_names, gene_names):
-                    CDSCollection.cds_dict[gid] = CDS(fasta_file)
+                    CDSCollection.unedited_cds_dict[gid] = CDS(
+                        fasta_file, fasta_file_id=gid
+                    )
         CDSCollection.cds_ranges = CDSCollection.get_cds_ranges()
+        export_gene_info_to_json(CDS.gene_info_dict)
 
     @classmethod
     def get_cds_ranges(cls):
@@ -327,7 +364,7 @@ class CDSCollection:
         seqnames = []
         starts = []
         ends = []
-        for gene_id, cds in cls.cds_dict.items():
+        for gene_id, cds in cls.unedited_cds_dict.items():
             gids.append(gene_id)
             seqnames.append(cds.chrom)
             starts.append(cds.genomic_pos[0])
@@ -355,7 +392,7 @@ class CDSCollection:
         chrom, start, end = allele.get_range()
         overlapping_cds = find_overlap(chrom, start, end, self.cds_ranges)
         if overlapping_cds:
-            return self.cds_dict[overlapping_cds].get_aa_change(
+            return deepcopy(self.unedited_cds_dict[overlapping_cds]).get_aa_change(
                 allele, include_synonymous
             )
         else:
@@ -363,13 +400,17 @@ class CDSCollection:
 
 
 def get_allele_aa_change_single_gene(
-    allele: Allele, gene_name=None, fasta_file=None, include_synonymous=True
+    allele: Allele,
+    gene_name: str = None,
+    fasta_file: str = None,
+    fasta_file_id: str = None,
+    include_synonymous: bool = True,
 ):
     """
     Obtain amino acid changes
     """
     if gene_name is None and fasta_file is not None:
-        cds = CDS.from_fasta(fasta_file)
+        cds = CDS.from_fasta(fasta_file, fasta_file_id)
     elif gene_name is not None and fasta_file is None:
         cds = CDS.from_gene_name(gene_name)
     else:

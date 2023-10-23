@@ -10,6 +10,7 @@ from bean.plotting.allele_stats import (
     plot_n_guides_per_edit,
     plot_allele_stats,
 )
+from bean.annotate.translate_allele import get_mismatch_df
 from bean.annotate.utils import parse_args, check_args
 import matplotlib.pyplot as plt
 
@@ -30,47 +31,58 @@ info = logging.info
 if __name__ == "__main__":
     args = parse_args()
     args = check_args(args)
-    bdata = be.read_h5ad(args.bdata_path)
-    allele_df_keys = ["allele_counts"]
-    info(
-        f"Starting from .uns['allele_counts'] with {len(bdata.uns['allele_counts'])} alleles."
-    )
-
-    if args.plasmid_path is not None:
+    if not args.load_tmp:
+        bdata = be.read_h5ad(args.bdata_path)
+        allele_df_keys = ["allele_counts"]
         info(
-            "Filtering significantly more edited nucleotide per guide compared to plasmid library..."
+            f"Starting from .uns['allele_counts'] with {len(bdata.uns['allele_counts'])} alleles."
         )
-        plasmid_adata = be.read_h5ad(args.plasmid_path)
-        plasmid_adata.uns[allele_df_keys[-1]] = plasmid_adata.uns[
-            allele_df_keys[-1]
-        ].loc[plasmid_adata.uns[allele_df_keys[-1]].allele.map(str) != "", :]
+        if args.plasmid_path is not None:
+            info(
+                "Filtering significantly more edited nucleotide per guide compared to plasmid library..."
+            )
+            plasmid_adata = be.read_h5ad(args.plasmid_path)
+            plasmid_adata.uns[allele_df_keys[-1]] = plasmid_adata.uns[
+                allele_df_keys[-1]
+            ].loc[plasmid_adata.uns[allele_df_keys[-1]].allele.map(str) != "", :]
 
-        (
-            q_val_each,
-            sig_allele_df,
-        ) = be.an.filter_alleles.filter_alleles(
-            bdata, plasmid_adata, filter_each_sample=True, run_parallel=True
-        )
-        bdata.uns["sig_allele_counts"] = sig_allele_df.reset_index(drop=True)
-        allele_df_keys.append("sig_allele_counts")
-        info(f"Filtered down to {len(bdata.uns['sig_allele_counts'])} alleles.")
+            (
+                q_val_each,
+                sig_allele_df,
+            ) = be.an.filter_alleles.filter_alleles(
+                bdata, plasmid_adata, filter_each_sample=True, run_parallel=True
+            )
+            bdata.uns["sig_allele_counts"] = sig_allele_df.reset_index(drop=True)
+            allele_df_keys.append("sig_allele_counts")
+            info(f"Filtered down to {len(bdata.uns['sig_allele_counts'])} alleles.")
 
-    print(len(bdata.uns[allele_df_keys[-1]]))
-    if len(bdata.uns[allele_df_keys[-1]]) >= 1:
-        info("Filtering out edits outside spacer position...")
-        bdata.uns[f"{allele_df_keys[-1]}_spacer"] = bdata.filter_allele_counts_by_pos(
-            rel_pos_start=0,
-            rel_pos_end=20,
-            rel_pos_is_reporter=False,
-            map_to_filtered=True,
-            allele_uns_key=allele_df_keys[-1],
-            jaccard_threshold=0.2,
-        ).reset_index(drop=True)
-        info(
-            f"Filtered down to {len(bdata.uns[f'{allele_df_keys[-1]}_spacer'])} alleles."
-        )
-        allele_df_keys.append(f"{allele_df_keys[-1]}_spacer")
-        bdata.write(f"{args.output_prefix}.tmp.h5ad")
+        print(len(bdata.uns[allele_df_keys[-1]]))
+        if len(bdata.uns[allele_df_keys[-1]]) >= 1:
+            info("Filtering out edits outside spacer position...")
+            bdata.uns[
+                f"{allele_df_keys[-1]}_spacer"
+            ] = bdata.filter_allele_counts_by_pos(
+                rel_pos_start=0,
+                rel_pos_end=20,
+                rel_pos_is_reporter=False,
+                map_to_filtered=True,
+                allele_uns_key=allele_df_keys[-1],
+                jaccard_threshold=0.2,
+            ).reset_index(
+                drop=True
+            )
+            info(
+                f"Filtered down to {len(bdata.uns[f'{allele_df_keys[-1]}_spacer'])} alleles."
+            )
+            allele_df_keys.append(f"{allele_df_keys[-1]}_spacer")
+            bdata.write(f"{args.output_prefix}.tmp.h5ad")
+    else:
+        bdata = be.read_h5ad(f"{args.output_prefix}.tmp.h5ad")
+        allele_df_keys = ["allele_counts"]
+        if "sig_allele_counts" in bdata.uns.keys():
+            allele_df_keys += ["sig_allele_counts"]
+        if f"{allele_df_keys[-1]}_spacer" in bdata.uns.keys():
+            allele_df_keys += [f"{allele_df_keys[-1]}_spacer"]
 
     if len(bdata.uns[allele_df_keys[-1]]) > 0 and args.filter_window:
         info(
@@ -122,6 +134,8 @@ if __name__ == "__main__":
             fasta_file=args.translate_fasta,
             fasta_file_dict=fasta_dict,
         ).rename(columns={"allele": "aa_allele"})
+        get_mismatch_df().to_csv(f"{args.output_prefix}.translation_ref_mismatches.csv")
+
         allele_df_keys.append(filtered_key)
         info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
 

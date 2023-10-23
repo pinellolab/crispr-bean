@@ -139,24 +139,34 @@ def _parse_range(chr_range: str) -> Tuple[str, int, int]:
 def _parse_description(desc_str: str):
     """Parse description line of fasta file to get range."""
     sstr = desc_str.split(" ")
+    strand = None
+    genome_range = None
     for s in sstr:
         if s.startswith("range="):
-            return _parse_range(s[6:])
+            genome_range = _parse_range(s[6:])
+        if s.startswith("strand="):
+            strand = s[-1]
+            assert strand in ["+", "-"]
+    if strand is None:
+        strand = "+"
+    return genome_range, strand
 
 
-def _get_seq_pos_from_fasta(fasta_file_name: str) -> Tuple[List[str], List[int]]:
+def get_cds_seq_pos_from_fasta(fasta_file_name: str) -> Tuple[List[str], List[int]]:
     """Obtain tuple of lists, first with nucleotide and second with genomic position of the nucleotide."""
     exons = list(SeqIO.parse(fasta_file_name, "fasta"))
     translated_seq = []
     genomic_pos = []
     for exon in exons:
-        exon_chrom, exon_start, exon_end = _parse_description(exon.description)
+        (exon_chrom, exon_start, exon_end), strand = _parse_description(
+            exon.description
+        )
         for i, nt in enumerate(str(exon.seq)):
             if nt.islower():
                 continue
             translated_seq.append(nt)
             genomic_pos.append(exon_start + i)
-    return (exon_chrom, translated_seq, genomic_pos)
+    return (exon_chrom, translated_seq, genomic_pos, strand)
 
 
 def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
@@ -194,12 +204,24 @@ class CDS:
             if not suppressMessage:
                 print("No fasta file provided as reference: using LDLR")
             fasta_file_name = os.path.dirname(be.__file__) + "/annotate/ldlr_exons.fa"
-        try:
-            cds.set_exon_fasta_name(fasta_file_name)
-        except FileNotFoundError as e:
-            print(os.getcwd())
-            raise e
-        cds.edited_nt = cds.nt.copy()
+        if gene_name not in cls.gene_info_dict:
+            chrom, translated_seq, genomic_pos, strand = get_cds_seq_pos_from_fasta(
+                fasta_file_name
+            )
+            cls.gene_info_dict[gene_name] = {
+                "chrom": chrom,
+                "translated_seq": translated_seq,
+                "genomic_pos": genomic_pos,
+                "strand": strand,
+            }
+        cds.gene_name = gene_name
+        cds.strand = cls.gene_info_dict[gene_name]["strand"]
+        cds.chrom = cls.gene_info_dict[gene_name]["chrom"]
+        cds.translated_seq = deepcopy(cls.gene_info_dict[gene_name]["translated_seq"])
+        cds.genomic_pos = cls.gene_info_dict[gene_name]["genomic_pos"]
+        cds.nt = cds.gene_info_dict[gene_name]["translated_seq"]
+        cds.pos = np.array(cds.genomic_pos)
+        cds.edited_nt = deepcopy(cds.nt)
         return cds
 
     @classmethod
@@ -224,14 +246,6 @@ class CDS:
         cds.pos = np.array(cds.genomic_pos)
         cds.edited_nt = deepcopy(cds.nt)
         return cds
-
-    def set_exon_fasta_name(self, fasta_file_name: str):
-        self.fasta_file_name = fasta_file_name
-        self.chrom, self.translated_seq, self.genomic_pos = _get_seq_pos_from_fasta(
-            fasta_file_name
-        )
-        self.nt = self.translated_seq
-        self.pos = np.array(self.genomic_pos)
 
     def translate(self):
         if self.strand == -1:
@@ -352,7 +366,7 @@ class CDSCollection:
         else:
             if not CDSCollection.unedited_cds_dict:
                 for gid, fasta_file in zip(fasta_file_names, gene_names):
-                    CDSCollection.unedited_cds_dict[gid] = CDS(
+                    CDSCollection.unedited_cds_dict[gid] = CDS.from_fasta(
                         fasta_file, fasta_file_id=gid
                     )
         CDSCollection.cds_ranges = CDSCollection.get_cds_ranges()

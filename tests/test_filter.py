@@ -29,8 +29,21 @@ def test_filter_tiling_screen():
 
 
 @pytest.mark.order(12)
-def test_filter_tiling_screen_genename():
+def test_filter_tiling_screen_translate_genename():
     cmd = "bean-filter tests/data/tiling_mini_screen_masked.h5ad -o tests/data/tiling_mini_screen_annotated_wrong -s 0 -e 19 -w -b -t -ap 0.1 -sp 0.3 --translate --translate-gene LDLR"
+    try:
+        subprocess.check_output(
+            cmd,
+            shell=True,
+            universal_newlines=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise exc
+
+
+@pytest.mark.order(13)
+def test_filter_tiling_screen_translate_fasta():
+    cmd = "bean-filter tests/data/tiling_mini_screen_masked.h5ad -o tests/data/tiling_mini_screen_annotated_wrong -s 0 -e 19 -w -b -t -ap 0.1 -sp 0.3 --translate --translate-fasta tests/data/ldlr_exons.fa"
     try:
         subprocess.check_output(
             cmd,

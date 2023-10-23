@@ -43,7 +43,7 @@ def _get_input_parser():
     )
 
     parser = argparse.ArgumentParser(
-        description="CRISPRessoCount parameters",
+        description="bean-count parameters",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 

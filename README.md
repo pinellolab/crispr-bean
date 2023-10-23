@@ -80,7 +80,7 @@ File should contain following columns.
   * Option 1: `chrom` & `genomic_pos`: Chromosome (ex. `chr19`) and genomic position of guide sequence. You will have to provide the path to the bigwig file with matching reference version in `bean-run`. 
   * Option 2: `accessibility_signal`: ATAC-seq signal value of the target loci of each guide.  
 * For variant library (gRNAs are designed to target specific variants and ignores bystander edits)
-  * `target` : This column denotes which target variant/element of each gRNA. This is not used in `bean-count[-samples]` but required to run `bean-run` in later steps.
+  * `target`: This column denotes which target variant/element of each gRNA. This is not used in `bean-count[-samples]` but required to run `bean-run` in later steps.
   * `target_group [Optional]`: If negative/positive control gRNA will be considered in `bean-qc` and/or `bean-run`, specify as "NegCtrl"/"PosCtrl" in this column. 
   * `target_pos [Optional]`: If `--match_target_pos` flag is used, input file needs `target_pos` which specifies 0-based relative position of targeted base within Reporter sequence.
 * For tiling library (gRNAs tile coding / noncoding sequences)
@@ -246,11 +246,39 @@ BEAN uses Bayesian network to incorporate gRNA editing outcome to provide poster
 
 For the full detail, see the method section of the [BEAN manuscript](https://www.medrxiv.org/content/10.1101/2023.09.08.23295253v1).
 
-<img src="imgs/bean.gif" alt="model" width="700"/>  
+<img src="imgs/bean.gif" alt="model" width="700"/>   
+  
+<br></br>
+```bash
+bean-run variant[tiling] my_sorting_screen_filtered.h5ad \
+[--uniform-edit, --scale-by-acc [--acc-bw-path accessibility_signal.bw, --acc-col accessibility]] \
+-o output_prefix/ \
+--fit-negctrl
+```
 
-```
-bean-run variant[tiling] my_sorting_screen_filtered.h5ad --scale-by-acc --acc-bw-path accessibility_signal.bw -o output_prefix/ --fit-negctrl
-```
+### Input
+`my_sorting_screen_filtered.h5ad` can be produced by one of the following:  
+1. [`bean-count-samples`]((#bean-count-samples-count-reporter-screen-data)) when you have raw `.fastq` file
+2. (Limited to `bean-run variant` mode)  `bean-create-screen` when you have flat `.csv` tables of gRNA metadata table, sample metadata table, gRNA counts table (# guides x # samples), and optionally # edits table.   
+    ```bash
+    bean-create-screen gRNA_info_table.csv sample_info_table.csv gRNA_counts_table.csv \
+    [--edits edit_counts_table.csv -o output.h5ad] 
+    ```  
+    * `gRNA_info_table.csv` should have following columns.
+      * `name`: gRNA ID column
+      * `target`: This column denotes which target variant/element of each gRNA.
+      * `target_group [Optional]`: If negative control gRNA will be used, specify as "NegCtrl" in this column. 
+    * `sample_info_table.csv` should have following columns.
+      * `sample_id`: ID of sequencing sample
+      * `rep`: Replicate # of this sample
+      * `bin`: Name of the sorting bin
+      * `upper_quantile`: FACS sorting upper quantile
+      * `lower_quantile`: FACS sorting lower quantile  
+    * `gRNA_counts_table.csv` should be formatted as follows.
+      * Columns include one of `sample_id` columns in `sample_info_table.csv` file.
+      * 1st row (row index) follows `name` (gRNA ID) in `gRNA_info_table.csv` file.
+3. You can manually create the `AnnData` object with more annotations including allele counts: see [API tutorial](#using-bean-as-python-module) for full detail.
+
 
 ### Output
 <img src="imgs/model_output.png" alt="model" width="700"/>

@@ -26,6 +26,7 @@ setup(
     scripts=[
         "bin/bean-count",
         "bin/bean-count-samples",
+        "bin/bean-create-screen",
         "bin/bean-qc",
         "bin/bean-filter",
         "bin/bean-run",  # TODO: prevent error when extra requirements are not met.
@@ -34,7 +35,7 @@ setup(
         "numpy",
         "pandas",
         "scipy",
-        "perturb-tools>=0.2.7",
+        "perturb-tools>=0.2.8",
         "matplotlib",
         "seaborn",
         "tqdm",

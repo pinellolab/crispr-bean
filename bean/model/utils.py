@@ -171,6 +171,12 @@ def parse_args():
         help="Column key in `bdata.samples` that describes experimental condition.",
     )
     parser.add_argument(
+        "--control-condition-label",
+        default="bulk",
+        type=str,
+        help="Value in `bdata.samples[condition_col]` that indicates control experimental condition.",
+    )
+    parser.add_argument(
         "--replicate-col",
         default="rep",
         type=str,

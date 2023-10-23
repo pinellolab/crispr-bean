@@ -1050,7 +1050,6 @@ class VariantSortingScreenData(VariantScreenData, SortingScreenData):
         VariantScreenData._post_init(self, target_col)
         if use_bcmatch:
             self.set_bcmatch(
-                self,
                 screen,
             )
 

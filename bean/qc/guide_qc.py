@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 from perturb_tools._qc.qc import get_outlier_guides
 

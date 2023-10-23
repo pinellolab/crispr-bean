@@ -1,5 +1,5 @@
 import numpy as np
-from setuptools import setup, Extension, find_packages
+from setuptools import setup, find_packages
 from Cython.Build import cythonize
 
 with open("README.md", "r") as fh:
@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="crispr-bean",
-    version="0.2.8",
+    version="0.2.9",
     python_requires=">=3.8.0",
     author="Jayoung Ryu",
     author_email="jayoung_ryu@g.harvard.edu",

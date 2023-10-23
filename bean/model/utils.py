@@ -198,7 +198,7 @@ def parse_args():
     parser.add_argument(
         "--outdir",
         "-o",
-        default=None,
+        default=".",
         type=str,
         help="Directory to save the run result.",
     )

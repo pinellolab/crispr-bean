@@ -17,6 +17,7 @@ def main():
         parameters=dict(
             bdata_path=args.bdata_path,
             out_bdata_path=args.out_screen_path,
+            tiling=args.tiling,
             edit_quantification_start_pos=args.edit_start_pos,
             edit_quantification_end_pos=args.edit_end_pos,
             target_pos_col=args.target_pos_col,

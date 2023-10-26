@@ -1,3 +1,4 @@
+import distutils
 import numpy as np
 import pandas as pd
 from copy import deepcopy
@@ -38,6 +39,12 @@ def parse_args():
         "--out-report-prefix",
         help="Output prefix of qc report (prefix.html, prefix.ipynb)",
         type=str,
+    )
+    parser.add_argument(
+        "--tiling",
+        dest="tiling",
+        type=lambda x: bool(distutils.util.strtobool(x)),
+        help="Specify that the guide library is tiling library without 'n guides per target' design",
     )
     parser.add_argument(
         "--replicate-label",

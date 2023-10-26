@@ -168,6 +168,7 @@ Above command produces
 
 
 #### Additional Parameters
+* `--tiling` (default: `None`): If set as `True` or `False`, it sets the screen object to be tiling (`True`) or variant (`False`)-targeting screen when calculating editing rate. 
 * `--replicate-label` (default: `"rep"`): Label of column in `bdata.samples` that describes replicate ID.
 * `--condition-label` (default: `"bin"`)": Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.).
 * `--target-pos-col` (default: `"target_pos"`): Target position column in `bdata.guides` specifying target edit position in reporter.

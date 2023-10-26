@@ -25,7 +25,7 @@ complement_base = {"A": "T", "T": "A", "C": "G", "G": "C"}
 
 def revcomp(nt_list: List[str]):
     rev_list = nt_list[::-1]
-    return list(map(complement_base, rev_list))
+    return list(map(lambda c: complement_base[c], rev_list))
 
 
 def fast_flatten(input_list):
@@ -129,7 +129,7 @@ def get_exons_from_transcript_id(transcript_id: str, id_version: int):
     return exons_list, cds_start, cds_end, strand
 
 
-def get_cds_pos_seq(exon_id, id_version, cds_start, cds_end, ref_version="GRCh38"):
+def get_exon_pos_seq(exon_id, id_version, cds_start, cds_end, ref_version="GRCh38"):
     seq = []
     genomic_pos = []
     api_url = f"http://tark.ensembl.org/api/exon/?stable_id={exon_id}&stable_id_version={id_version}&expand=sequence"
@@ -152,11 +152,17 @@ def get_cds_pos_seq(exon_id, id_version, cds_start, cds_end, ref_version="GRCh38
     else:
         exon_record = exon_json["results"][0]
     sequence = exon_record["sequence"]["sequence"]
+    strand = exon_record["loc_strand"]
     start_pos = exon_record["loc_start"]
     end_pos = exon_record["loc_end"]
     chrom = exon_record["loc_region"]
     if not chrom.startswith("chr"):
         chrom = "chr" + chrom
+    if strand == -1:
+        sequence = revcomp([*sequence])
+
+    if cds_start > end_pos or cds_end < start_pos:
+        return chrom, [], []
     if cds_start > start_pos and cds_start < end_pos:
         if cds_start > end_pos:
             warn(f"Exon {exon_id} doesn't have coding sequence.")
@@ -186,10 +192,12 @@ def get_cds_seq_pos_from_gene_name(gene_name: str):
     exons_list, cds_start, cds_end, strand = get_exons_from_transcript_id(
         transcript_id, id_version
     )
+    if strand == -1:
+        exons_list = exons_list[::-1]
     cds_seq = []
     cds_pos = []
     for exon_dict in exons_list:
-        cds_chrom, _cds_seq, _cds_pos = get_cds_pos_seq(
+        cds_chrom, _cds_seq, _cds_pos = get_exon_pos_seq(
             exon_dict["stable_id"], exon_dict["stable_id_version"], cds_start, cds_end
         )
         cds_seq.extend(_cds_seq)

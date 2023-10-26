@@ -382,17 +382,16 @@ class CDSCollection:
             gids.append(gene_id)
             seqnames.append(cds.chrom)
             starts.append(cds.genomic_pos[0])
-            try:
-                ends.append(cds.genomic_pos[-1])
-            except:
-                print(cds.genomic_pos)
-                exit(1)
-
+            ends.append(cds.genomic_pos[-1])
+        starts = np.array(starts)
+        ends = np.array(ends)
+        genomic_start = np.minimum(starts, ends)
+        genomic_end = np.maximum(starts, ends)
         return pd.DataFrame(
             {
                 "chrom": seqnames,
-                "start": starts,
-                "end": ends,
+                "start": genomic_start,
+                "end": genomic_end,
             },
             index=gids,
         )

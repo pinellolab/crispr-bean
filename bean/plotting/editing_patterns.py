@@ -24,15 +24,14 @@ def _add_absent_edits(
     editable_positions = np.where(
         (np.array(list(bdata.guides.loc[guide, "Reporter"])) == edited_base)
     )[0]
-    if guide not in edit_tbl.guide:
+    if guide not in edit_tbl.guide.tolist():
         observed_rel_pos = []
     else:
         edited_db = edit_tbl.loc[edit_tbl.guide == guide, :]
-        observed_rel_pos = edited_db.rel_pos
+        observed_rel_pos = edited_db.rel_pos.tolist()
     edits = []
     positions = []
     for editable_pos in editable_positions:
-
         if editable_pos not in observed_rel_pos:
             edits.append(
                 Edit(
@@ -61,7 +60,11 @@ def _add_absent_edits(
 
 
 def get_edit_rates(
-    bdata, edit_count_key="edit_counts", add_absent=True, adjust_spacer_pos: bool = True
+    bdata,
+    edit_count_key="edit_counts",
+    add_absent=True,
+    adjust_spacer_pos: bool = True,
+    reporter_column: str = "reporter",
 ):
     """
     Obtain position- and context-wise editing rate (context: base preceding the target base position).
@@ -114,7 +117,7 @@ def get_edit_rates(
         )
         edit_rates_agg.rel_pos = edit_rates_agg.rel_pos.astype(int)
         edit_rates_agg["context"] = edit_rates_agg.apply(
-            lambda row: bdata.guides.loc[row.guide, "Reporter"][
+            lambda row: bdata.guides.loc[row.guide, reporter_column][
                 row.rel_pos - 1 : row.rel_pos + 1
             ],
             axis=1,
@@ -354,6 +357,7 @@ def plot_by_pos_pam(
         fig, ax = plt.subplots(figsize=figsize)
     sns.heatmap(pos_by_pam, ax=ax, cmap="Blues")
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+    return pos_by_pam
 
 
 def plot_by_pos_pam_and_context(bdata, edit_rates_df, figsize=(6, 6)):

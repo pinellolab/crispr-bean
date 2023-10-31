@@ -9,6 +9,7 @@ from scipy.special import softmax
 from ..framework.Edit import Allele
 from ..framework.AminoAcidEdit import CodingNoncodingAllele
 from ._supporting_fn import map_alleles_to_filtered
+from .utils import fast_concat
 
 
 def sum_column_groups(mat, column_index_list):
@@ -389,6 +390,7 @@ def filter_allele_prop(
     adata,
     allele_uns_key: str,
     allele_prop_thres: float = 0.05,
+    allele_count_thres: int = 0,
     sample_prop_thres: float = 0.1,
     map_to_filtered=True,
     retain_max=True,
@@ -403,6 +405,7 @@ def filter_allele_prop(
     Arguments
     adata: ReporterScreen object (should be from bulk)
     -- allele_prop_thres: Proportion of allele among the barcode matched guide counts to filter for
+    -- allele_count_thres: Read count of allele to filter for
     -- sample_prop_thres: Proportion of samples where allele proportion exceeds the allele_prop_thres.
     -- map_to_filtered: If True, map the allele counts that are filtered out to the closest and most abundant allele that is retained after filtering. If False, discard the read counts that are filtered out.
     -- retain_max: If True, in case there is no allele that is retained during the filtering step, retain one allele with maximum median allele proportion across samples.
@@ -413,9 +416,13 @@ def filter_allele_prop(
         ["guide", allele_col]
     )
     aa_prop_filtered = aa_prop.loc[
-        (np.nan_to_num(aa_prop.loc[:, adata.samples.index]) > allele_prop_thres).mean(
-            axis=1
-        )
+        (
+            (np.nan_to_num(aa_prop.loc[:, adata.samples.index]) > allele_prop_thres)
+            & (
+                alleles.set_index(["guide", allele_col]).loc[:, adata.samples.index]
+                >= allele_count_thres
+            )
+        ).mean(axis=1)
         >= sample_prop_thres,
         :,
     ]
@@ -429,7 +436,9 @@ def filter_allele_prop(
                 guide_df = aa_prop.loc[
                     aa_prop.index.get_level_values("guide") == guide,
                 ]
-                max_frequency_idx = np.argmax(guide_df.mean(axis=1))
+                max_frequency_idx = np.nanargmax(
+                    guide_df.mean(axis=1, numeric_only=True).fillna(0)
+                )
                 append_rows.append(guide_df.iloc[[max_frequency_idx], :])
         aa_prop_filtered = pd.concat([aa_prop_filtered] + append_rows, axis=0)
 
@@ -477,7 +486,6 @@ def _map_alleles_to_filtered(
         raw_allele_counts.groupby("guide"),
         desc="Mapping alleles to closest filtered alleles",
     ):
-
         guide_filtered_allele_counts = filtered_allele_counts.loc[
             filtered_allele_counts.guide == guide, :
         ].set_index(allele_col)
@@ -487,8 +495,8 @@ def _map_alleles_to_filtered(
             merge_priority = guide_filtered_allele_counts.mean(
                 axis=1, numeric_only=True
             )
+            merge_priority = merge_priority.fillna(0)
             if is_cn_allele:
-
                 guide_raw_counts["allele_mapped"] = guide_raw_counts[allele_col].map(
                     lambda allele: allele.map_to_closest(
                         guide_filtered_alleles,
@@ -510,10 +518,10 @@ def _map_alleles_to_filtered(
                 .rename(columns={"allele_mapped": allele_col})
                 .groupby(["guide", allele_col])
                 .sum()
-            )
+            ).reset_index()
 
             mapped_allele_counts.append(guide_raw_counts)
-    res = pd.concat(mapped_allele_counts).reset_index()
+    res = fast_concat(mapped_allele_counts).reset_index(drop=True)
     res = res.loc[res[allele_col].map(bool), :]
     return res
 
@@ -572,8 +580,10 @@ def _distribute_alleles_to_filtered(
             res,
             index=guide_filtered_counts.index,
             columns=guide_filtered_counts.columns,
-        )
+        ).reset_index()
         mapped_allele_counts.append(added_counts)
-    res = pd.concat(mapped_allele_counts).reset_index()
+    # @TODO: these lines are taking very long?
+    print("Contatenating allele counts...")
+    res = fast_concat(mapped_allele_counts).reset_index(drop=True)
     res = res.loc[res[allele_col].map(bool), :]
     return res

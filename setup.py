@@ -1,13 +1,14 @@
 import numpy as np
-import setuptools
+from setuptools import setup, find_packages
 from Cython.Build import cythonize
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setuptools.setup(
+
+setup(
     name="crispr-bean",
-    version="0.1.3",
+    version="0.2.9",
     python_requires=">=3.8.0",
     author="Jayoung Ryu",
     author_email="jayoung_ryu@g.harvard.edu",
@@ -15,28 +16,42 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/pinellolab/crispr-bean",
-    packages=setuptools.find_packages(),
+    packages=find_packages(),
     ext_modules=cythonize(["bean/mapping/CRISPResso2Align.pyx"]),
     include_dirs=np.get_include(),
+    setup_requires=[
+        "setuptools>=18.0",
+        "Cython",
+    ],
     scripts=[
         "bin/bean-count",
         "bin/bean-count-samples",
+        "bin/bean-create-screen",
         "bin/bean-qc",
         "bin/bean-filter",
-        "bin/bean-run" #TODO: prevent error when extra requirements are not met.
+        "bin/bean-run",  # TODO: prevent error when extra requirements are not met.
     ],
     install_requires=[
         "numpy",
-        "perturb-tools>=0.0.16",
-        "anndata>=0.8.0",
-        "Bio>=1.5",
-        "matplotlib",
         "pandas",
         "scipy",
+        "perturb-tools>=0.2.8",
+        "matplotlib",
         "seaborn",
         "tqdm",
+        "bio",
+        "liftover",
+        "openpyxl>=3.0.10",
+        "papermill>=2.4.0",
+        "pyBigWig>=0.3.18",
+        "pyro-ppl==1.8.1",
+        "scikit-learn",
+        "statsmodels>=0.12.1",
+        "ipykernel",
+        "pytest-order",
+        "nbconvert",
     ],
-    extras_require={"model": ["pyBigWig", "pyro-ppl", "statsmodels", "torch"]},
+    extras_require={"model": ["pyBigWig", "pyro-ppl<=1.8.1", "statsmodels", "torch<2"]},
     include_package_data=True,
     package_data={
         "": [

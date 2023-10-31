@@ -77,8 +77,8 @@ def main():
 
     counter.get_counts()
     if counter.count_reporter_edits:
-        counter.screen.uns["allele_count"] = counter.screen.uns["allele_count"].loc[
-            counter.screen.uns["allele_count"].allele.map(str) != "", :
+        counter.screen.uns["allele_counts"] = counter.screen.uns["allele_counts"].loc[
+            counter.screen.uns["allele_counts"].allele.map(str) != "", :
         ]
         if match_target_pos:
             base_editing_map = {"A": "G", "C": "T"}

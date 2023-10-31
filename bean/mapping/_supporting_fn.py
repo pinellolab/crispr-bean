@@ -1,4 +1,3 @@
-from turtle import position
 from typing import List, Union
 import subprocess as sb
 import numpy as np
@@ -6,7 +5,6 @@ import pandas as pd
 import gzip
 from Bio import SeqIO
 from Bio.Seq import Seq
-from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from .CRISPResso2Align import read_matrix, global_align_base_editor
 from ..framework.Edit import Allele, Edit
 
@@ -89,7 +87,6 @@ def _check_readname_match(R1: List[SeqIO.SeqRecord], R2: List[SeqIO.SeqRecord]):
 
 def _get_guide_to_reporter_df(sgRNA_filename: str) -> pd.DataFrame:
     """Returns a gRNA name to reporter sequence mapping."""
-    guide_to_reporter = {}
 
     with open(sgRNA_filename) as infile:
         sgRNA_df = pd.read_csv(infile)
@@ -131,7 +128,6 @@ def _get_edited_allele(
     start_pos: int = 0,
     end_pos: int = 100,
 ):
-
     allele = Allele()
 
     assert len(ref_seq) == len(query_seq), "reference and query seq length mismatch"
@@ -178,6 +174,7 @@ def _get_allele_from_alignment(
     strand: int,
     start_pos: int,
     end_pos: int,
+    chrom: str = None,
     positionwise_quality: np.ndarray = None,
     quality_thres: float = -1,
 ):
@@ -211,6 +208,7 @@ def _get_allele_from_alignment(
         if alt_base_is_good_quality and ref_pos >= start_pos and ref_pos < end_pos:
             allele.add(
                 Edit(
+                    chrom=chrom,
                     rel_pos=ref_pos,
                     ref_base=ref_base,
                     alt_base=alt_base,
@@ -229,6 +227,7 @@ def _get_edited_allele_crispresso(
     aln_mat_path: str,
     offset: int,
     strand: int = 1,
+    chrom: str = None,
     start_pos: int = 0,
     end_pos: int = 100,
     positionwise_quality: np.ndarray = None,
@@ -237,7 +236,7 @@ def _get_edited_allele_crispresso(
 ):
     aln_matrix = read_matrix(aln_mat_path)
     assert strand in [-1, +1]
-    gap_incentive = np.zeros(len(ref_seq) + 1, dtype=np.int)
+    gap_incentive = np.zeros(len(ref_seq) + 1, dtype=int)
     query_aligned, ref_aligned, score = global_align_base_editor(
         query_seq,
         ref_seq,
@@ -256,6 +255,7 @@ def _get_edited_allele_crispresso(
             strand,
             start_pos,
             end_pos,
+            chrom,
             positionwise_quality,
             quality_thres,
         )

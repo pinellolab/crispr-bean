@@ -74,20 +74,10 @@ def NormalModel(
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
             a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
-            a_bcmatch = get_alpha(
-                expected_guide_p,
-                data.size_factor_bcmatch,
-                data.sample_mask,
-                data.a0_bcmatch,
-            )
-            assert (
-                data.X.shape
-                == data.X_bcmatch.shape
-                == (
-                    data.n_reps,
-                    data.n_condits,
-                    data.n_guides,
-                )
+            assert data.X.shape == (
+                data.n_reps,
+                data.n_condits,
+                data.n_guides,
             )
             with poutine.mask(
                 mask=torch.logical_and(
@@ -101,6 +91,13 @@ def NormalModel(
                     obs=data.X_masked.permute(0, 2, 1),
                 )
             if use_bcmatch:
+                print(f"Use_bcmatch:{use_bcmatch}")
+                a_bcmatch = get_alpha(
+                    expected_guide_p,
+                    data.size_factor_bcmatch,
+                    data.sample_mask,
+                    data.a0_bcmatch,
+                )
                 with poutine.mask(
                     mask=torch.logical_and(
                         data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1)
@@ -116,7 +113,6 @@ def NormalModel(
                         dist.DirichletMultinomial(a_bcmatch, validate_args=False),
                         obs=data.X_bcmatch_masked.permute(0, 2, 1),
                     )
-
     return alleles_p_bin
 
 
@@ -162,12 +158,7 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
             a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
-            a_bcmatch = get_alpha(
-                expected_guide_p,
-                data.size_factor_bcmatch,
-                data.sample_mask,
-                data.a0_bcmatch,
-            )
+
             assert (
                 data.X.shape
                 == data.X_bcmatch.shape
@@ -189,6 +180,12 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
                     obs=data.X_masked.permute(0, 2, 1),
                 )
             if use_bcmatch:
+                a_bcmatch = get_alpha(
+                    expected_guide_p,
+                    data.size_factor_bcmatch,
+                    data.sample_mask,
+                    data.a0_bcmatch,
+                )
                 with poutine.mask(
                     mask=torch.logical_and(
                         data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1)
@@ -597,6 +594,7 @@ def MultiMixtureNormalModel(
     norm_pi=False,
     scale_by_accessibility=False,
     epsilon=1e-5,
+    fit_noise: bool = False,
 ):
     """Tiling version of MixtureNormalModel"""
 
@@ -679,7 +677,9 @@ def MultiMixtureNormalModel(
             )
     if scale_by_accessibility:
         # Endogenous target site editing rate may be different
-        pi = scale_pi_by_accessibility(pi, data.guide_accessibility)
+        pi = scale_pi_by_accessibility(
+            pi, data.guide_accessibility, fit_noise=fit_noise
+        )
 
     with replicate_plate:
         with bin_plate as b:
@@ -758,7 +758,14 @@ def MultiMixtureNormalModel(
                     )
 
 
-def MultiMixtureNormalGuide(data, alpha_prior=1, use_bcmatch=True, epsilon=1e-5):
+def MultiMixtureNormalGuide(
+    data,
+    alpha_prior=1,
+    use_bcmatch=True,
+    epsilon=1e-5,
+    scale_by_accessibility: bool = False,
+    fit_noise: bool = False,
+):
     """
     Guide for model C14
     """
@@ -831,3 +838,8 @@ def MultiMixtureNormalGuide(data, alpha_prior=1, use_bcmatch=True, epsilon=1e-5)
                 data.n_guides,
                 data.n_max_alleles,
             ), pi.shape
+    if scale_by_accessibility:
+        # Endogenous target site editing rate may be different
+        pi = scale_pi_by_accessibility(
+            pi, data.guide_accessibility, fit_noise=fit_noise
+        )

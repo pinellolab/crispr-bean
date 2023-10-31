@@ -1,6 +1,7 @@
 from typing import Tuple
 import gzip
 import logging
+from copy import deepcopy
 import os
 import sys
 from os import path
@@ -17,7 +18,6 @@ from ._supporting_fn import (
     _check_readname_match,
     _get_edited_allele_crispresso,
     _get_fastq_handle,
-    _multiindex_dict_to_df,
     _read_count_match,
     _read_is_good_quality,
     _write_alignment_matrix,
@@ -67,11 +67,15 @@ class GuideEditCounter:
         self.min_single_bp_quality = kwargs["min_single_bp_quality"]
 
         self.guides_info_df = pd.read_csv(kwargs["sgRNA_filename"])
-        self.guides_has_strands = "strand" in self.guides_info_df.columns
+        self.guides_has_strands = (
+            "strand" in self.guides_info_df.columns.tolist()
+        )  # @TODO: fix this?
         if self.guides_has_strands:
-            info("Considering strand information of guides")
-            assert "start_pos" in self.guides_info_df.columns
-            # assert "gRNA_end" in self.guides_info_df.columns
+            info("Considering `strand` column in sgRNA info file")
+            if "start_pos" not in self.guides_info_df.columns.tolist():
+                raise InputFileError("Guide `start_pos` not in sgRNA info file.")
+            if "guide_len" not in self.guides_info_df.columns.tolist():
+                self.guides_info_df["guide_len"] = self.guides_info_df.sequence.map(len)
         else:
             info("Ignoring guide strands, all guides are considered positive")
 
@@ -101,6 +105,7 @@ class GuideEditCounter:
             target_base_change=f"{self.base_edited_from}>{self.base_edited_to}",
             tiling=kwargs["tiling"],
         )
+        self.screen.guides["guide_len"] = self.screen.guides.sequence.map(len)
         self.count_guide_edits = kwargs["count_guide_edits"]
         if self.count_guide_edits:
             self.screen.uns["guide_edit_counts"] = {}
@@ -117,8 +122,8 @@ class GuideEditCounter:
         self.align_score_threshold = 80
         self.target_pos_col = kwargs["target_pos_col"]
 
-        self.guide_start_seq = kwargs["guide_start_seq"]
-        self.guide_end_seq = kwargs["guide_end_seq"]
+        self.guide_start_seq = kwargs["guide_start_seq"].upper()
+        self.guide_end_seq = kwargs["guide_end_seq"].upper()
         if not self.guide_start_seq == "":
             info(
                 f"{self.name}: Using guide_start_seq={self.guide_start_seq} for {self.output_dir}"
@@ -185,17 +190,17 @@ class GuideEditCounter:
             os.path.basename(self.R2_filename).replace(".fastq", "").replace(".gz", "")
             + "_filtered.fastq.gz"
         )
-        if path.exists(self.filtered_R1_filename) and path.exists(
-            self.filtered_R2_filename
-        ):
-            warn("Using preexisting filtered file")
-        else:
-            self._check_names_filter_fastq()
+        self._check_names_filter_fastq()
+        # if (
+        #     path.exists(self.filtered_R1_filename)
+        #     and path.exists(self.filtered_R2_filename)
+        #     and self.reuse_filtered_reads
+        # ):
+        #     warn("Using preexisting filtered file")
+        # else:
+        #     self._check_names_filter_fastq()
 
     def get_counts(self):
-        # infile_R1 = _get_fastq_handle(self.R1_filename)
-        # infile_R2 = _get_fastq_handle(self.R2_filename)
-
         self.nomatch_R1_filename = self.R1_filename.replace(".fastq", "_nomatch.fastq")
         self.nomatch_R2_filename = self.R2_filename.replace(".fastq", "_nomatch.fastq")
         self.semimatch_R1_filename = self.R1_filename.replace(
@@ -204,7 +209,7 @@ class GuideEditCounter:
         self.semimatch_R2_filename = self.R2_filename.replace(
             ".fastq", "_semimatch.fastq"
         )
-        if self.count_reporter_edits:
+        if self.count_reporter_edits or self.count_guide_edits:
             _write_alignment_matrix(
                 self.base_edited_from,
                 self.base_edited_to,
@@ -217,14 +222,6 @@ class GuideEditCounter:
         else:  # count both bc matched & unmatched guide counts
             self._get_guide_counts_bcmatch_semimatch()
 
-        if self.count_guide_edits:
-            self.screen.uns["guide_edit_counts"] = _multiindex_dict_to_df(
-                self.screen.uns["guide_edit_counts"], "edit", self.database_id
-            )
-            self.screen.uns["guide_edit_counts"].guide = self.screen.guides.index[
-                self.screen.uns["guide_edit_counts"].guide.to_numpy(dtype=int)
-            ]
-
         if self.count_reporter_edits:
             self.screen.uns["edit_counts"] = pd.DataFrame.from_dict(
                 self.screen.uns["edit_counts"]
@@ -232,6 +229,8 @@ class GuideEditCounter:
 
         if self.count_reporter_edits:
             self._write_reporter_alleles()
+        if self.count_guide_edits:
+            self._write_guide_self_alleles()
         if self.count_guide_reporter_alleles:
             self._write_guide_reporter_alleles()
         count_stat_path = self._jp("mapping_stats.txt")
@@ -309,6 +308,31 @@ class GuideEditCounter:
                 self.screen.uns["allele_counts"].guide
             ]
 
+    def _write_guide_self_alleles(self):
+        guides = []
+        alleles = []
+        counts = []
+        guide_edits = deepcopy(self.screen.uns["guide_edit_counts"])
+        for guide, allele_to_count in guide_edits.items():
+            if len(allele_to_count.keys()) == 0:
+                continue
+            guides.extend([guide] * len(allele_to_count.keys()))
+            for allele, count in allele_to_count.items():
+                alleles.append(allele)
+                counts.append(count)
+        if not (len(guides) == len(alleles) == len(counts)):
+            raise ValueError(
+                f"Guides:{len(guides)}, alleles:{len(alleles)}, counts:{len(counts)}"
+            )
+        self.screen.uns["guide_edit_counts"] = pd.DataFrame(
+            {"guide": guides, "allele": alleles, self.database_id: counts}
+        )
+
+        if "guide" in self.screen.uns["guide_edit_counts"].columns:
+            self.screen.uns["guide_edit_counts"].guide = self.screen.guides.index[
+                self.screen.uns["guide_edit_counts"].guide
+            ]
+
     def _get_guide_counts_bcmatch(self):
         NotImplemented
 
@@ -316,11 +340,15 @@ class GuideEditCounter:
         self, matched_guide_idx, R1_record: SeqIO.SeqRecord, single_base_qual_cutoff=30
     ):
         if self.guides_has_strands:
-            strand = self.screen.guides.strand[matched_guide_idx]
+            strand = self.screen.guides.strand.iloc[matched_guide_idx]
             guide_strand = strand_str_to_int.get(strand, 1)
         else:
             guide_strand = 1
-        ref_guide_seq = self.screen.guides.sequence[matched_guide_idx]
+        ref_guide_seq = self.screen.guides.sequence.iloc[matched_guide_idx]
+        if "chrom" in self.screen.guides.columns.tolist():
+            chrom = self.screen.guides.chrom.iloc[matched_guide_idx]
+        else:
+            chrom = None
         read_guide_seq, read_guide_qual = self.get_guide_seq_qual(
             R1_record, len(ref_guide_seq)
         )
@@ -332,24 +360,28 @@ class GuideEditCounter:
             aln_mat_path=self.output_dir + "/.aln_mat.txt",
             offset=0,
             strand=guide_strand,
+            chrom=chrom,
             start_pos=0,
             end_pos=len(ref_guide_seq),
             positionwise_quality=np.array(read_guide_qual),
             quality_thres=single_base_qual_cutoff,
             objectify_allele=self.objectify_allele,
         )
+
+        if not self.count_reporter_edits:
+            self._update_counted_guide_allele(matched_guide_idx, guide_edit_allele)
         return (guide_edit_allele, score)
 
     def _get_strand_offset_from_guide_index(self, guide_idx: int) -> Tuple[int, int]:
         """Returns guide starnd and offset for a given guide index."""
         if self.guides_has_strands:
-            strand = self.screen.guides.strand[guide_idx]
+            strand = self.screen.guides.strand.iloc[guide_idx]
             if strand in strand_str_to_int:
                 guide_strand = strand_str_to_int[strand]
                 offset = _get_stranded_guide_offset(
                     strand=guide_strand,
-                    start_pos=self.screen.guides.start_pos[guide_idx],
-                    guide_len=self.screen.guides.guide_len[guide_idx],
+                    start_pos=self.screen.guides.start_pos.iloc[guide_idx],
+                    guide_len=self.screen.guides.guide_len.iloc[guide_idx],
                 )
             else:
                 guide_strand = 1
@@ -372,6 +404,16 @@ class GuideEditCounter:
                 self.guide_to_allele[guide_idx][allele] = 1
         else:
             self.guide_to_allele[guide_idx] = {allele: 1}
+
+    def _update_counted_guide_allele(self, guide_idx: int, allele: Allele) -> None:
+        """Add allele count to self.guide_to_allele dictionary."""
+        if guide_idx in self.screen.uns["guide_edit_counts"].keys():
+            if allele in self.screen.uns["guide_edit_counts"][guide_idx].keys():
+                self.screen.uns["guide_edit_counts"][guide_idx][allele] += 1
+            else:
+                self.screen.uns["guide_edit_counts"][guide_idx][allele] = 1
+        else:
+            self.screen.uns["guide_edit_counts"][guide_idx] = {allele: 1}
 
     def _update_counted_allele_and_guideAllele(
         self, guide_idx: int, allele: Allele, guide_allele: Allele
@@ -410,13 +452,16 @@ class GuideEditCounter:
         single_base_qual_cutoff: Ignore this base if the Phread quality score is less than this threshold
         guide_allele: Allele from baseedit in gRNA spacer sequence when paired with guide allele.
         """
-        ref_reporter_seq = self.screen.guides.Reporter[matched_guide_idx]
+        ref_reporter_seq = self.screen.guides.reporter.iloc[matched_guide_idx]
         read_reporter_seq, read_reporter_qual = self.get_reporter_seq_qual(R2_record)
 
         guide_strand, offset = self._get_strand_offset_from_guide_index(
             matched_guide_idx
         )
-
+        if "chrom" in self.screen.guides.columns.tolist():
+            chrom = self.screen.guides.chrom.iloc[matched_guide_idx]
+        else:
+            chrom = None
         allele, score = _get_edited_allele_crispresso(
             ref_seq=ref_reporter_seq,
             query_seq=read_reporter_seq,
@@ -425,6 +470,7 @@ class GuideEditCounter:
             aln_mat_path=self.output_dir + "/.aln_mat.txt",
             offset=offset,
             strand=guide_strand,
+            chrom=chrom,
             positionwise_quality=np.array(read_reporter_qual),
             quality_thres=single_base_qual_cutoff,
             objectify_allele=self.objectify_allele,
@@ -446,16 +492,19 @@ class GuideEditCounter:
     def _get_guide_counts_bcmatch_semimatch(
         self, bcmatch_layer="X_bcmatch", semimatch_layer="X"
     ):
-
         self.screen.layers[semimatch_layer] = np.zeros_like((self.screen.X))
-        R1_iter, R2_iter = self._get_fastq_iterators()
-
-        outfile_R1_nomatch, outfile_R2_nomatch = self._get_fastq_handle("nomatch")
-        outfile_R1_semimatch, outfile_R2_semimatch = self._get_fastq_handle("semimatch")
-        outfile_R1_dup_wo_bc, outfile_R2_dup_wo_bc = self._get_fastq_handle(
-            "duplicate_wo_barcode"
+        R1_iter, R2_iter = self._get_fastq_iterators(
+            self.filtered_R1_filename, self.filtered_R2_filename
         )
-        outfile_R1_dup, outfile_R2_dup = self._get_fastq_handle("duplicate")
+        if self.keep_intermediate:
+            outfile_R1_nomatch, outfile_R2_nomatch = self._get_fastq_handle("nomatch")
+            outfile_R1_semimatch, outfile_R2_semimatch = self._get_fastq_handle(
+                "semimatch"
+            )
+            outfile_R1_dup_wo_bc, outfile_R2_dup_wo_bc = self._get_fastq_handle(
+                "duplicate_wo_barcode"
+            )
+            outfile_R1_dup, outfile_R2_dup = self._get_fastq_handle("duplicate")
         with tqdm(
             enumerate(zip(R1_iter, R2_iter)),
             total=self.n_reads_after_filtering,
@@ -470,9 +519,7 @@ class GuideEditCounter:
                 )
 
                 if len(bc_match) == 0:
-                    if (
-                        len(semimatch) == 0
-                    ):  # no guide matchsplit string by period pythonpan
+                    if len(semimatch) == 0:  # no guide match
                         if self.keep_intermediate:
                             _write_paired_end_reads(
                                 r1, r2, outfile_R1_nomatch, outfile_R2_nomatch
@@ -488,7 +535,9 @@ class GuideEditCounter:
                         matched_guide_idx = semimatch[0]
                         self.screen.layers[semimatch_layer][matched_guide_idx, 0] += 1
                         if self.count_guide_edits:
-                            self._count_guide_edits(matched_guide_idx, r1)
+                            guide_allele, _ = self._count_guide_edits(
+                                matched_guide_idx, r1
+                            )
                         self.semimatch += 1
 
                 elif len(bc_match) >= 2:  # duplicate mapping
@@ -605,7 +654,7 @@ class GuideEditCounter:
         return revcomp(R2_seq[: self.guide_bc_len])
 
     def _match_read_to_sgRNA_bcmatch_semimatch(self, R1_seq: str, R2_seq: str):
-        # This should be adjusted for each experimental recipes.'
+        # This should be adjusted for each experimental recipes.
         guide_barcode = self.get_barcode(R1_seq, R2_seq)
         bc_match_idx = np.array([])
         semimatch_idx = np.array([])
@@ -665,23 +714,23 @@ class GuideEditCounter:
 
         return (R1_handle, R2_handle)
 
-    def _get_fastq_iterators(self):
-        R1_handle = _get_fastq_handle(self.R1_filename)
-        R2_handle = _get_fastq_handle(self.R2_filename)
+    def _get_fastq_iterators(self, R1_filename=None, R2_filename=None):
+        if R1_filename is None:
+            R1_filename = self.R1_filename
+        if R2_filename is None:
+            R2_filename = self.R2_filename
+        R1_handle = _get_fastq_handle(R1_filename)
+        R2_handle = _get_fastq_handle(R2_filename)
 
         R1_iterator = FastqPhredIterator(R1_handle)
         R2_iterator = FastqPhredIterator(R2_handle)
 
         return (R1_iterator, R2_iterator)
 
-    def _get_seq_records(self):
+    def _get_seq_handles(self):
         R1_handle = _get_fastq_handle(self.R1_filename)
         R2_handle = _get_fastq_handle(self.R2_filename)
-        R1 = list(SeqIO.parse(R1_handle, "fastq"))
-        R2 = list(SeqIO.parse(R2_handle, "fastq"))
-        R1_handle.close()
-        R2_handle.close()
-        return (R1, R2)
+        return (R1_handle, R2_handle)
 
     def _check_names_filter_fastq(self, filter_by_qual=False):
         if self.min_average_read_quality > 0 or self.min_single_bp_quality > 0:
@@ -694,51 +743,58 @@ class GuideEditCounter:
                 f"In the filtering, bases up to position {self.qend_R1} of R1 and {self.qend_R2} of R2 are considered."
             )
 
-        R1, R2 = self._get_seq_records()
+        R1_iter, R2_iter = self._get_fastq_iterators()
+        (self.n_reads_after_filtering) = self._check_readname_match_and_filter_quality(
+            R1_iter, R2_iter, filter_by_qual
+        )
 
-        _check_readname_match(R1, R2)
-        if filter_by_qual:
-            self.n_reads_after_filtering = self._filter_read_quality(R1, R2)
-            if self.n_reads_after_filtering == 0:
-                raise NoReadsAfterQualityFiltering(
-                    "No reads in input or no reads survived the average or single bp quality filtering."
-                )
-            else:
-                info(
-                    "Number of reads in input:%d\tNumber of reads after filtering:%d\n"
-                    % (self.n_total_reads, self.n_reads_after_filtering)
-                )
+        if self.n_reads_after_filtering == 0:
+            raise NoReadsAfterQualityFiltering(
+                "No reads in input or no reads survived the average or single bp quality filtering."
+            )
         else:
-            self.n_reads_after_filtering = self.n_total_reads
+            info(
+                "Number of reads in input:%d\tNumber of reads after filtering:%d\n"
+                % (self.n_total_reads, self.n_reads_after_filtering)
+            )
 
-    def _filter_read_quality(self, R1=None, R2=None) -> int:
-        R1_filtered = gzip.open(self.filtered_R1_filename, "w+")
-        R2_filtered = gzip.open(self.filtered_R2_filename, "w+")
-
-        if R1 is None or R2 is None:
-            R1, R2 = self._get_seq_records()
+    def _check_readname_match_and_filter_quality(
+        self, R1_iter, R2_iter, filter_by_qual=False
+    ) -> Tuple[int, int]:
+        R1_filtered = gzip.open(self.filtered_R1_filename, "wt+")
+        R2_filtered = gzip.open(self.filtered_R2_filename, "wt+")
 
         n_reads_after_filtering = 0
-        for i, R1_record in enumerate(R1):
-            R2_record = R2[i]
-
-            R1_quality_pass = _read_is_good_quality(
-                R1_record,
-                self.min_average_read_quality,
-                self.min_single_bp_quality,
-                self.qend_R1,
-            )
-            R2_quality_pass = _read_is_good_quality(
-                R2_record,
-                self.min_average_read_quality,
-                self.min_single_bp_quality,
-                self.qend_R2,
-            )
-
+        for R1_record, R2_record in tqdm(
+            zip(R1_iter, R2_iter), total=self.n_total_reads
+        ):
+            if R1_record.name != R2_record.name:
+                raise InputFileError(
+                    "R1 and R2 read discordance in read {} and {}".format(
+                        R1_record.name, R2_record.name
+                    )
+                )
+            if filter_by_qual:
+                R1_quality_pass = _read_is_good_quality(
+                    R1_record,
+                    self.min_average_read_quality,
+                    self.min_single_bp_quality,
+                    self.qend_R1,
+                )
+                R2_quality_pass = _read_is_good_quality(
+                    R2_record,
+                    self.min_average_read_quality,
+                    self.min_single_bp_quality,
+                    self.qend_R2,
+                )
+            else:
+                R1_quality_pass = True
+                R2_quality_pass = True
             if R1_quality_pass and R2_quality_pass:
                 n_reads_after_filtering += 1
-                R1_filtered.write(R1.format("fastq"))
-                R2_filtered.write(R2.format("fastq"))
+                R1_filtered.write(R1_record.format("fastq"))
+                R2_filtered.write(R2_record.format("fastq"))
+
         return n_reads_after_filtering
 
     def _write_start_log(self):

@@ -16,8 +16,8 @@ def plot_n_alleles_per_guide(
         for g in bdata.guides.index
     ]
     ax.hist(lens, bins=np.arange(min(lens) - 0.5, max(lens) + 0.5))
-    ax.set_xlabel("# alleles")
-    ax.set_title(f"# Alleles per guide, raw (n={len(bdata.uns[allele_df_key])})")
+    ax.set_xlabel("# alleles per guide")
+    ax.set_title(f"n_alleles={len(bdata.uns[allele_df_key])}")
     ax.set_ylabel("# guides")
     return ax
 
@@ -40,7 +40,25 @@ def plot_n_guides_per_edit(
     if ax is None:
         fig, ax = plt.subplots()
     ax.hist(n_guides, bins=np.arange(min(n_guides) - 0.5, max(n_guides) + 0.5))
-    ax.set_xlabel("# guides")
-    ax.set_title(f"# guides per edit (n={len(edits_df)})")
+    ax.set_xlabel("# guides per variant")
+    ax.set_title(f"n_variants={len(edits_df)}")
     ax.set_ylabel("# edits")
     return ax
+
+
+def plot_allele_stats(bdata, allele_df_keys, plot_save_path):
+    fig = plt.figure(constrained_layout=True, figsize=(6, 3 * len(allele_df_keys)))
+    fig.suptitle("Allele stats")
+
+    subfigs = fig.subfigures(nrows=len(allele_df_keys), ncols=1)
+    for row, subfig in enumerate(subfigs):
+        key = allele_df_keys[row]
+        subfig.suptitle(f"{key}")
+
+        # create 1x3 subplots per subfig
+        ax = subfig.subplots(nrows=1, ncols=2)
+        plot_n_alleles_per_guide(bdata, key, bdata.uns[key].columns[1], ax[0])
+        plot_n_guides_per_edit(bdata, key, bdata.uns[key].columns[1], ax[1])
+
+    #plt.tight_layout()
+    fig.savefig(plot_save_path, bbox_inches="tight")

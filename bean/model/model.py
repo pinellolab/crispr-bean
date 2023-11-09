@@ -91,7 +91,6 @@ def NormalModel(
                     obs=data.X_masked.permute(0, 2, 1),
                 )
             if use_bcmatch:
-                print(f"Use_bcmatch:{use_bcmatch}")
                 a_bcmatch = get_alpha(
                     expected_guide_p,
                     data.size_factor_bcmatch,

@@ -248,7 +248,7 @@ bean-filter my_sorting_screen.h5ad \
 
 ## `bean-run`: Quantify variant effects
 BEAN uses Bayesian network to incorporate gRNA editing outcome to provide posterior estimate of variant phenotype. The Bayesian network reflects data generation process. Briefly,  
-1. Cellular phenotype is modeled as the Gaussian mixture distribution of wild-type phenotype and variant phenotype.
+1. Cellular phenotype (either for cells are sorted upon for sorting screen, or log(proliferation rate)) is modeled as the Gaussian mixture distribution of wild-type phenotype and variant phenotype.
 2. The weight of the mixture components are inferred from the reporter editing outcome and the chromatin accessibility of the loci.
 3. Cells with each gRNA, formulated as the mixture distribution, is sorted by the phenotypic quantile to produce the gRNA counts.
 
@@ -258,7 +258,7 @@ For the full detail, see the method section of the [BEAN manuscript](https://www
   
 <br></br>
 ```bash
-bean-run variant[tiling] my_sorting_screen_filtered.h5ad \
+bean-run sorting[survival] variant[tiling] my_sorting_screen_filtered.h5ad \
 [--uniform-edit, --scale-by-acc [--acc-bw-path accessibility_signal.bw, --acc-col accessibility]] \
 -o output_prefix/ \
 --fit-negctrl

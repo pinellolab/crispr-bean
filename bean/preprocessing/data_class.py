@@ -1,8 +1,8 @@
 import sys
 import abc
+import logging
 from dataclasses import dataclass
 from typing import Dict, Tuple
-import logging
 from xmlrpc.client import Boolean
 from copy import deepcopy
 import torch
@@ -13,7 +13,6 @@ from .get_alpha0 import get_fitted_alpha0, get_pred_alpha0
 from .get_pi_alpha0 import get_fitted_alpha0 as get_fitted_pi_alpha0
 from .get_pi_alpha0 import get_pred_alpha0 as get_pred_pi_alpha0
 from .utils import (
-    Alias,
     get_accessibility_guides,
     get_edit_to_index_dict,
     _assign_rep_ids_and_sort,
@@ -47,8 +46,13 @@ class ScreenData(abc.ABC):
         device: str = None,
         replicate_column: str = "rep",
         pi_popt: Tuple[float] = None,
+        control_can_be_selected: bool = False,
         **kwargs,
     ):
+        """
+        Args
+        control_can_be_selected: If True, screen.samples[condition_column] == control_condition can also be included in effect size inference if its condition column is not NA (Currently only suppoted for prolifertion screens).
+        """
         # TODO: remove replicate with too small number of (ex. only 1) sorting bin
         self.condition_column = condition_column
         self.device = device
@@ -66,9 +70,12 @@ class ScreenData(abc.ABC):
             )
 
         self.screen = screen
-        self.screen_selected = screen[
-            :, screen.samples[condition_column] != control_condition
-        ]
+        if not control_can_be_selected:
+            self.screen_selected = screen[
+                :, screen.samples[condition_column] != control_condition
+            ]
+        else:
+            self.screen_selected = screen[:, ~screen.samples[condition_column].isnull()]
 
         self.n_condits = len(
             self.screen_selected.var[condition_column].unique()
@@ -178,7 +185,16 @@ class ScreenData(abc.ABC):
     def transform_data(self, X, n_bins=None):
         if n_bins is None:
             n_bins = self.n_condits
-        x = torch.as_tensor(X).T.reshape((self.n_reps, n_bins, self.n_guides)).float()
+        try:
+            x = (
+                torch.as_tensor(X)
+                .T.reshape((self.n_reps, n_bins, self.n_guides))
+                .float()
+            )
+        except RuntimeError:
+            print((self.n_reps, n_bins, self.n_guides))
+            print(X.shape)
+            exit(1)
         if self.device is not None:
             x = x.cuda()
         return x
@@ -668,7 +684,7 @@ class TilingReporterScreenData(ReporterScreenData):
         allele_tensor = torch.empty(
             (self.n_reps, self.n_condits, self.n_guides, self.n_max_alleles),
         )
-        if not self.device is None:
+        if self.device is not None:
             allele_tensor = allele_tensor.cuda()
         for i in range(self.n_reps):
             for j in range(self.n_condits):
@@ -710,7 +726,7 @@ class TilingReporterScreenData(ReporterScreenData):
 
         try:
             assert (allele_tensor >= 0).all(), allele_tensor[allele_tensor < 0]
-        except:
+        except AssertionError:
             print("Allele tensor doesn't match condit_allele_df")
             return (allele_tensor, reindexed_df)
         return allele_tensor
@@ -724,7 +740,7 @@ class TilingReporterScreenData(ReporterScreenData):
         allele_tensor = torch.empty(
             (self.n_reps, 1, self.n_guides, self.n_max_alleles),
         )
-        if not self.device is None:
+        if self.device is not None:
             allele_tensor = allele_tensor.cuda()
         for i in range(self.n_reps):
             condit_idx = np.where(adata.samples.rep_id == i)[0]
@@ -761,14 +777,10 @@ class TilingReporterScreenData(ReporterScreenData):
                 self.n_guides,
                 self.n_max_alleles,
             )
-            try:
-                allele_tensor[i, 0, :, :] = torch.as_tensor(condit_allele_df.to_numpy())
-            except:
-                print("Allele tensor doesn't match condit_allele_df")
-                return (allele_tensor, torch.as_tensor(condit_allele_df.to_numpy()))
+            allele_tensor[i, 0, :, :] = torch.as_tensor(condit_allele_df.to_numpy())
         try:
             assert (allele_tensor >= 0).all(), allele_tensor[allele_tensor < 0]
-        except:
+        except AssertionError:
             print("Negative values in allele_tensor")
             return (allele_tensor, reindexed_df)
         return allele_tensor
@@ -795,48 +807,6 @@ class TilingReporterScreenData(ReporterScreenData):
             for j in range(n_valid_allele[i]):
                 mask[i, j + 1] = 1
         return mask.bool()
-
-    def get_allele_to_edit_tensor(
-        self,
-        adata,
-        edits_to_index: Dict[str, int],
-        guide_allele_id_to_allele_df: pd.DataFrame,
-    ):
-        """
-        Convert (guide, allele_id_for_guide) -> allele DataFrame into the tensor with shape (n_guides, n_max_alleles_per_guide, n_edits) tensor.
-        -----
-        Arguments
-        edits_to_index (dict) -- Dictionary from edit (str) to unique index (int)
-        guide_allele_id_to_allele_df (pd.DataFrame) -- pd.DataFrame of (guide(str), allele_id_for_guide(int)) -> CodingNoncodingAllele
-        -----
-        Returns
-        allele_edit_assignment (torch.Tensor) -- Binary tensor of shape (n_guides, n_max_alleles_per_guide, n_edits).
-        allele_edit_assignment(i, j, k) is 1 if jth allele of ith guide has kth edit.
-        """
-        guide_allele_id_to_allele_df[
-            "edits"
-        ] = guide_allele_id_to_allele_df.aa_allele.map(
-            lambda a: list(a.aa_allele.edits) + list(a.nt_allele.edits)
-        )
-        guide_allele_id_to_allele_df = guide_allele_id_to_allele_df.reset_index()
-        guide_allele_id_to_allele_df[
-            "edit_idx"
-        ] = guide_allele_id_to_allele_df.edits.map(
-            lambda es: [edits_to_index[e.get_abs_edit()] for e in es]
-        )
-        guide_allele_id_to_edit_df = guide_allele_id_to_allele_df[
-            ["guide", "allele_id_for_guide", "edit_idx"]
-        ].set_index(["guide", "allele_id_for_guide"])
-        guide_allele_id_to_edit_df = guide_allele_id_to_edit_df.unstack(
-            level=1, fill_value=[]
-        ).reindex(adata.guides.index, fill_value=[])
-        allele_edit_assignment = torch.zeros(
-            (len(adata.guides), self.n_max_alleles - 1, len(edits_to_index.keys()))
-        )
-        for i in range(len(guide_allele_id_to_edit_df)):
-            for j in range(len(guide_allele_id_to_edit_df.columns)):
-                allele_edit_assignment[i, j, guide_allele_id_to_edit_df.iloc[i, j]] = 1
-        return allele_edit_assignment
 
 
 @dataclass
@@ -909,7 +879,7 @@ class SortingScreenData(ScreenData):
             == len(self.screen.samples[self.replicate_column].unique())
         ).all():
             raise ValueError(
-                "Not all replicate share same quantile bin definition. If you have missing bin data, add the sample and add 'mask' column in 'screen.samples'."
+                "Not all replicate share same quantile bin definition. If you have missing bin data, add the sample and add 'mask' column in 'screen.samples' or run `bean-qc` that automatically handles this."
             )
         sorting_bins = self.screen_selected.samples.sort_values(
             [upper_quantile_column, lower_quantile_column]
@@ -952,12 +922,14 @@ class SurvivalScreenData(ScreenData):
         repguide_mask: str = None,
         sample_mask_column: str = None,
         shrink_alpha: bool = False,
-        condition_column: str = "time",
+        condition_column: str = "condition",
         control_condition: str = "bulk",
-        accessibility_col: str = None,
-        accessibility_bw_path: str = None,
+        control_can_be_selected=True,
+        time_column: str = "time",
+        replicate_column: str = "rep",
         **kwargs,
     ):
+        self._pre_init(condition_column)
         super().__init__(
             screen=screen,
             repguide_mask=repguide_mask,
@@ -965,14 +937,59 @@ class SurvivalScreenData(ScreenData):
             shrink_alpha=shrink_alpha,
             condition_column=condition_column,
             control_condition=control_condition,
-            accessibility_col=accessibility_col,
-            accessibility_bw_path=accessibility_bw_path,
+            control_can_be_selected=control_can_be_selected,
             **kwargs,
         )
+        self._post_init()
+
+    def _pre_init(self, time_column: str, condition_column: str):
+        self.time_column = time_column
+        if not np.issubdtype(self.screen.samples[time_column].dtype, np.number):
+            raise ValueError(
+                f"Invalid timepoint value({self.screen.samples[time_column]}) in screen.samples[{time_column}]: check input."
+            )
+
+        if not (
+            self.screen.samples.groupby(condition_column).size()
+            == len(self.screen.samples[self.replicate_column].unique())
+        ).all():
+            raise ValueError(
+                f"Not all replicate share same timepoint definition. If you have missing bin data, add the sample and add 'mask' column in 'screen.samples', or run `bean-qc` that automatically handles this. \n{self.screen.samples}"
+            )
+
+    def _post_init(
+        self,
+    ):
         self.timepoints = torch.as_tensor(
-            self.screen.samples[condition_column].unique()
+            self.screen_selected.samples[self.time_column].unique()
         )
-        self.timepoints = Alias("n_condits")
+        self.n_timepoints = self.n_condits
+        timepoints = self.screen_selected.samples.sort_values(self.time_column)[
+            self.time_column
+        ].drop_duplicates()
+        if timepoints.isnull().any():
+            raise ValueError(
+                f"NaN values in time points provided in input: {self.screen_selected.samples[self.time_column]}"
+            )
+        for j, time in enumerate(timepoints):
+            self.screen_selected.samples.loc[
+                self.screen_selected.samples[self.time_column] == time,
+                f"{self.time_column}_id",
+            ] = j
+        self.screen.samples[f"{self.time_column}_id"] = -1
+        self.screen.samples.loc[
+            self.screen_selected.samples.index, f"{self.time_column}_id"
+        ] = self.screen_selected.samples[f"{self.time_column}_id"]
+        self.screen = _assign_rep_ids_and_sort(
+            self.screen, self.replicate_column, self.time_column
+        )
+        self.screen_selected = _assign_rep_ids_and_sort(
+            self.screen_selected, self.replicate_column, self.time_column
+        )
+        self.screen_control = _assign_rep_ids_and_sort(
+            self.screen_control,
+            self.replicate_column,
+        )
 
 
 @dataclass
@@ -985,7 +1002,7 @@ class VariantReporterScreenData(VariantScreenData, ReporterScreenData):
         pi_popt: Tuple[float] = None,
         impute_pi_popt: bool = False,
         shrink_alpha: bool = False,
-        condition_column: str = "time",
+        condition_column: str = "condition",
         control_condition: str = "bulk",
         accessibility_col: str = None,
         accessibility_bw_path: str = None,
@@ -1036,8 +1053,8 @@ class VariantSortingScreenData(VariantScreenData, SortingScreenData):
             screen,
             *args,
             sample_mask_column=sample_mask_column,
-            replicate_column="rep",
-            condition_column="bin",
+            replicate_column=replicate_column,
+            condition_column=condition_column,
             shrink_alpha=shrink_alpha,
             **kwargs,
         )
@@ -1110,8 +1127,8 @@ class VariantSortingReporterScreenData(VariantReporterScreenData, SortingScreenD
             screen,
             *args,
             sample_mask_column=sample_mask_column,
-            replicate_column="rep",
-            condition_column="bin",
+            replicate_column=replicate_column,
+            condition_column=condition_column,
             shrink_alpha=shrink_alpha,
             **kwargs,
         )
@@ -1159,8 +1176,8 @@ class TilingSortingReporterScreenData(TilingReporterScreenData, SortingScreenDat
             screen,
             *args,
             sample_mask_column=sample_mask_column,
-            replicate_column="rep",
-            condition_column="bin",
+            replicate_column=replicate_column,
+            condition_column=condition_column,
             shrink_alpha=shrink_alpha,
             **kwargs,
         )
@@ -1187,5 +1204,187 @@ class TilingSortingReporterScreenData(TilingReporterScreenData, SortingScreenDat
 
 
 @dataclass
+class VariantSurvivalScreenData(VariantScreenData, SurvivalScreenData):
+    def __init__(
+        self,
+        screen,
+        *args,
+        replicate_column="rep",
+        condition_column="condition",
+        time_column="time",
+        control_can_be_selected=True,
+        target_col="target",
+        sample_mask_column="mask",
+        shrink_alpha: bool = False,
+        use_bcmatch=False,
+        **kwargs,
+    ):
+        ScreenData.__init__(
+            self,
+            screen,
+            *args,
+            sample_mask_column=sample_mask_column,
+            replicate_column=replicate_column,
+            condition_column=condition_column,
+            time_column=time_column,
+            shrink_alpha=shrink_alpha,
+            control_can_be_selected=control_can_be_selected,
+            **kwargs,
+        )
+        SurvivalScreenData._pre_init(self, time_column, condition_column)
+        ScreenData._post_init(self)
+        SurvivalScreenData._post_init(self)
+        VariantScreenData._post_init(self, target_col)
+        if use_bcmatch:
+            self.set_bcmatch(
+                screen,
+            )
+
+    def set_bcmatch(self, screen):
+        screen.samples["size_factor_bcmatch"] = self.get_size_factor(
+            screen.layers["X_bcmatch"]
+        )
+        self.screen_selected.samples["size_factor_bcmatch"] = screen.samples.loc[
+            self.screen_selected.samples.index, "size_factor_bcmatch"
+        ]
+        self.screen_control.samples["size_factor_bcmatch"] = screen.samples.loc[
+            self.screen_control.samples.index, "size_factor_bcmatch"
+        ]
+        self.X_bcmatch = self.transform_data(self.screen_selected.layers["X_bcmatch"])
+        self.X_bcmatch_masked = self.X_bcmatch * self.sample_mask[:, :, None]
+        self.X_bcmatch_control = self.transform_data(
+            self.screen_control.layers["X_bcmatch"], 1
+        )
+        self.X_bcmatch_control_masked = (
+            self.X_bcmatch_control * self.bulk_sample_mask[:, None, None]
+        )
+        self.size_factor_bcmatch = torch.as_tensor(
+            self.screen_selected.samples["size_factor_bcmatch"].to_numpy()
+        ).reshape(self.n_reps, self.n_condits)
+        self.size_factor_bcmatch_control = torch.as_tensor(
+            self.screen_control.samples["size_factor_bcmatch"].to_numpy()
+        ).reshape(self.n_reps, 1)
+        a0_bcmatch = get_pred_alpha0(
+            self.X_bcmatch.clone().cpu(),
+            self.size_factor_bcmatch.clone().cpu(),
+            self.popt,
+            self.sample_mask.cpu(),
+        )
+        self.a0_bcmatch = torch.as_tensor(a0_bcmatch)
+
+
+@dataclass
 class VariantSurvivalReporterScreenData(VariantReporterScreenData, SurvivalScreenData):
-    pass
+    def __init__(
+        self,
+        screen,
+        *args,
+        replicate_column="rep",
+        condition_column="condition",
+        time_column="time",
+        control_can_be_selected=True,
+        target_col="target",
+        sample_mask_column="mask",
+        use_const_pi: bool = False,
+        impute_pi_popt: bool = False,
+        pi_prior_count: int = 10,
+        shrink_alpha: bool = False,
+        pi_popt: Tuple[float] = None,
+        **kwargs,
+    ):
+        ScreenData.__init__(
+            self,
+            screen,
+            *args,
+            sample_mask_column=sample_mask_column,
+            replicate_column=replicate_column,
+            condition_column=condition_column,
+            time_column=time_column,
+            shrink_alpha=shrink_alpha,
+            control_can_be_selected=control_can_be_selected,
+            **kwargs,
+        )
+        SurvivalScreenData._pre_init(self, time_column, condition_column)
+        ScreenData._post_init(self)
+        SurvivalScreenData._post_init(self)
+        VariantScreenData._post_init(self, target_col)
+        ReporterScreenData._post_init(
+            self,
+            screen,
+            use_const_pi,
+            impute_pi_popt,
+            pi_prior_count,
+            shrink_alpha,
+            pi_popt,
+        )
+
+
+@dataclass
+class TilingSurvivalReporterScreenData(TilingReporterScreenData, SurvivalScreenData):
+    def __init__(
+        self,
+        screen,
+        *args,
+        replicate_column="rep",
+        condition_column="condition",
+        time_column="time",
+        control_can_be_selected=True,
+        sample_mask_column="mask",
+        use_const_pi: bool = False,
+        impute_pi_popt: bool = False,
+        pi_prior_count: int = 10,
+        shrink_alpha: bool = False,
+        pi_popt: Tuple[float] = None,
+        allele_df_key: str = None,
+        allele_col: str = None,
+        control_guide_tag: str = None,
+        **kwargs,
+    ):
+        ScreenData.__init__(
+            self,
+            screen,
+            *args,
+            sample_mask_column=sample_mask_column,
+            replicate_column=replicate_column,
+            condition_column=condition_column,
+            time_column=time_column,
+            shrink_alpha=shrink_alpha,
+            control_can_be_selected=control_can_be_selected,
+            **kwargs,
+        )
+        SurvivalScreenData._pre_init(self, time_column, condition_column)
+        ScreenData._post_init(self)
+        SurvivalScreenData._post_init(self)
+        TilingReporterScreenData._post_init(
+            self,
+            allele_df_key=allele_df_key,
+            control_guide_tag=control_guide_tag,
+        )
+        ReporterScreenData._post_init(
+            self,
+            screen,
+            use_const_pi,
+            impute_pi_popt,
+            pi_prior_count,
+            shrink_alpha,
+            pi_popt,
+        )
+
+
+DATACLASS_DICT = {
+    "sorting": {
+        "Normal": VariantSortingScreenData,
+        "MixtureNormal": VariantSortingReporterScreenData,
+        "MixtureNormal+Acc": VariantSortingReporterScreenData,
+        "MixtureNormalConstPi": VariantSortingScreenData,
+        "MultiMixtureNormal": TilingSortingReporterScreenData,
+        "MultiMixtureNormal+Acc": TilingSortingReporterScreenData,
+    },
+    "survival": {
+        "Normal": VariantSurvivalScreenData,
+        "MixtureNormal": VariantSurvivalReporterScreenData,
+        "MixtureNormal+Acc": VariantSurvivalReporterScreenData,
+        "MultiMixtureNormal": TilingSurvivalReporterScreenData,
+        "MultiMixtureNormal+Acc": TilingSurvivalReporterScreenData,
+    },
+}

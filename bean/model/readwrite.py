@@ -57,41 +57,50 @@ def write_result_table(
     adjust_confidence_negatives: np.ndarray = None,
     guide_index: Optional[Sequence[str]] = None,
     guide_acc: Optional[Sequence] = None,
+    sd_is_fitted: bool = True,
     return_result: bool = False,
 ) -> Union[pd.DataFrame, None]:
     """Combine target information and scores to write result table to a csv file or return it."""
     if param_hist_dict["params"]["mu_loc"].dim() == 2:
         mu = param_hist_dict["params"]["mu_loc"].detach()[:, 0].cpu().numpy()
         mu_sd = param_hist_dict["params"]["mu_scale"].detach()[:, 0].cpu().numpy()
-        sd = param_hist_dict["params"]["sd_loc"].detach().exp()[:, 0].cpu().numpy()
+        if sd_is_fitted:
+            sd = param_hist_dict["params"]["sd_loc"].detach().exp()[:, 0].cpu().numpy()
     elif param_hist_dict["params"]["mu_loc"].dim() == 1:
         mu = param_hist_dict["params"]["mu_loc"].detach().cpu().numpy()
         mu_sd = param_hist_dict["params"]["mu_scale"].detach().cpu().numpy()
-        sd = param_hist_dict["params"]["sd_loc"].detach().exp().cpu().numpy()
+        if sd_is_fitted:
+            sd = param_hist_dict["params"]["sd_loc"].detach().exp().cpu().numpy()
     else:
         raise ValueError(
             f'`mu_loc` has invalid shape of {param_hist_dict["params"]["mu_loc"].shape}'
         )
-    fit_df = pd.DataFrame(
-        {
-            "mu": mu,
-            "mu_sd": mu_sd,
-            "mu_z": mu / mu_sd,
-            "sd": sd,
-        }
-    )
+    param_dict = {
+        "mu": mu,
+        "mu_sd": mu_sd,
+        "mu_z": mu / mu_sd,
+    }
+    if sd_is_fitted:
+        param_dict["sd"] = sd
+    fit_df = pd.DataFrame(param_dict)
     fit_df["novl"] = get_novl(fit_df, "mu", "mu_sd")
     if "negctrl" in param_hist_dict.keys():
         print("Normalizing with common negative control distribution")
         mu0 = param_hist_dict["negctrl"]["params"]["mu_loc"].detach().cpu().numpy()
-        sd0 = (
-            param_hist_dict["negctrl"]["params"]["sd_loc"].detach().exp().cpu().numpy()
-        )
-        print(f"Fitted mu0={mu0}, sd0={sd0}.")
+        if sd_is_fitted:
+            sd0 = (
+                param_hist_dict["negctrl"]["params"]["sd_loc"]
+                .detach()
+                .exp()
+                .cpu()
+                .numpy()
+            )
+        print(f"Fitted mu0={mu0}" + (f", sd0={sd0}." if sd_is_fitted else ""))
         fit_df["mu_scaled"] = (mu - mu0) / sd0
         fit_df["mu_sd_scaled"] = mu_sd / sd0
         fit_df["mu_z_scaled"] = fit_df.mu_scaled / fit_df.mu_sd_scaled
-        fit_df["sd_scaled"] = sd / sd0
+        if sd_is_fitted:
+            fit_df["sd_scaled"] = sd / sd0
         fit_df["novl_scaled"] = get_novl(fit_df, "mu_scaled", "mu_sd_scaled")
 
     fit_df = pd.concat(

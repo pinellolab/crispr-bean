@@ -4,7 +4,7 @@ import subprocess
 
 @pytest.mark.order(13)
 def test_run_variant_wacc():
-    cmd = "bean-run variant tests/data/var_mini_screen_annotated.h5ad --scale-by-acc --acc-bw-path tests/data/accessibility_signal_var.bw -o tests/test_res/var/ --repguide-mask None"
+    cmd = "bean-run variant tests/data/var_mini_screen_annotated.h5ad --scale-by-acc --acc-bw-path tests/data/accessibility_signal_chr6.bw -o tests/test_res/var/ --repguide-mask None"
     try:
         subprocess.check_output(
             cmd,

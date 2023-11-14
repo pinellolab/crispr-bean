@@ -22,7 +22,7 @@ def _add_absent_edits(
 ):
     """If edit is not observed in editable position, add into the edit rate table."""
     editable_positions = np.where(
-        (np.array(list(bdata.guides.loc[guide, "Reporter"])) == edited_base)
+        (np.array(list(bdata.guides.loc[guide, "reporter"])) == edited_base)
     )[0]
     if guide not in edit_tbl.guide.tolist():
         observed_rel_pos = []
@@ -62,14 +62,13 @@ def _add_absent_edits(
 def get_edit_rates(
     bdata,
     edit_count_key="edit_counts",
-    add_absent=True,
     adjust_spacer_pos: bool = True,
     reporter_column: str = "reporter",
 ):
     """
     Obtain position- and context-wise editing rate (context: base preceding the target base position).
     Args
-    bdata (bean.ReporterScreen): input ReporterScreen object to be used for analyzing posiiton-wide editing rate.
+    bdata (bean.reporterScreen): input ReporterScreen object to be used for analyzing posiiton-wide editing rate.
     edit_count_key: key in bdata.uns with edit count DataFrame to be used for analyzing posiiton-wide editing rate.
     """
     edit_rates = bdata.get_normalized_allele_counts(bdata.uns[edit_count_key])
@@ -77,53 +76,45 @@ def get_edit_rates(
     edit_rates_agg = edit_rates_agg.loc[
         edit_rates_agg.guide.map(lambda s: "CONTROL" not in s)
     ].reset_index(drop=True)
-    try:
-        edit_rates_agg["rep_median"] = edit_rates.iloc[:, 2:].median(axis=1)
-        edit_rates_agg["rep_mean"] = edit_rates.iloc[:, 2:].mean(axis=1)
-        edit_rates_agg["rel_pos"] = edit_rates_agg.edit.map(lambda e: e.rel_pos).astype(
-            int
+    edit_rates_agg["rep_median"] = edit_rates.iloc[:, 2:].median(axis=1)
+    edit_rates_agg["rep_mean"] = edit_rates.iloc[:, 2:].mean(axis=1)
+    edit_rates_agg["rel_pos"] = edit_rates_agg.edit.map(lambda e: e.rel_pos).astype(int)
+
+    for guide in tqdm(
+        edit_rates_agg.guide.unique(),
+        desc="Calibrating edits in editable positions...",
+    ):
+        edit_rates_agg = _add_absent_edits(
+            bdata,
+            guide,
+            edit_rates_agg,
+            edited_base=bdata.base_edited_from,
+            target_alt=bdata.base_edited_to,
         )
-        if add_absent:
-            for guide in tqdm(
-                edit_rates_agg.guide.unique(),
-                desc="Calibrating edits in editable positions...",
-            ):
-                edit_rates_agg = _add_absent_edits(
-                    bdata,
-                    guide,
-                    edit_rates_agg,
-                    edited_base=bdata.base_edited_from,
-                    target_alt=bdata.base_edited_to,
-                )
-        if adjust_spacer_pos:
-            if "guide_len" not in bdata.guides.columns:
-                bdata.guides["guide_len"] = bdata.guides.sequence.map(len)
-            start_pad = (
-                32
-                - 6
-                - bdata.guides.guide_len[edit_rates_agg.guide].reset_index(drop=True)
-            )
-            edit_rates_agg["spacer_pos"] = (edit_rates_agg.rel_pos - start_pad).astype(
-                int
-            )
-            edit_rates_agg = edit_rates_agg[
-                (edit_rates_agg.spacer_pos >= 0) & (edit_rates_agg.spacer_pos < 20)
-            ].reset_index(drop=True)
-            edit_rates_agg.loc[:, "spacer_pos"] = edit_rates_agg["spacer_pos"] + 1
-        else:
-            edit_rates_agg["spacer_pos"] = edit_rates_agg.rel_pos + 1
-        edit_rates_agg["base_change"] = edit_rates_agg.edit.map(
-            lambda e: e.get_base_change()
+
+    if adjust_spacer_pos:
+        if "guide_len" not in bdata.guides.columns:
+            bdata.guides["guide_len"] = bdata.guides.sequence.map(len)
+        start_pad = (
+            32 - 6 - bdata.guides.guide_len[edit_rates_agg.guide].reset_index(drop=True)
         )
-        edit_rates_agg.rel_pos = edit_rates_agg.rel_pos.astype(int)
-        edit_rates_agg["context"] = edit_rates_agg.apply(
-            lambda row: bdata.guides.loc[row.guide, reporter_column][
-                row.rel_pos - 1 : row.rel_pos + 1
-            ],
-            axis=1,
-        )
-    except Exception as exp:
-        print(exp)
+        edit_rates_agg["spacer_pos"] = (edit_rates_agg.rel_pos - start_pad).astype(int)
+        edit_rates_agg = edit_rates_agg[
+            (edit_rates_agg.spacer_pos >= 0) & (edit_rates_agg.spacer_pos < 20)
+        ].reset_index(drop=True)
+        edit_rates_agg.loc[:, "spacer_pos"] = edit_rates_agg["spacer_pos"] + 1
+    else:
+        edit_rates_agg["spacer_pos"] = edit_rates_agg.rel_pos + 1
+    edit_rates_agg["base_change"] = edit_rates_agg.edit.map(
+        lambda e: e.get_base_change()
+    )
+    edit_rates_agg.rel_pos = edit_rates_agg.rel_pos.astype(int)
+    edit_rates_agg["context"] = edit_rates_agg.apply(
+        lambda row: bdata.guides.loc[row.guide, reporter_column][
+            row.rel_pos - 1 : row.rel_pos + 1
+        ],
+        axis=1,
+    )
     return edit_rates_agg
 
 
@@ -190,10 +181,10 @@ def _get_norm_rates_df(
     edit_rates_df=None,
     edit_count_key="edit_counts",
     base_changes: Sequence[str] = None,
-    show_list=None,
 ):
     change_by_pos = pd.pivot(
-        edit_rates_df.groupby(["base_change", "spacer_pos"])
+        edit_rates_df[["base_change", "spacer_pos", "rep_mean"]]
+        .groupby(["base_change", "spacer_pos"])
         .sum()["rep_mean"]
         .reset_index(),
         index="spacer_pos",
@@ -203,7 +194,7 @@ def _get_norm_rates_df(
 
     norm_matrix = pd.DataFrame(index=change_by_pos.index, columns=BASES)
     for pos in norm_matrix.index:
-        pos_base = bdata.guides.Reporter.map(
+        pos_base = bdata.guides.reporter.map(
             lambda s: s[pos] if pos < len(s) else " "
         ).values
         for b in BASES:
@@ -216,10 +207,8 @@ def _get_norm_rates_df(
             :, change_by_pos.columns.map(lambda s: s.split(">")[0])
         ].values
     )
-    if show_list is None:
-        show_list = ["A>C", "A>T", "A>G", "C>T", "C>G"]
     # norm_rate_reduced = _combine_complementary_base_changes(norm_rate).astype(float)
-    return norm_rate.astype(float)[show_list]  # _reduced
+    return norm_rate.astype(float)[base_changes]  # _reduced
 
 
 def _get_possible_changes_from_target_base(target_basechange: str):
@@ -257,6 +246,8 @@ def plot_by_pos_behive(
     if nonref_base_changes is None:
         if target_basechange == "A>G":
             nonref_base_changes = ["C>T", "C>G"]
+        elif target_basechange == "C>T":
+            nonref_base_changes = ["G>A", "G>C"]
         else:
             print("No non-ref base changes specified. not drawing them")
             nonref_base_changes = []
@@ -266,10 +257,10 @@ def plot_by_pos_behive(
         bdata,
         norm_rates_df,
         edit_count_key,
-        base_changes=[
+        base_changes=ref_other_changes
+        + [
             target_basechange,
         ]
-        + ref_other_changes
         + nonref_base_changes,
     )
     fig, ax = plt.subplots(figsize=(3, 7))
@@ -278,6 +269,7 @@ def plot_by_pos_behive(
     if normalize:
         df_to_draw = df_to_draw / vmax * 100
         vmax = 100
+
     target_data = df_to_draw.copy()
     target_data.loc[:, target_data.columns != target_basechange] = np.nan
     sns.heatmap(
@@ -291,6 +283,7 @@ def plot_by_pos_behive(
         fmt=".0f" if normalize else ".2g",
         annot_kws={"fontsize": 8},
     )
+
     ref_data = df_to_draw.copy()
     ref_data.loc[
         :,
@@ -322,20 +315,19 @@ def plot_by_pos_behive(
         annot_kws={"fontsize": 8},
     )
     ax.set_ylabel("Protospacer position")
-    return ax
+    return ax, df_to_draw
 
 
-def get_position_by_pam_rates(bdata, edit_rates_df: pd.DataFrame):
-    edit_rates_df["pam"] = bdata.guides.loc[
-        edit_rates_df.guide, "5-nt PAM"
-    ].reset_index(drop=True)
+def get_position_by_pam_rates(bdata, edit_rates_df: pd.DataFrame, pam_col="5-nt PAM"):
+    edit_rates_df["pam"] = bdata.guides.loc[edit_rates_df.guide, pam_col].reset_index(
+        drop=True
+    )
     edit_rates_df["pam23"] = edit_rates_df.pam.map(lambda s: s[1:3])
-    edit_rates_df["pam2"] = edit_rates_df.pam.map(lambda s: s[1])
-    edit_rates_df["pam3"] = edit_rates_df.pam.map(lambda s: s[2])
-    edit_rates_df["pam12"] = edit_rates_df.pam.map(lambda s: s[:2])
-    edit_rates_df["pam34"] = edit_rates_df.pam.map(lambda s: s[2:4])
     return pd.pivot(
-        edit_rates_df.loc[(edit_rates_df.base_change == bdata.target_base_change)]
+        edit_rates_df.loc[
+            (edit_rates_df.base_change == bdata.target_base_change),
+            ["rep_mean", "pam23", "spacer_pos"],
+        ]
         .groupby(["pam23", "spacer_pos"])
         .mean()
         .reset_index(),
@@ -348,11 +340,12 @@ def get_position_by_pam_rates(bdata, edit_rates_df: pd.DataFrame):
 def plot_by_pos_pam(
     bdata,
     edit_rates_df,
+    pam_col="5-nt PAM",
     ax=None,
     figsize=(6, 4),
 ):
     """Plot position by PAM"""
-    pos_by_pam = get_position_by_pam_rates(bdata, edit_rates_df)
+    pos_by_pam = get_position_by_pam_rates(bdata, edit_rates_df, pam_col)
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     sns.heatmap(pos_by_pam, ax=ax, cmap="Blues")
@@ -432,6 +425,7 @@ def get_pam_preference(
 def plot_pam_preference(
     edit_rates_df,
     bdata=None,
+    pam_col="5-nt PAM",
     edit_start_pos: int = 3,
     edit_end_pos: int = 8,
     ax=None,
@@ -440,7 +434,7 @@ def plot_pam_preference(
     """ """
     if "pam2" not in edit_rates_df.columns or "pam3" not in edit_rates_df.columns:
         edit_rates_df["pam"] = bdata.guides.loc[
-            edit_rates_df.guide, "5-nt PAM"
+            edit_rates_df.guide, pam_col
         ].reset_index(drop=True)
         edit_rates_df["pam2"] = edit_rates_df.pam.map(lambda s: s[1])
         edit_rates_df["pam3"] = edit_rates_df.pam.map(lambda s: s[2])

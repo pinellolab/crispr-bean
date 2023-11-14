@@ -13,12 +13,14 @@ This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The r
 ## Overview
 `crispr-bean` supports end-to-end analysis of pooled sorting screens, with or without reporter.  
 
-<img src="imgs/dag_bean.png" alt="dag_bean.svg" width="700"/>  
+<img src="imgs/dag_bean_v2.png" alt="dag_bean_v2.svg" width="700"/>  
 
-1. [`bean-count-sample`](#bean-count-samples-count-reporter-screen-data): Base-editing-aware **mapping** of guide, optionally with reporter from `.fastq` files.  
-2. [`bean-qc`](#bean-qc-qc-of-reporter-screen-data): Quality control report and filtering out / masking of aberrant sample and guides  
-3. [`bean-filter`](#bean-filter-filtering-and-optionally-translating-alleles): Filter reporter alleles; essential for `tiling` mode that allows for all alleles generated from gRNA.
-4. [`bean-run`](#bean-run-quantify-variant-effects): Quantify targeted variants' effect sizes from screen data.  
+1. [`bean-count-sample`](#bean-count-samples-count-reporter-screen-data): Base-editing-aware **mapping** of guide, optionally with reporter from `.fastq` files.
+  *   [`bean-count-create`](#bean-create-screen-create-reporterscreen-object-from-flat-files) creates minimal ReporterScreen object from flat gRNA count file. Note that this way, allele counts are not included and many functionalities involving allele and edit counts are not supported.
+2. [`bean-profile`](#bean-profile-profile-editing-patterns): Profile editing preferences of your editor.  
+3. [`bean-qc`](#bean-qc-qc-of-reporter-screen-data): Quality control report and filtering out / masking of aberrant sample and guides  
+4. [`bean-filter`](#bean-filter-filtering-and-optionally-translating-alleles): Filter reporter alleles; essential for `tiling` mode that allows for all alleles generated from gRNA.
+5. [`bean-run`](#bean-run-quantify-variant-effects): Quantify targeted variants' effect sizes from screen data.  
 
 ### Data structure
 BEAN stores mapped gRNA and allele counts in `ReporterScreen` object which is compatible with [AnnData](https://anndata.readthedocs.io/en/latest/index.html). See [Data Structure](#data-structure) section for more information.
@@ -141,7 +143,35 @@ Optional columns are not required but can be provided for compatibility with `be
 * `--rerun` (default: `False`): Recount each sample. If `False`, existing count for each sample is taken.
 
 
+## `bean-create-screen`: Create ReporterScreen object from flat files
+```bash
+bean-create-screen gRNA_library.csv sample_list.csv gRNA_counts_table.csv
+```
+### Input
+  * [gRNA_library.csv](#1-gRNA_librarycsv)
+  * [sample_list.csv](#2-sample_listcsv)
+  * gRNA_counts_table.csv: Table with gRNA ID in the first column and sample IDs as the column names (first row)
 
+### Full Parameters
+  * `-e`, `--edits` (default: `None`): Path to edit counts .csv table, with index at first column and column names at the first row.
+  * `-o`, `--output-prefix` (default: `None`): Output file prefix (output will be saved as `output_prefix.h5ad`). If not provided, `gRNA_counts_table_csv` file prefix is used.
+
+<br/><br/>
+
+## `bean-profile`: Profile editing patterns
+```bash
+bean-profile my_sorting_screen.h5ad -o output_prefix `# Prefix for editing profile report` 
+```
+### Parameters
+  * `-o`, `--output-prefix` (default: `None`): Output prefix of editing pattern report (prefix.html, prefix.ipynb). If not provided, base name of `bdata_path` is used.
+  * `--replicate-col` (default: `"rep"`): Column name in `bdata.samples` that describes replicate ID.
+  * `--condition-col` (default: `"bin"`): Column name in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.)
+  * `--pam-col` (default: `None`): Column name describing PAM of each gRNA in `bdata.guides`.
+  * `--control-condition` (default: `"bulk"`): Control condition where editing preference would be profiled at. Pre-filters data where `bdata.samples[condition_col] == control_condition`.
+  * `-w`, `--window-length` (default: `6`): Window length of editing window of maximal editing efficiency to be identified. This window is used to quantify context specificity within the window.
+
+### Output
+Above command produces `prefix_editing_preference.[html,ipynb]` as editing preferences ([see example](notebooks/profile_editing_preference.ipynb)).  
 
 <br/><br/>
 

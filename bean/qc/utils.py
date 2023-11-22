@@ -84,7 +84,7 @@ def parse_args():
         "--count-correlation-thres",
         help="Correlation threshold to mask out.",
         type=float,
-        default=0.8,
+        default=0.7,
     )
     parser.add_argument(
         "--edit-rate-thres",
@@ -115,6 +115,12 @@ def parse_args():
         help="Values in of column in `ReporterScreen.samples[condition_label]` for LFC will be calculated between, delimited by comma",
         type=str,
         default="top,bot",
+    )
+    parser.add_argument(
+        "--ctrl-cond",
+        help="Values in of column in `ReporterScreen.samples[condition_label]` for guide-level editing rate to be calculated",
+        type=str,
+        default="bulk",
     )
     parser.add_argument(
         "--recalculate-edits",

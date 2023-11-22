@@ -256,3 +256,14 @@ def _obtain_effective_edit_rate(ndata, count_thres=10):
 
 def _obtain_n_guides_alleles_per_variant(ndata):
     return (ndata.allele_to_edit.sum(axis=1) > 0).sum(axis=0)
+
+
+def _obtain_n_cooccurring_variants(ndata) -> np.ndarray:
+    """Obtain the number of co-occurring variants in any allele produced by any guides."""
+    allele_to_edit = ndata.allele_to_edit.cpu()
+    n_coedited_vars_edits = []
+    for edit_idx in range(allele_to_edit.shape[-1]):
+        gidx, aidx = torch.where(allele_to_edit[:, :, edit_idx] > 0)
+        n_coedited_vars = (allele_to_edit[gidx, aidx, :].sum(axis=0) > 0).sum() - 1
+        n_coedited_vars_edits.append(n_coedited_vars)
+    return np.array(n_coedited_vars_edits)

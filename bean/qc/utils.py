@@ -84,7 +84,7 @@ def parse_args():
         "--count-correlation-thres",
         help="Correlation threshold to mask out.",
         type=float,
-        default=0.8,
+        default=0.7,
     )
     parser.add_argument(
         "--edit-rate-thres",

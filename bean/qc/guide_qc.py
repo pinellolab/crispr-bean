@@ -30,7 +30,7 @@ def get_outlier_guides_and_mask(
     ).fillna(1)
     print(outlier_guides)
     for _, row in outlier_guides.iterrows():
-        mask.loc[row[bdata.guides.index.name], row[replicate_col]] = 0
+        mask.loc[row["name"], row[replicate_col]] = 0
     return outlier_guides, mask
 
 

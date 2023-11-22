@@ -199,7 +199,10 @@ def main(args, bdata):
         target_info_df["n_guides"] = _obtain_n_guides_alleles_per_variant(ndata).cpu()
         target_info_df["n_coocc"] = _obtain_n_cooccurring_variants(ndata)
         if args.adjust_confidence_by_negative_control:
-            adj_negctrl_idx = np.where(target_info_df.ref == target_info_df.alt)[0]
+            adj_negctrl_idx = np.where(
+                (target_info_df.ref == target_info_df.alt)
+                & (target_info_df.coding == "coding")
+            )[0]
             print("syn idx: ", adj_negctrl_idx)
 
     guide_info_df = ndata.screen.guides

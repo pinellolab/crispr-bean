@@ -117,6 +117,12 @@ def parse_args():
         default="top,bot",
     )
     parser.add_argument(
+        "--ctrl_cond",
+        help="Values in of column in `ReporterScreen.samples[condition_label]` for guide-level editing rate to be calculated",
+        type=str,
+        default="bulk",
+    )
+    parser.add_argument(
         "--recalculate-edits",
         help="Even when ReporterScreen.layers['edit_count'] exists, recalculate the edit counts from ReporterScreen.uns['allele_count'].",
         action="store_true",

@@ -211,6 +211,7 @@ Above command produces
 * `--posctrl-val` (default: `PosCtrl`): Value in .h5ad.guides[`posctrl_col`] that specifies guide will be used as the positive control in calculating log fold change.
 * `--lfc-thres` (default: `0.1`): Positive guides' correlation threshold to filter out.
 * `--lfc-conds` (default: `"top,bot"`): Values in of column in `ReporterScreen.samples[condition_label]` for LFC will be calculated between, delimited by comma
+* `--ctrl-cond` (default: `"bulk"`): Value in of column in `ReporterScreen.samples[condition_label]` where guide-level editing rate to be calculated
 * `--recalculate-edits` (default: `False`): Even when `ReporterScreen.layers['edit_count']` exists, recalculate the edit counts from `ReporterScreen.uns['allele_count']`."
 
 <br/><br/>

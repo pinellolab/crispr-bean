@@ -440,7 +440,7 @@ class VariantScreenData(ScreenData):
     def get_target_lengths(self, screen, target_col="target"):
         target_len_list = []
         screen.guides[target_col] = screen.guides[target_col].astype("category")
-        cur_item = screen.guides[target_col].cat.codes[0]
+        cur_item = screen.guides[target_col].cat.codes.iloc[0]
         cur_len = 0
         n_targets = 0
         for i in screen.guides[target_col].cat.codes:

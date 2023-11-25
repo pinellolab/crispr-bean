@@ -2,6 +2,7 @@
 import os
 import sys
 import logging
+import warnings
 from copy import deepcopy
 from functools import partial
 import numpy as np
@@ -57,6 +58,17 @@ DATACLASS_DICT = {
     "MultiMixtureNormal": TilingSortingReporterScreenData,
     "MultiMixtureNormal+Acc": TilingSortingReporterScreenData,
 }
+
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=r".*is_categorical_dtype is deprecated and will be removed in a future version.*",
+)
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=r".*FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas.*",
+)
 
 
 def identify_model_guide(args):

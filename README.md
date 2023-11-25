@@ -201,6 +201,8 @@ Above command produces
 * `--tiling` (default: `None`): If set as `True` or `False`, it sets the screen object to be tiling (`True`) or variant (`False`)-targeting screen when calculating editing rate. 
 * `--replicate-label` (default: `"rep"`): Label of column in `bdata.samples` that describes replicate ID.
 * `--condition-label` (default: `"bin"`)": Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.).
+* `--sample-covariates` (default: `None`): Comma-separated list of column names in `bdata.samples` that describes non-selective experimental condition (drug treatment, etc.). The values in the `bdata.samples` should NOT contain `.`. 
+* `--no-editing` (default: `False`): Ignore QC about editing. Can be used for QC of other editing modalities.
 * `--target-pos-col` (default: `"target_pos"`): Target position column in `bdata.guides` specifying target edit position in reporter.
 * `--rel-pos-is-reporter` (default: `False`): Specifies whether `edit_start_pos` and `edit_end_pos` are relative to reporter position. If `False`, those are relative to spacer position.
 * `--edit-start-pos` (default: `2`): Edit start position to quantify editing rate on, 0-based inclusive.

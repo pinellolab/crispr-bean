@@ -219,10 +219,10 @@ def _assign_rep_ids_and_sort(
             sort_key = f"{rep_col}_id"
         else:
             sort_key = [f"{rep_col}_id", f"{condition_column}_id"]
-        screen = screen[
-            :,
-            screen.samples.sort_values(sort_key).index,
-        ]
+    screen = screen[
+        :,
+        screen.samples.sort_values(sort_key).index,
+    ]
     return screen
 
 

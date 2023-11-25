@@ -99,6 +99,8 @@ class ReporterScreen(Screen):
             self.layers["X_bcmatch"] = X_bcmatch
         for k, df in self.uns.items():
             if not isinstance(df, pd.DataFrame):
+                if k == "sample_covariates" and not isinstance(df, list):
+                    self.uns[k] = df.tolist()
                 continue
             if "guide" in df.columns and len(df) > 0:
                 if (
@@ -325,13 +327,13 @@ class ReporterScreen(Screen):
             if k.startswith("repguide_mask"):
                 if "sample_covariates" in adata.uns:
                     adata.var["_rc"] = adata.var[
-                        ["rep"] + adata.uns["sample_covariates"]
+                        ["rep"] + list(adata.uns["sample_covariates"])
                     ].values.tolist()
                     adata.var["_rc"] = adata.var["_rc"].map(
                         lambda slist: ".".join(slist)
                     )
                     new_uns[k] = df.loc[guides_include, adata.var._rc.unique()]
-                    adata.var.pop("_rc")
+                    #adata.var.pop("_rc")
                 else:
                     new_uns[k] = df.loc[guides_include, adata.var.rep.unique()]
             if not isinstance(df, pd.DataFrame):

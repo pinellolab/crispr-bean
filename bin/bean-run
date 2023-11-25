@@ -2,6 +2,8 @@
 import os
 import sys
 import logging
+import warnings
+from functools import partial
 from copy import deepcopy
 import numpy as np
 import pandas as pd
@@ -43,6 +45,11 @@ warn = logging.warning
 debug = logging.debug
 info = logging.info
 pyro.set_rng_seed(101)
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=r".*is_categorical_dtype is deprecated and will be removed in a future version.*",
+)
 
 
 def main(args, bdata):
@@ -127,8 +134,15 @@ def main(args, bdata):
             run_inference(model, guide, ndata, num_steps=args.n_iter)
         )
         if args.fit_negctrl:
-            negctrl_model = m.ControlNormalModel
-            negctrl_guide = m.ControlNormalGuide
+            negctrl_model = partial(
+                m.ControlNormalModel,
+                use_bcmatch=(not args.ignore_bcmatch and "X_bcmatch" in bdata.layers),
+            )
+            print((not args.ignore_bcmatch and "X_bcmatch" in bdata.layers))
+            negctrl_guide = partial(
+                m.ControlNormalGuide,
+                use_bcmatch=(not args.ignore_bcmatch and "X_bcmatch" in bdata.layers),
+            )
             negctrl_idx = np.where(
                 guide_info_df[args.negctrl_col].map(lambda s: s.lower())
                 == args.negctrl_col_value.lower()
@@ -137,7 +151,7 @@ def main(args, bdata):
             print(negctrl_idx.shape)
             ndata_negctrl = ndata[negctrl_idx]
             param_history_dict["negctrl"] = run_inference(
-                negctrl_model, negctrl_guide, ndata_negctrl
+                negctrl_model, negctrl_guide, ndata_negctrl, num_steps=args.n_iter
             )
 
     outfile_path = (

@@ -60,17 +60,34 @@ class ScreenData(abc.ABC):
         self.device = device
         screen.samples["size_factor"] = self.get_size_factor(screen.X)
         if not (
-            "rep" in screen.samples.columns
+            replicate_column in screen.samples.columns
             and condition_column in screen.samples.columns
         ):
-            screen.samples["rep"], screen.samples[condition_column] = zip(
+            screen.samples[replicate_column], screen.samples[condition_column] = zip(
                 *screen.samples.index.map(lambda s: s.rsplit("_", 1))
             )
         if condition_column not in screen.samples.columns:
             screen.samples[condition_column] = screen.samples["index"].map(
                 lambda s: s.split("_")[-1]
             )
-
+        if "sample_covariates" in screen.uns:
+            self.sample_covariates = screen.uns["sample_covariates"]
+            self.n_sample_covariates = len(self.sample_covariates)
+            screen.samples["_rc"] = screen.samples[
+                [replicate_column] + self.sample_covariates
+            ].values.tolist()
+            screen.samples["_rc"] = screen.samples["_rc"].map(
+                lambda slist: ".".join(slist)
+            )
+            self.rep_by_cov = torch.as_tensor(
+                (
+                    screen.samples[["_rc"] + self.sample_covariates]
+                    .drop_duplicates()
+                    .set_index("_rc")
+                    .values.astype(int)
+                )
+            )
+            replicate_column = "_rc"
         self.screen = screen
         if not control_can_be_selected:
             self.screen_selected = screen[
@@ -146,7 +163,7 @@ class ScreenData(abc.ABC):
             ).all()
             assert (
                 self.screen_selected.uns[self.repguide_mask].columns
-                == self.screen_selected.samples.rep.unique()
+                == self.screen_selected.samples[self.replicate_column].unique()
             ).all()
             self.repguide_mask = (
                 torch.as_tensor(self.screen_selected.uns[self.repguide_mask].values.T)
@@ -182,6 +199,7 @@ class ScreenData(abc.ABC):
         ndata.X_masked = ndata.X_masked[:, :, guide_idx]
         ndata.X_control = ndata.X_control[:, :, guide_idx]
         ndata.repguide_mask = ndata.repguide_mask[:, guide_idx]
+        ndata.a0 = ndata.a0[guide_idx]
         return ndata
 
     def transform_data(self, X, n_bins=None):
@@ -905,9 +923,20 @@ class SortingScreenData(ScreenData):
         self.screen.samples.loc[
             self.screen_selected.samples.index, f"{self.condition_column}_id"
         ] = self.screen_selected.samples[f"{self.condition_column}_id"]
+        print(self.screen.samples.columns)
         self.screen = _assign_rep_ids_and_sort(
             self.screen, self.replicate_column, self.condition_column
         )
+        print(self.screen.samples.columns)
+        if self.sample_covariates is not None:
+            self.rep_by_cov = torch.as_tensor(
+                (
+                    self.screen.samples[["_rc"] + self.sample_covariates]
+                    .drop_duplicates()
+                    .set_index("_rc")
+                    .values.astype(int)
+                )
+            )
         self.screen_selected = _assign_rep_ids_and_sort(
             self.screen_selected, self.replicate_column, self.condition_column
         )
@@ -986,8 +1015,12 @@ class SurvivalScreenData(ScreenData):
         self.screen = _assign_rep_ids_and_sort(
             self.screen, self.replicate_column, self.time_column
         )
+        if self.sample_covariates is not None:
+            self.rep_by_cov = self.screen.samples.groupby(self.replicate_column)[
+                self.sample_covariates
+            ].values
         self.screen_selected = _assign_rep_ids_and_sort(
-            self.screen_selected, self.replicate_column, self.time_column
+            self.screen_selected, self.replicate_column, self.condition_column
         )
         self.screen_control = _assign_rep_ids_and_sort(
             self.screen_control,

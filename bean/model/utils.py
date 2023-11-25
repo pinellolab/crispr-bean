@@ -8,17 +8,23 @@ import pyro.distributions.constraints as constraints
 def get_alpha(
     expected_guide_p, size_factor, sample_mask, a0, epsilon=1e-5, normalize_by_a0=True
 ):
-    p = (
-        expected_guide_p.permute(0, 2, 1) * size_factor[:, None, :]
-    )  # (n_reps, n_guides, n_bins)
-    if normalize_by_a0:
-        a = (
-            (p + epsilon / p.shape[-1])
-            / (p.sum(axis=-1)[:, :, None] + epsilon)
-            * a0[None, :, None]
-        )
-        a = (a * sample_mask[:, None, :]).clamp(min=epsilon)
-        return a
+    try:
+        p = (
+            expected_guide_p.permute(0, 2, 1) * size_factor[:, None, :]
+        )  # (n_reps, n_guides, n_bins)
+
+        if normalize_by_a0:
+            a = (
+                (p + epsilon / p.shape[-1])
+                / (p.sum(axis=-1)[:, :, None] + epsilon)
+                * a0[None, :, None]
+            )
+            a = (a * sample_mask[:, None, :]).clamp(min=epsilon)
+            return a
+    except:
+        print(size_factor.shape)
+        print(expected_guide_p.shape)
+        print(a0.shape)
     a = (p * sample_mask[:, None, :]).clamp(min=epsilon)
     return a
 

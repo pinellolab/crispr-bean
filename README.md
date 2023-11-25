@@ -97,7 +97,7 @@ File should contain following columns with header.
 * `R1_filepath`: Path to read 1 `.fastq[.gz]` file
 * `R2_filepath`: Path to read 1 `.fastq[.gz]` file
 * `sample_id`: ID of sequencing sample
-* `rep [Optional]`: Replicate # of this sample
+* `rep [Optional]`: Replicate # of this sample (Should NOT contain `.`)
 * `bin [Optional]`: Name of the sorting bin
 * `upper_quantile [Optional]`: FACS sorting upper quantile
 * `lower_quantile [Optional]`: FACS sorting lower quantile  

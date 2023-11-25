@@ -2,7 +2,7 @@ import sys
 import abc
 import logging
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 from xmlrpc.client import Boolean
 from copy import deepcopy
 import torch
@@ -40,6 +40,7 @@ class ScreenData(abc.ABC):
         sample_mask_column: str = None,
         shrink_alpha: bool = False,
         condition_column: str = "sort",
+        sample_covariate_column: List[str] = [],
         control_condition: str = "bulk",
         accessibility_col: str = None,
         accessibility_bw_path: str = None,
@@ -51,6 +52,7 @@ class ScreenData(abc.ABC):
     ):
         """
         Args
+        condition_column: By default, a single condition column, but you can optionally inlcude sample covariate column
         control_can_be_selected: If True, screen.samples[condition_column] == control_condition can also be included in effect size inference if its condition column is not NA (Currently only suppoted for prolifertion screens).
         """
         # TODO: remove replicate with too small number of (ex. only 1) sorting bin
@@ -821,6 +823,7 @@ class SortingScreenData(ScreenData):
         sample_mask_column: str = None,
         shrink_alpha: bool = False,
         condition_column: str = "sort",
+        sample_covariate_column: List[str] = [],
         control_condition: str = "bulk",
         lower_quantile_column: str = "lower_quantile",
         upper_quantile_column: str = "upper_quantile",

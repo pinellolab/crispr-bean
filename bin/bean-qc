@@ -34,6 +34,7 @@ def main():
             ctrl_cond=args.ctrl_cond,
             exp_id=args.out_report_prefix,
             recalculate_edits=args.recalculate_edits,
+            base_edit_data=args.base_edit_data,
         ),
         kernel_name="bean_python3",
     )

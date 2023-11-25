@@ -323,8 +323,20 @@ class ReporterScreen(Screen):
         new_uns = deepcopy(self.uns)
         for k, df in adata.uns.items():
             if k.startswith("repguide_mask"):
-                new_uns[k] = df.loc[guides_include, adata.var.rep.unique()]
+                if "sample_covariates" in adata.uns:
+                    adata.var["_rc"] = adata.var[
+                        ["rep"] + adata.uns["sample_covariates"]
+                    ].values.tolist()
+                    adata.var["_rc"] = adata.var["_rc"].map(
+                        lambda slist: ".".join(slist)
+                    )
+                    new_uns[k] = df.loc[guides_include, adata.var._rc.unique()]
+                    adata.var.pop("_rc")
+                else:
+                    new_uns[k] = df.loc[guides_include, adata.var.rep.unique()]
             if not isinstance(df, pd.DataFrame):
+                if k == "sample_covariates":
+                    new_uns[k] = df
                 continue
             if "guide" in df.columns:
                 if "allele" in df.columns:
@@ -892,7 +904,7 @@ def concat(screens: Collection[ReporterScreen], *args, axis=1, **kwargs):
 
     if axis == 0:
         for k in keys:
-            if k in ["target_base_change", "tiling"]:
+            if k in ["target_base_change", "tiling", "sample_covariates"]:
                 adata.uns[k] = screens[0].uns[k]
                 continue
             elif "edit" not in k and "allele" not in k:
@@ -902,7 +914,7 @@ def concat(screens: Collection[ReporterScreen], *args, axis=1, **kwargs):
     if axis == 1:
         # If combining multiple samples, edit/allele tables should be merged.
         for k in keys:
-            if k in ["target_base_change", "tiling"]:
+            if k in ["target_base_change", "tiling", "sample_covariates"]:
                 adata.uns[k] = screens[0].uns[k]
                 continue
             elif "edit" not in k and "allele" not in k:

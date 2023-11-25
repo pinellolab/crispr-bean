@@ -1,4 +1,4 @@
-from typing import Union, Sequence, Optional
+from typing import Union, Sequence, Optional, List
 import numpy as np
 import pandas as pd
 from statistics import NormalDist
@@ -58,6 +58,7 @@ def write_result_table(
     guide_index: Optional[Sequence[str]] = None,
     guide_acc: Optional[Sequence] = None,
     sd_is_fitted: bool = True,
+    sample_covariates: List[str] = None,
     return_result: bool = False,
 ) -> Union[pd.DataFrame, None]:
     """Combine target information and scores to write result table to a csv file or return it."""
@@ -82,6 +83,24 @@ def write_result_table(
     }
     if sd_is_fitted:
         param_dict["sd"] = sd
+    if sample_covariates is not None:
+        assert (
+            "mu_cov_loc" in param_hist_dict["params"]
+            and "mu_cov_scale" in param_hist_dict["params"]
+        ), param_hist_dict["params"].keys()
+        for i, sample_cov in enumerate(sample_covariates):
+            param_dict[f"mu_{sample_cov}"] = (
+                mu + param_hist_dict["params"]["mu_cov_loc"].detach().cpu().numpy()[i]
+            )
+            param_dict[f"mu_sd_{sample_cov}"] = np.sqrt(
+                mu_sd**2
+                + param_hist_dict["params"]["mu_cov_scale"].detach().cpu().numpy()[i]
+                ** 2
+            )
+            param_dict[f"mu_z_{sample_cov}"] = (
+                param_dict[f"mu_{sample_cov}"] / param_dict[f"mu_sd_{sample_cov}"]
+            )
+
     fit_df = pd.DataFrame(param_dict)
     fit_df["novl"] = get_novl(fit_df, "mu", "mu_sd")
     if "negctrl" in param_hist_dict.keys():
@@ -102,6 +121,17 @@ def write_result_table(
         if sd_is_fitted:
             fit_df["sd_scaled"] = sd / sd0
         fit_df["novl_scaled"] = get_novl(fit_df, "mu_scaled", "mu_sd_scaled")
+        if sample_covariates is not None:
+            for i, sample_cov in enumerate(sample_covariates):
+                fit_df[f"mu_{sample_cov}_scaled"] = (
+                    fit_df[f"mu_{sample_cov}"] - mu0
+                ) / sd0
+                fit_df[f"mu_sd_{sample_cov}_scaled"] = (
+                    fit_df[f"mu_sd_{sample_cov}"] / sd0
+                )
+                fit_df[f"mu_z_{sample_cov}_scaled"] = (
+                    fit_df[f"mu_{sample_cov}_scaled"] / fit_df["mu_sd_scaled"]
+                )
 
     fit_df = pd.concat(
         [target_info_df.reset_index(), fit_df.reset_index(drop=True)], axis=1
@@ -132,6 +162,22 @@ def write_result_table(
                 else "mu_sd",
             )
             fit_df = add_credible_interval(fit_df, "mu_adj", "mu_sd_adj")
+            if sample_covariates is not None:
+                for i, sample_cov in enumerate(sample_covariates):
+                    fit_df = adjust_normal_params_by_control(
+                        fit_df,
+                        std,
+                        suffix=f"_{sample_cov}_adj",
+                        mu_adjusted_col=f"mu_{sample_cov}_scaled"
+                        if "negctrl" in param_hist_dict.keys()
+                        else f"mu_{sample_cov}",
+                        mu_sd_adjusted_col=f"mu_sd_{sample_cov}_scaled"
+                        if "negctrl" in param_hist_dict.keys()
+                        else f"mu_sd_{sample_cov}",
+                    )
+                    fit_df = add_credible_interval(
+                        fit_df, f"mu_{sample_cov}_adj", f"mu_sd_{sample_cov}_adj"
+                    )
 
     if write_fitted_eff or guide_acc is not None:
         if "alpha_pi" not in param_hist_dict["params"].keys():

@@ -138,7 +138,7 @@ def main(args, bdata):
                 m.ControlNormalModel,
                 use_bcmatch=(not args.ignore_bcmatch and "X_bcmatch" in bdata.layers),
             )
-            print((not args.ignore_bcmatch and "X_bcmatch" in bdata.layers))
+
             negctrl_guide = partial(
                 m.ControlNormalGuide,
                 use_bcmatch=(not args.ignore_bcmatch and "X_bcmatch" in bdata.layers),
@@ -147,8 +147,9 @@ def main(args, bdata):
                 guide_info_df[args.negctrl_col].map(lambda s: s.lower())
                 == args.negctrl_col_value.lower()
             )[0]
-            print(len(negctrl_idx))
-            print(negctrl_idx.shape)
+            info(
+                f"Using {len(negctrl_idx)} negative control elements to adjust phenotypic effect sizes..."
+            )
             ndata_negctrl = ndata[negctrl_idx]
             param_history_dict["negctrl"] = run_inference(
                 negctrl_model, negctrl_guide, ndata_negctrl, num_steps=args.n_iter
@@ -180,6 +181,7 @@ def main(args, bdata):
         adjust_confidence_by_negative_control=args.adjust_confidence_by_negative_control,
         adjust_confidence_negatives=adj_negctrl_idx,
         sd_is_fitted=(args.selection == "sorting"),
+        sample_covariates=ndata.sample_covariates,
     )
     info("Done!")
 

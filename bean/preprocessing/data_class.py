@@ -923,11 +923,9 @@ class SortingScreenData(ScreenData):
         self.screen.samples.loc[
             self.screen_selected.samples.index, f"{self.condition_column}_id"
         ] = self.screen_selected.samples[f"{self.condition_column}_id"]
-        print(self.screen.samples.columns)
         self.screen = _assign_rep_ids_and_sort(
             self.screen, self.replicate_column, self.condition_column
         )
-        print(self.screen.samples.columns)
         if self.sample_covariates is not None:
             self.rep_by_cov = torch.as_tensor(
                 (

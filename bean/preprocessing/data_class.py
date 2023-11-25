@@ -929,7 +929,7 @@ class SurvivalScreenData(ScreenData):
         replicate_column: str = "rep",
         **kwargs,
     ):
-        self._pre_init(condition_column)
+        screen = self._pre_init(screen, condition_column, time_column, condition_column)
         super().__init__(
             screen=screen,
             repguide_mask=repguide_mask,
@@ -942,8 +942,13 @@ class SurvivalScreenData(ScreenData):
         )
         self._post_init()
 
-    def _pre_init(self, time_column: str, condition_column: str):
-        self.time_column = time_column
+    def _pre_init(
+        self,
+        time_column: str,
+        condition_column: str,
+        control_condition: str,
+        normalized_time_column: str = "_time_normed",
+    ):
         if not np.issubdtype(self.screen.samples[time_column].dtype, np.number):
             raise ValueError(
                 f"Invalid timepoint value({self.screen.samples[time_column]}) in screen.samples[{time_column}]: check input."
@@ -956,6 +961,28 @@ class SurvivalScreenData(ScreenData):
             raise ValueError(
                 f"Not all replicate share same timepoint definition. If you have missing bin data, add the sample and add 'mask' column in 'screen.samples', or run `bean-qc` that automatically handles this. \n{self.screen.samples}"
             )
+
+        self.screen.samples[normalized_time_column] = (
+            self.screen.samples[time_column] - self.screen.samples[time_column].min()
+        ) / (
+            self.screen.samples[time_column].max()
+            - self.screen.samples[time_column].min()
+        )
+        self.screen_selected.samples[normalized_time_column] = (
+            self.screen_selected.samples[time_column]
+            - self.screen.samples[time_column].min()
+        ) / (
+            self.screen.samples[time_column].max()
+            - self.screen.samples[time_column].min()
+        )
+        self.screen_control.samples[normalized_time_column] = (
+            self.screen_control.samples[time_column]
+            - self.screen.samples[time_column].min()
+        ) / (
+            self.screen.samples[time_column].max()
+            - self.screen.samples[time_column].min()
+        )
+        self.time_column = normalized_time_column
 
     def _post_init(
         self,
@@ -1212,6 +1239,7 @@ class VariantSurvivalScreenData(VariantScreenData, SurvivalScreenData):
         replicate_column="rep",
         condition_column="condition",
         time_column="time",
+        control_condition="bulk",
         control_can_be_selected=True,
         target_col="target",
         sample_mask_column="mask",
@@ -1226,12 +1254,15 @@ class VariantSurvivalScreenData(VariantScreenData, SurvivalScreenData):
             sample_mask_column=sample_mask_column,
             replicate_column=replicate_column,
             condition_column=condition_column,
+            control_condition=control_condition,
             time_column=time_column,
             shrink_alpha=shrink_alpha,
             control_can_be_selected=control_can_be_selected,
             **kwargs,
         )
-        SurvivalScreenData._pre_init(self, time_column, condition_column)
+        SurvivalScreenData._pre_init(
+            self, time_column, condition_column, control_condition
+        )
         ScreenData._post_init(self)
         SurvivalScreenData._post_init(self)
         VariantScreenData._post_init(self, target_col)
@@ -1282,6 +1313,7 @@ class VariantSurvivalReporterScreenData(VariantReporterScreenData, SurvivalScree
         replicate_column="rep",
         condition_column="condition",
         time_column="time",
+        control_condition="control",
         control_can_be_selected=True,
         target_col="target",
         sample_mask_column="mask",
@@ -1299,12 +1331,15 @@ class VariantSurvivalReporterScreenData(VariantReporterScreenData, SurvivalScree
             sample_mask_column=sample_mask_column,
             replicate_column=replicate_column,
             condition_column=condition_column,
+            control_condition=control_condition,
             time_column=time_column,
             shrink_alpha=shrink_alpha,
             control_can_be_selected=control_can_be_selected,
             **kwargs,
         )
-        SurvivalScreenData._pre_init(self, time_column, condition_column)
+        SurvivalScreenData._pre_init(
+            self, time_column, condition_column, control_condition
+        )
         ScreenData._post_init(self)
         SurvivalScreenData._post_init(self)
         VariantScreenData._post_init(self, target_col)
@@ -1328,6 +1363,7 @@ class TilingSurvivalReporterScreenData(TilingReporterScreenData, SurvivalScreenD
         replicate_column="rep",
         condition_column="condition",
         time_column="time",
+        control_condition="control",
         control_can_be_selected=True,
         sample_mask_column="mask",
         use_const_pi: bool = False,
@@ -1347,12 +1383,15 @@ class TilingSurvivalReporterScreenData(TilingReporterScreenData, SurvivalScreenD
             sample_mask_column=sample_mask_column,
             replicate_column=replicate_column,
             condition_column=condition_column,
+            control_condition=control_condition,
             time_column=time_column,
             shrink_alpha=shrink_alpha,
             control_can_be_selected=control_can_be_selected,
             **kwargs,
         )
-        SurvivalScreenData._pre_init(self, time_column, condition_column)
+        SurvivalScreenData._pre_init(
+            self, time_column, condition_column, control_condition
+        )
         ScreenData._post_init(self)
         SurvivalScreenData._post_init(self)
         TilingReporterScreenData._post_init(

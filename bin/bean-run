@@ -59,19 +59,6 @@ warnings.filterwarnings(
 )
 
 
-DATACLASS_DICT = {
-    "Normal": VariantSortingScreenData,
-    "MixtureNormal": VariantSortingReporterScreenData,
-    "_MixtureNormal+Acc": VariantSortingReporterScreenData,  # TODO: old
-    "MixtureNormal+Acc": VariantSortingReporterScreenData,
-    "MixtureNormalConstPi": VariantSortingScreenData,
-    "MultiMixtureNormal": TilingSortingReporterScreenData,
-    "MultiMixtureNormal+Acc": TilingSortingReporterScreenData,
-}
-
-
-
-
 def main(args, bdata):
     if args.cuda:
         os.environ["CUDA_VISIBLE_DEVICES"] = "1"

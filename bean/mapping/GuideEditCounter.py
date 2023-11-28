@@ -490,7 +490,7 @@ class GuideEditCounter:
             )
 
     def _get_guide_counts_bcmatch_semimatch(
-        self, bcmatch_layer="X_bcmatch", semimatch_layer="X"
+        self, bcmatch_layer="X_bcmatch", semimatch_layer="X_semimatch"
     ):
         self.screen.layers[semimatch_layer] = np.zeros_like((self.screen.X))
         R1_iter, R2_iter = self._get_fastq_iterators(

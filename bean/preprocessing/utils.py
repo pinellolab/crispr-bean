@@ -3,8 +3,8 @@ import torch
 import numpy as np
 import pyBigWig
 import pandas as pd
-import anndata as ad
 import bean as be
+from bean.qc.guide_qc import filter_no_info_target
 
 
 class Alias:
@@ -19,6 +19,35 @@ class Alias:
 
     def __set__(self, obj, value):
         setattr(obj, self.source_name, value)
+
+
+def prepare_bdata(bdata: be.ReporterScreen, args, warn, prefix: str):
+    """Utility function for formatting bdata for bean-run"""
+    bdata = bdata.copy()
+    bdata.samples[args.replicate_col] = bdata.samples[args.replicate_col].astype(
+        "category"
+    )
+    bdata.guides = bdata.guides.loc[:, ~bdata.guides.columns.duplicated()].copy()
+    if args.library_design == "variant":
+        if bdata.guides[args.target_col].isnull().any():
+            raise ValueError(
+                f"Some target column (bdata.guides[{args.target_col}]) value is null. Check your input file."
+            )
+        bdata = bdata[bdata.guides[args.target_col].argsort(), :]
+        n_no_support_targets, bdata = filter_no_info_target(
+            bdata,
+            condit_col=args.condition_col,
+            control_condition=args.control_condition_label,
+            target_col=args.target_col,
+            write_no_support_targets=True,
+            no_support_target_write_path=f"{prefix}/no_support_targets.csv",
+        )
+        if n_no_support_targets > 0:
+            warn(
+                f"Ignoring {n_no_support_targets} targets with 0 gRNA counts across all non-control samples. Ignored targets are written in {prefix}/no_support_targets.csv."
+            )
+        return bdata
+    return bdata
 
 
 def _get_accessibility_single(
@@ -191,10 +220,10 @@ def _assign_rep_ids_and_sort(
             sort_key = f"{rep_col}_id"
         else:
             sort_key = [f"{rep_col}_id", f"{condition_column}_id"]
-        screen = screen[
-            :,
-            screen.samples.sort_values(sort_key).index,
-        ]
+    screen = screen[
+        :,
+        screen.samples.sort_values(sort_key).index,
+    ]
     return screen
 
 

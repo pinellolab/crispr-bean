@@ -1,3 +1,4 @@
+from typing import Optional, Tuple
 import numpy as np
 import torch
 from scipy.optimize import curve_fit
@@ -71,8 +72,9 @@ def get_fitted_alpha0(
     sample_size_factors,
     sample_mask=None,
     fit_quantile: float = None,
-    shrink=False,
-    shrink_prior_var=1.0,
+    shrink: bool = False,
+    shrink_prior_var: float = 1.0,
+    popt: Optional[Tuple[float, float]] = None,
 ):
     """Fits sum of concentration of DirichletMultinomial distribution.
 
@@ -80,6 +82,7 @@ def get_fitted_alpha0(
         fit: if False, return the raw value
         fit_quantile: if not None, alpha is fitted conservatively with lowest `fit_quantile`
             guides.
+        popt: Regression coefficient (b0, b1) of log(a0) ~ log(q) that will be used if fitting dispersion on the data fails
     """
     n_reps, n_condits, n_guides = X.shape
     if sample_mask is None:
@@ -98,7 +101,8 @@ def get_fitted_alpha0(
 
     x, y = get_valid_vals(n.log(), a0.log())
     if len(y) < 10:
-        popt = (-1.510, 0.7861)
+        if popt is None:
+            popt = (-1.510, 0.7861)
         print(
             f"Cannot fit log(a0) ~ log(q): data too sparse! Using pre-fitted values [b0, b1]={popt}"
         )

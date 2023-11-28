@@ -397,8 +397,8 @@ def run_inference(
 def identify_model_guide(args):
     if args.selection == "sorting":
         m = sorting_model
-    else:
-        m = survival_model
+    # else:
+    #     m = survival_model
     if args.library_design == "tiling":
         info("Using Mixture Normal model...")
         return (

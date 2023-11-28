@@ -8,7 +8,8 @@ import logging
 from functools import partial
 import pyro
 import bean.model.model as sorting_model
-import bean.model.survival_model as survival_model
+
+# import bean.model.survival_model as survival_model
 
 logging.basicConfig(
     level=logging.INFO,

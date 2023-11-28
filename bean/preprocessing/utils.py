@@ -47,6 +47,7 @@ def prepare_bdata(bdata: be.ReporterScreen, args, warn, prefix: str):
                 f"Ignoring {n_no_support_targets} targets with 0 gRNA counts across all non-control samples. Ignored targets are written in {prefix}/no_support_targets.csv."
             )
         return bdata
+    return bdata
 
 
 def _get_accessibility_single(

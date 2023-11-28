@@ -2,7 +2,7 @@ import sys
 import abc
 import logging
 from dataclasses import dataclass
-from typing import Dict, Tuple, List
+from typing import Optional, Dict, Tuple, List
 from xmlrpc.client import Boolean
 from copy import deepcopy
 import torch
@@ -46,7 +46,8 @@ class ScreenData(abc.ABC):
         accessibility_bw_path: str = None,
         device: str = None,
         replicate_column: str = "rep",
-        pi_popt: Tuple[float] = None,
+        popt: Optional[Tuple[float]] = None,
+        pi_popt: Optional[Tuple[float]] = None,
         control_can_be_selected: bool = False,
         **kwargs,
     ):
@@ -113,10 +114,9 @@ class ScreenData(abc.ABC):
         self.sample_mask_column = sample_mask_column
         self.repguide_mask = repguide_mask
         self.shrink_alpha = shrink_alpha
+        self.popt = popt
 
-    def _post_init(
-        self,
-    ):
+    def _post_init(self):
         # Assign accessibility info
         if self.accessibility_col is not None:
             self.guide_accessibility = torch.as_tensor(
@@ -185,6 +185,7 @@ class ScreenData(abc.ABC):
             self.size_factor.clone().cpu(),
             self.sample_mask.cpu(),
             shrink=self.shrink_alpha,
+            popt=self.popt,
         )
         fitted_a0 = torch.as_tensor(fitted_a0)
         a0 = fitted_a0
@@ -926,7 +927,7 @@ class SortingScreenData(ScreenData):
         self.screen = _assign_rep_ids_and_sort(
             self.screen, self.replicate_column, self.condition_column
         )
-        if self.sample_covariates is not None:
+        if hasattr(self, "sample_covariates"):
             self.rep_by_cov = torch.as_tensor(
                 (
                     self.screen.samples[["_rc"] + self.sample_covariates]
@@ -1013,7 +1014,7 @@ class SurvivalScreenData(ScreenData):
         self.screen = _assign_rep_ids_and_sort(
             self.screen, self.replicate_column, self.time_column
         )
-        if self.sample_covariates is not None:
+        if hasattr(self, "sample_covariates"):
             self.rep_by_cov = self.screen.samples.groupby(self.replicate_column)[
                 self.sample_covariates
             ].values

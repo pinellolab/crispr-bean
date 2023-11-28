@@ -45,7 +45,7 @@ def NormalModel(
     sd = sd_alleles
     sd = torch.repeat_interleave(sd, data.target_lengths, dim=0)
     assert sd.shape == (data.n_guides, 1)
-    if data.sample_covariates is not None:
+    if hasattr(data, "sample_covariates"):
         with pyro.plate("cov_place", data.n_sample_covariates):
             mu_cov = pyro.sample("mu_cov", dist.Normal(0, 1))
         assert mu_cov.shape == (data.n_sample_covariates,), mu_cov.shape
@@ -55,15 +55,15 @@ def NormalModel(
             lq = data.lower_bounds[b]
             assert uq.shape == lq.shape == (data.n_condits,)
             with guide_plate:
-                mu = mu.unsqueeze(0).unsqueeze(0).expand(
-                    (data.n_reps, data.n_condits, -1, -1)
-                ) + (data.rep_by_cov * mu_cov)[:, 0].unsqueeze(-1).unsqueeze(
-                    -1
-                ).unsqueeze(
-                    -1
-                ).expand(
-                    (-1, data.n_condits, data.n_guides, 1)
+                mu = (
+                    mu.unsqueeze(0)
+                    .unsqueeze(0)
+                    .expand((data.n_reps, data.n_condits, -1, -1))
                 )
+                if hasattr(data, "sample_covariates"):
+                    mu = mu + (data.rep_by_cov * mu_cov)[:, 0].unsqueeze(-1).unsqueeze(
+                        -1
+                    ).unsqueeze(-1).expand((-1, data.n_condits, data.n_guides, 1))
                 sd = torch.sqrt(
                     (
                         sd.unsqueeze(0)
@@ -511,7 +511,7 @@ def NormalGuide(data):
                 constraint=constraints.positive,
             )
             pyro.sample("sd_alleles", dist.LogNormal(sd_loc, sd_scale))
-    if data.sample_covariates is not None:
+    if hasattr(data, "sample_covariates"):
         with pyro.plate("cov_place", data.n_sample_covariates):
             mu_cov_loc = pyro.param(
                 "mu_cov_loc", torch.zeros((data.n_sample_covariates,))

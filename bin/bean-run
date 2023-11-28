@@ -45,11 +45,31 @@ warn = logging.warning
 debug = logging.debug
 info = logging.info
 pyro.set_rng_seed(101)
+
 warnings.filterwarnings(
     "ignore",
     category=FutureWarning,
     message=r".*is_categorical_dtype is deprecated and will be removed in a future version.*",
 )
+
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=r".*FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas.*",
+)
+
+
+DATACLASS_DICT = {
+    "Normal": VariantSortingScreenData,
+    "MixtureNormal": VariantSortingReporterScreenData,
+    "_MixtureNormal+Acc": VariantSortingReporterScreenData,  # TODO: old
+    "MixtureNormal+Acc": VariantSortingReporterScreenData,
+    "MixtureNormalConstPi": VariantSortingScreenData,
+    "MultiMixtureNormal": TilingSortingReporterScreenData,
+    "MultiMixtureNormal+Acc": TilingSortingReporterScreenData,
+}
+
+
 
 
 def main(args, bdata):

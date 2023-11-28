@@ -97,7 +97,7 @@ File should contain following columns with header.
 * `R1_filepath`: Path to read 1 `.fastq[.gz]` file
 * `R2_filepath`: Path to read 1 `.fastq[.gz]` file
 * `sample_id`: ID of sequencing sample
-* `rep [Optional]`: Replicate # of this sample
+* `rep [Optional]`: Replicate # of this sample (Should NOT contain `.`)
 * `bin [Optional]`: Name of the sorting bin
 * `upper_quantile [Optional]`: FACS sorting upper quantile
 * `lower_quantile [Optional]`: FACS sorting lower quantile  
@@ -201,6 +201,8 @@ Above command produces
 * `--tiling` (default: `None`): If set as `True` or `False`, it sets the screen object to be tiling (`True`) or variant (`False`)-targeting screen when calculating editing rate. 
 * `--replicate-label` (default: `"rep"`): Label of column in `bdata.samples` that describes replicate ID.
 * `--condition-label` (default: `"bin"`)": Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.).
+* `--sample-covariates` (default: `None`): Comma-separated list of column names in `bdata.samples` that describes non-selective experimental condition (drug treatment, etc.). The values in the `bdata.samples` should NOT contain `.`. 
+* `--no-editing` (default: `False`): Ignore QC about editing. Can be used for QC of other editing modalities.
 * `--target-pos-col` (default: `"target_pos"`): Target position column in `bdata.guides` specifying target edit position in reporter.
 * `--rel-pos-is-reporter` (default: `False`): Specifies whether `edit_start_pos` and `edit_end_pos` are relative to reporter position. If `False`, those are relative to spacer position.
 * `--edit-start-pos` (default: `2`): Edit start position to quantify editing rate on, 0-based inclusive.
@@ -279,7 +281,7 @@ bean-filter my_sorting_screen.h5ad \
 
 ## `bean-run`: Quantify variant effects
 BEAN uses Bayesian network to incorporate gRNA editing outcome to provide posterior estimate of variant phenotype. The Bayesian network reflects data generation process. Briefly,  
-1. Cellular phenotype is modeled as the Gaussian mixture distribution of wild-type phenotype and variant phenotype.
+1. Cellular phenotype (either for cells are sorted upon for sorting screen, or log(proliferation rate)) is modeled as the Gaussian mixture distribution of wild-type phenotype and variant phenotype.
 2. The weight of the mixture components are inferred from the reporter editing outcome and the chromatin accessibility of the loci.
 3. Cells with each gRNA, formulated as the mixture distribution, is sorted by the phenotypic quantile to produce the gRNA counts.
 
@@ -289,7 +291,7 @@ For the full detail, see the method section of the [BEAN manuscript](https://www
   
 <br></br>
 ```bash
-bean-run variant[tiling] my_sorting_screen_filtered.h5ad \
+bean-run sorting[survival] variant[tiling] my_sorting_screen_filtered.h5ad \
 [--uniform-edit, --scale-by-acc [--acc-bw-path accessibility_signal.bw, --acc-col accessibility]] \
 -o output_prefix/ \
 --fit-negctrl

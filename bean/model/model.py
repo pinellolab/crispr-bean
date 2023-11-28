@@ -45,26 +45,51 @@ def NormalModel(
     sd = sd_alleles
     sd = torch.repeat_interleave(sd, data.target_lengths, dim=0)
     assert sd.shape == (data.n_guides, 1)
-
+    if hasattr(data, "sample_covariates"):
+        with pyro.plate("cov_place", data.n_sample_covariates):
+            mu_cov = pyro.sample("mu_cov", dist.Normal(0, 1))
+        assert mu_cov.shape == (data.n_sample_covariates,), mu_cov.shape
     with replicate_plate:
         with bin_plate as b:
             uq = data.upper_bounds[b]
             lq = data.lower_bounds[b]
             assert uq.shape == lq.shape == (data.n_condits,)
-            # with guide_plate, poutine.mask(mask=(data.allele_counts.sum(axis=-1) == 0)):
             with guide_plate:
-                alleles_p_bin = get_std_normal_prob(
-                    uq.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
-                    lq.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
-                    mu.unsqueeze(0).expand((data.n_condits, -1, -1)),
-                    sd.unsqueeze(0).expand((data.n_condits, -1, -1)),
+                mu = (
+                    mu.unsqueeze(0)
+                    .unsqueeze(0)
+                    .expand((data.n_reps, data.n_condits, -1, -1))
                 )
-                assert alleles_p_bin.shape == (data.n_condits, data.n_guides, 1)
-
-            expected_allele_p = alleles_p_bin.unsqueeze(0).expand(
-                data.n_reps, -1, -1, -1
-            )
-            expected_guide_p = expected_allele_p.sum(axis=-1)
+                if hasattr(data, "sample_covariates"):
+                    mu = mu + (data.rep_by_cov * mu_cov)[:, 0].unsqueeze(-1).unsqueeze(
+                        -1
+                    ).unsqueeze(-1).expand((-1, data.n_condits, data.n_guides, 1))
+                sd = torch.sqrt(
+                    (
+                        sd.unsqueeze(0)
+                        .unsqueeze(0)
+                        .expand((data.n_reps, data.n_condits, -1, -1))
+                    )
+                )
+                alleles_p_bin = get_std_normal_prob(
+                    uq.unsqueeze(0)
+                    .unsqueeze(-1)
+                    .unsqueeze(-1)
+                    .expand((data.n_reps, -1, data.n_guides, 1)),
+                    lq.unsqueeze(0)
+                    .unsqueeze(-1)
+                    .unsqueeze(-1)
+                    .expand((data.n_reps, -1, data.n_guides, 1)),
+                    mu,
+                    sd,
+                )
+                assert alleles_p_bin.shape == (
+                    data.n_reps,
+                    data.n_condits,
+                    data.n_guides,
+                    1,
+                )
+            expected_guide_p = alleles_p_bin.sum(axis=-1)
             assert expected_guide_p.shape == (
                 data.n_reps,
                 data.n_condits,
@@ -91,7 +116,6 @@ def NormalModel(
                     obs=data.X_masked.permute(0, 2, 1),
                 )
             if use_bcmatch:
-                print(f"Use_bcmatch:{use_bcmatch}")
                 a_bcmatch = get_alpha(
                     expected_guide_p,
                     data.size_factor_bcmatch,
@@ -159,14 +183,10 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
             a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
 
-            assert (
-                data.X.shape
-                == data.X_bcmatch.shape
-                == (
-                    data.n_reps,
-                    data.n_condits,
-                    data.n_guides,
-                )
+            assert data.X.shape == (
+                data.n_reps,
+                data.n_condits,
+                data.n_guides,
             )
             with poutine.mask(
                 mask=torch.logical_and(
@@ -491,6 +511,18 @@ def NormalGuide(data):
                 constraint=constraints.positive,
             )
             pyro.sample("sd_alleles", dist.LogNormal(sd_loc, sd_scale))
+    if hasattr(data, "sample_covariates"):
+        with pyro.plate("cov_place", data.n_sample_covariates):
+            mu_cov_loc = pyro.param(
+                "mu_cov_loc", torch.zeros((data.n_sample_covariates,))
+            )
+            mu_cov_scale = pyro.param(
+                "mu_cov_scale",
+                torch.ones((data.n_sample_covariates,)),
+                constraint=constraints.positive,
+            )
+            mu_cov = pyro.sample("mu_cov", dist.Normal(mu_cov_loc, mu_cov_scale))
+            assert mu_cov.shape == (data.n_sample_covariates,), mu_cov.shape
 
 
 def MixtureNormalGuide(

@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="crispr-bean",
-    version="0.2.9",
+    version="0.3.0",
     python_requires=">=3.8.0",
     author="Jayoung Ryu",
     author_email="jayoung_ryu@g.harvard.edu",
@@ -36,7 +36,7 @@ setup(
         "numpy",
         "pandas",
         "scipy",
-        "perturb-tools>=0.2.8",
+        "perturb-tools>=0.3.0",
         "matplotlib",
         "seaborn>=0.13.0",
         "tqdm",

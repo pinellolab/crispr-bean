@@ -22,7 +22,7 @@ This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The r
 4. [`bean-filter`](#bean-filter-filtering-and-optionally-translating-alleles): Filter reporter alleles; essential for `tiling` mode that allows for all alleles generated from gRNA.
 5. [`bean-run`](#bean-run-quantify-variant-effects): Quantify targeted variants' effect sizes from screen data.  
 
-### Data structure
+### Screen data is saved as *ReporterScreen* object in the pipeline.
 BEAN stores mapped gRNA and allele counts in `ReporterScreen` object which is compatible with [AnnData](https://anndata.readthedocs.io/en/latest/index.html). See [Data Structure](#data-structure) section for more information.
 
 ### Examples
@@ -162,6 +162,11 @@ bean-create-screen gRNA_library.csv sample_list.csv gRNA_counts_table.csv
 ```bash
 bean-profile my_sorting_screen.h5ad -o output_prefix `# Prefix for editing profile report` 
 ```
+### Output
+Above command produces `prefix_editing_preference.[html,ipynb]` as editing preferences ([see example](notebooks/profile_editing_preference.ipynb)).  
+
+<img src="imgs/profile_output.png" alt="Allele translation" width="700" style="background-color:white;"/>  
+
 ### Parameters
   * `-o`, `--output-prefix` (default: `None`): Output prefix of editing pattern report (prefix.html, prefix.ipynb). If not provided, base name of `bdata_path` is used.
   * `--replicate-col` (default: `"rep"`): Column name in `bdata.samples` that describes replicate ID.
@@ -170,8 +175,6 @@ bean-profile my_sorting_screen.h5ad -o output_prefix `# Prefix for editing profi
   * `--control-condition` (default: `"bulk"`): Control condition where editing preference would be profiled at. Pre-filters data where `bdata.samples[condition_col] == control_condition`.
   * `-w`, `--window-length` (default: `6`): Window length of editing window of maximal editing efficiency to be identified. This window is used to quantify context specificity within the window.
 
-### Output
-Above command produces `prefix_editing_preference.[html,ipynb]` as editing preferences ([see example](notebooks/profile_editing_preference.ipynb)).  
 
 <br/><br/>
 
@@ -183,7 +186,10 @@ bean-qc \
   -r qc_report_my_sorting_screen   `# Prefix for QC report` 
 ```
 
-`bean-qc` supports following quality control and masks samples with low quality. Specifically:
+`bean-qc` supports following quality control and masks samples with low quality. Specifically:  
+
+<img src="imgs/qc_output.png" alt="Allele translation" width="900" style="background-color:white;"/>  
+
 * Plots guide coverage and the uniformity of coverage
 * Guide count correlation between samples
 * Log fold change correlation when positive controls are provided

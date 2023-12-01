@@ -22,15 +22,27 @@ def get_outlier_guides_and_mask(
     abs_RPM_thres: RPM threshold value that will be used to define outlier guides.
     """
     outlier_guides = get_outlier_guides(bdata, condit_col, mad_z_thres, abs_RPM_thres)
-    outlier_guides[replicate_col] = bdata.samples.loc[
-        outlier_guides["sample"], replicate_col
-    ].values
-    mask = pd.DataFrame(
-        index=bdata.guides.index, columns=bdata.samples[replicate_col].unique()
-    ).fillna(1)
+    if not isinstance(replicate_col, str):
+        outlier_guides["_rc"] = bdata.samples.loc[
+            outlier_guides["sample"], replicate_col
+        ].values.tolist()
+        outlier_guides["_rc"] = outlier_guides["_rc"].map(lambda slist: ".".join(slist))
+    else:
+        outlier_guides[replicate_col] = bdata.samples.loc[
+            outlier_guides["sample"], replicate_col
+        ].values
+    if isinstance(replicate_col, str):
+        reps = bdata.samples[replicate_col].unique()
+    else:
+        reps = bdata.samples[replicate_col].drop_duplicates().to_records(index=False)
+        reps = [".".join(slist) for slist in reps]
+    mask = pd.DataFrame(index=bdata.guides.index, columns=reps).fillna(1)
     print(outlier_guides)
     for _, row in outlier_guides.iterrows():
-        mask.loc[row[bdata.guides.index.name], row[replicate_col]] = 0
+        mask.loc[
+            row["name"], row[replicate_col if isinstance(replicate_col, str) else "_rc"]
+        ] = 0
+
     return outlier_guides, mask
 
 

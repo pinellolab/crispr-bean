@@ -1,4 +1,5 @@
 import distutils
+from typing import Union, List
 import numpy as np
 import pandas as pd
 from copy import deepcopy
@@ -53,10 +54,21 @@ def parse_args():
         default="rep",
     )
     parser.add_argument(
+        "--sample-covariates",
+        help="Comma-separated list of column names in `bdata.samples` that describes non-selective experimental condition. (drug treatment, etc.)",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
         "--condition-label",
         help="Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.)",
         type=str,
         default="bin",
+    )
+    parser.add_argument(
+        "--no-editing",
+        help="Ignore QC about editing. Can be used for QC of other editing modalities.",
+        action="store_true",
     )
     parser.add_argument(
         "--target-pos-col",
@@ -84,7 +96,7 @@ def parse_args():
         "--count-correlation-thres",
         help="Correlation threshold to mask out.",
         type=float,
-        default=0.8,
+        default=0.7,
     )
     parser.add_argument(
         "--edit-rate-thres",
@@ -117,6 +129,12 @@ def parse_args():
         default="top,bot",
     )
     parser.add_argument(
+        "--ctrl-cond",
+        help="Values in of column in `ReporterScreen.samples[condition_label]` for guide-level editing rate to be calculated",
+        type=str,
+        default="bulk",
+    )
+    parser.add_argument(
         "--recalculate-edits",
         help="Even when ReporterScreen.layers['edit_count'] exists, recalculate the edit counts from ReporterScreen.uns['allele_count'].",
         action="store_true",
@@ -137,21 +155,30 @@ def check_args(args):
         )
     args.lfc_cond1 = lfc_conds[0]
     args.lfc_cond2 = lfc_conds[1]
+    if args.sample_covariates is not None:
+        if "," in args.sample_covariates:
+            args.sample_covariates = args.sample_covariates.split(",")
+            args.replicate_label = [args.replicate_label] + args.sample_covariates
+        else:
+            args.replicate_label = [args.replicate_label, args.sample_covariates]
+    if args.no_editing:
+        args.base_edit_data = False
+    else:
+        args.base_edit_data = True
     return args
 
 
-def _add_dummy_sample(bdata, rep, cond, condition_label: str, replicate_label: str):
+def _add_dummy_sample(
+    bdata, rep, cond, condition_label: str, replicate_label: Union[str, List[str]]
+):
     sample_id = f"{rep}_{cond}"
     cond_df = deepcopy(bdata.samples)
-    cond_df[replicate_label] = np.nan
-    cond_df = cond_df.drop_duplicates()
+    # cond_df = cond_df.drop_duplicates()
     cond_row = cond_df.loc[cond_df[condition_label] == cond, :]
-    if not len(cond_row) == 1:
-        raise ValueError(
-            f"Non-unique condition specification in ReporterScreen.samples: {cond_row}"
-        )
+    if len(cond_row) != 1:
+        cond_row = cond_row.iloc[[0], :]
     cond_row.index = [sample_id]
-    cond_row.loc[:, replicate_label] = rep
+    cond_row[replicate_label] = rep
     dummy_sample_bdata = ReporterScreen(
         X=np.zeros((bdata.n_obs, 1)),
         X_bcmatch=np.zeros((bdata.n_obs, 1)),
@@ -169,27 +196,40 @@ def _add_dummy_sample(bdata, rep, cond, condition_label: str, replicate_label: s
     return bdata
 
 
-def fill_in_missing_samples(bdata, condition_label: str, replicate_label: str):
+def fill_in_missing_samples(
+    bdata, condition_label: str, replicate_label: Union[str, List[str]]
+):
     """If not all condition exists for every replicate in bdata, fill in fake sample"""
     added_dummy = False
-    for rep in bdata.samples[replicate_label].unique():
+    if isinstance(replicate_label, str):
+        rep_list = bdata.samples[replicate_label].unique()
+    else:
+        rep_list = (
+            bdata.samples[replicate_label].drop_duplicates().to_records(index=False)
+        )
+        # print(rep_list)
+    for rep in rep_list:
         for cond in bdata.samples[condition_label].unique():
+            if isinstance(replicate_label, str):
+                rep_samples = bdata.samples[replicate_label] == rep
+            else:
+                rep = list(rep)
+                rep_samples = (bdata.samples[replicate_label] == rep).all(axis=1)
             if (
-                len(
-                    np.where(
-                        (bdata.samples[replicate_label] == rep)
-                        & (bdata.samples[condition_label] == cond)
-                    )[0]
-                )
+                len(np.where(rep_samples & (bdata.samples[condition_label] == cond))[0])
                 != 1
             ):
+                print(f"Adding dummy samples for {rep}, {cond}")
                 bdata = _add_dummy_sample(
                     bdata, rep, cond, condition_label, replicate_label
                 )
                 if not added_dummy:
                     added_dummy = True
     if added_dummy:
-        bdata = bdata[
-            :, bdata.samples.sort_values([replicate_label, condition_label]).index
-        ]
+        if isinstance(replicate_label, str):
+            sort_labels = [replicate_label, condition_label]
+        else:
+            sort_labels = replicate_label + [condition_label]
+            bdata = bdata[:, bdata.samples.sort_values(sort_labels).index]
+
     return bdata

@@ -165,7 +165,7 @@ bean-profile my_sorting_screen.h5ad -o output_prefix `# Prefix for editing profi
 ### Output
 Above command produces `prefix_editing_preference.[html,ipynb]` as editing preferences ([see example](notebooks/profile_editing_preference.ipynb)).  
 
-<img src="imgs/profile_output.png" alt="Allele translation" width="700" style="background-color:white;"/>  
+<img src="imgs/profile_output.png" alt="Allele translation" width="700" />  
 
 ### Parameters
   * `-o`, `--output-prefix` (default: `None`): Output prefix of editing pattern report (prefix.html, prefix.ipynb). If not provided, base name of `bdata_path` is used.
@@ -188,7 +188,7 @@ bean-qc \
 
 `bean-qc` supports following quality control and masks samples with low quality. Specifically:  
 
-<img src="imgs/qc_output.png" alt="Allele translation" width="900" style="background-color:white;"/>  
+<img src="imgs/qc_output.png" alt="Allele translation" width="900"/>  
 
 * Plots guide coverage and the uniformity of coverage
 * Guide count correlation between samples
@@ -402,5 +402,5 @@ Python package `bean` supports multiple data wrangling functionalities for `Repo
 * Full pipeline takes 90.1s in GitHub Action for toy dataset of 2 replicates and 30 guides.
 
 ## Citation
-If you have used BEAN, please cite:  
+If you have used BEAN for your analysis, please cite:  
 Ryu, J. et al. Joint genotypic and phenotypic outcome modeling improves base editing variant effect quantification. medRxiv (2023) doi:10.1101/2023.09.08.23295253

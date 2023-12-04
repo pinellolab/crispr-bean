@@ -225,11 +225,11 @@ class CDS:
         return cds
 
     @classmethod
-    def from_gene_name(cls, gene_name):
+    def from_gene_name(cls, gene_name, ref_version: str = "GRCh38"):
         cds = cls()
         if gene_name not in cls.gene_info_dict:
             chrom, translated_seq, genomic_pos, strand = get_cds_seq_pos_from_gene_name(
-                gene_name
+                gene_name, ref_version
             )
             cls.gene_info_dict[gene_name] = {
                 "chrom": chrom,
@@ -329,8 +329,8 @@ def get_mismatch_df():
     ).drop_duplicates()
 
 
-def get_cds_dict(gene_names):
-    return {gname: CDS.from_gene_name(gname) for gname in gene_names}
+def get_cds_dict(gene_names, ref_version: str = "GRCh38"):
+    return {gname: CDS.from_gene_name(gname, ref_version) for gname in gene_names}
 
 
 def export_gene_info_to_json(gene_dict, write_path=".tmp_gene_info.csv"):
@@ -418,6 +418,7 @@ def get_allele_aa_change_single_gene(
     fasta_file: str = None,
     fasta_file_id: str = None,
     include_synonymous: bool = True,
+    ref_version: str = "GRCh38",
 ):
     """
     Obtain amino acid changes
@@ -425,7 +426,7 @@ def get_allele_aa_change_single_gene(
     if gene_name is None and fasta_file is not None:
         cds = CDS.from_fasta(fasta_file, fasta_file_id)
     elif gene_name is not None and fasta_file is None:
-        cds = CDS.from_gene_name(gene_name)
+        cds = CDS.from_gene_name(gene_name, ref_version)
     else:
         raise ValueError("Only one of `gene_name` or `fasta_file` should be provided.")
     return cds.get_aa_change(allele, include_synonymous)

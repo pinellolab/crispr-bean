@@ -97,7 +97,7 @@ def get_mane_transcript_id(gene_name: str):
     return mane_transcript_id, id_version
 
 
-def get_exons_from_transcript_id(transcript_id: str, id_version: int):
+def get_exons_from_transcript_id(transcript_id: str, id_version: int, ref_version: str = "GRCh38"):
     """
     Retrieves the exons and the start position of the coding sequence (CDS) for a given transcript ID and version.
 
@@ -112,9 +112,18 @@ def get_exons_from_transcript_id(transcript_id: str, id_version: int):
     response = requests.get(api_url, headers={"Content-Type": "application/json"})
     transcript_json = response.json()
     if transcript_json["count"] != 1:
-        raise ValueError(
-            f"Non-unique entry for transcript ID and version:\n{transcript_json}"
-        )
+        if transcript_json["count"] > 1:
+            api_url = f"http://tark.ensembl.org/api/transcript/?stable_id={transcript_id}&stable_id_version={id_version}&assembly_name={ref_version}&expand=exons"
+            response = requests.get(api_url, headers={"Content-Type": "application/json"})
+            transcript_json = response.json()
+            if transcript_json["count"] != 1:
+                raise ValueError(
+                    f"Non-unique entry for transcript ID , version {id_version} and assembly {ref_version}:\n{transcript_json}"
+                )
+        else:
+            raise ValueError(
+                f"No entry found for transcript ID {transcript_id}, version {id_version} and assembly {ref_version}"
+            )
     transcript_record = transcript_json["results"][0]
     exons_list = transcript_record["exons"]
     strand = transcript_record["loc_strand"]  # +1/-1
@@ -186,11 +195,11 @@ def get_exon_pos_seq(exon_id, id_version, cds_start, cds_end, ref_version="GRCh3
     return chrom, list(sequence), list(range(start_pos, end_pos + 1))
 
 
-def get_cds_seq_pos_from_gene_name(gene_name: str):
+def get_cds_seq_pos_from_gene_name(gene_name: str, ref_version: str = "GRCh38"):
     transcript_id, id_version = get_mane_transcript_id(gene_name)
     print(f"MANE transcript ID {transcript_id} for {gene_name} will be used.")
     exons_list, cds_start, cds_end, strand = get_exons_from_transcript_id(
-        transcript_id, id_version
+        transcript_id, id_version, ref_version
     )
     if strand == -1:
         exons_list = exons_list[::-1]

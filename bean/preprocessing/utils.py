@@ -214,12 +214,16 @@ def _assign_rep_ids_and_sort(
     screen: be.ReporterScreen, rep_col: str, condition_column: str = None
 ) -> be.ReporterScreen:
     """Assign replicate IDs to samples and sort them accordingly."""
+    if rep_col not in screen.samples.columns:
+        raise ValueError(
+            f"{rep_col} not in columns of ReporterScreen.samples with following columns: {screen.samples.columns}. Check your input or adjust `--replicate-col` of `bean-run` command as the existing column name specifying experimental replicates."
+        )
     for i, rep in enumerate(sorted(screen.samples[rep_col].unique())):
         screen.samples.loc[screen.samples[rep_col] == rep, f"{rep_col}_id"] = i
-        if condition_column is None:
-            sort_key = f"{rep_col}_id"
-        else:
-            sort_key = [f"{rep_col}_id", f"{condition_column}_id"]
+    if condition_column is None:
+        sort_key = f"{rep_col}_id"
+    else:
+        sort_key = [f"{rep_col}_id", f"{condition_column}_id"]
     screen = screen[
         :,
         screen.samples.sort_values(sort_key).index,

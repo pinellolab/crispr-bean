@@ -309,6 +309,25 @@ def check_args(args, bdata):
             raise ValueError(
                 f"{args.bdata_path} does not have specified sample mask column {args.sample_mask_col} in .samples"
             )
+    if args.condition_col not in bdata.samples.columns:
+        raise ValueError(
+            f"Condition column set by `--condition-col` {args.condition_col} not in ReporterScreen.samples.columns:{bdata.samples.columns}. Check your input."
+        )
+    if args.control_condition_label not in bdata.samples[args.condition_col].tolist():
+        raise ValueError(
+            f"No sample has control label (set by `--control-condition-label`) {args.control_condition_label} in ReporterScreen.samples[{args.condition_col}]: {bdata.samples[args.condition_col]}. Check your input."
+        )
+    if args.replicate_col not in bdata.samples.columns:
+        raise ValueError(
+            f"Condition column set by `--replicate-col` {args.replicate_col} not in ReporterScreen.samples.columns:{bdata.samples.columns}. Check your input."
+        )
+    if (
+        args.control_guide_tag is not None
+        and not bdata.guides.index.map(lambda s: args.control_guide_tag in s).any()
+    ):
+        raise ValueError(
+            f"Negative control guide label {args.control_guide_tag} provided by `--control-guide-tag` doesn't appear in any of the guide names. Check your input."
+        )
     if args.alpha_if_overdispersion_fitting_fails is not None:
         try:
             b0, b1 = args.alpha_if_overdispersion_fitting_fails.split(",")

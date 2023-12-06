@@ -130,7 +130,6 @@ def main(args, bdata):
             print("syn idx: ", adj_negctrl_idx)
 
     guide_info_df = ndata.screen.guides
-    del bdata
 
     info(f"Running inference for {model_label}...")
 

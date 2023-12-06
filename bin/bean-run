@@ -117,6 +117,7 @@ def main(args, bdata):
             pd.DataFrame(pd.Series(ndata.edit_index))
             .reset_index()
             .rename(columns={"index": "edit"}),
+            control_tag=args.control_guide_tag,
             splice_sites=None if args.splice_site_path is None else splice_site,
         )
         target_info_df["effective_edit_rate"] = _obtain_effective_edit_rate(ndata).cpu()

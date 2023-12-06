@@ -293,7 +293,7 @@ def check_args(args, bdata):
             bdata.guides[args.negctrl_col].map(lambda s: s.lower())
             == args.negctrl_col_value.lower()
         ).sum()
-        if not n_negctrl >= 20:
+        if not n_negctrl >= 10:
             raise ValueError(
                 f"Not enough negative control guide in the input data: {n_negctrl}. Check your input arguments."
             )

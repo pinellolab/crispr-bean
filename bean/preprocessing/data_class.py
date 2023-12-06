@@ -1136,6 +1136,20 @@ class VariantSortingScreenData(VariantScreenData, SortingScreenData):
         )
         self.a0_bcmatch = torch.as_tensor(a0_bcmatch)
 
+    def __getitem__(self, guide_idx):
+        ndata = super().__getitem__(guide_idx)
+        if hasattr(ndata, "X_bcmatch"):
+            ndata.X_bcmatch = ndata.X_bcmatch[:, :, guide_idx]
+        if hasattr(ndata, "X_bcmatch_masked"):
+            ndata.X_bcmatch_masked = ndata.X_bcmatch_masked[:, :, guide_idx]
+        if hasattr(ndata, "X_bcmatch_control"):
+            ndata.X_bcmatch_control = ndata.X_bcmatch_control[:, :, guide_idx]
+        if hasattr(ndata, "X_bcmatch_control_masked"):
+            ndata.X_bcmatch_control_masked = ndata.X_bcmatch_control_masked[
+                :, :, guide_idx
+            ]
+        return ndata
+
 
 @dataclass
 class VariantSortingReporterScreenData(VariantReporterScreenData, SortingScreenData):

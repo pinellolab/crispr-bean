@@ -206,18 +206,23 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
                     data.sample_mask,
                     data.a0_bcmatch,
                 )
-                with poutine.mask(
-                    mask=torch.logical_and(
-                        data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1)
-                        > mask_thres,
-                        data.repguide_mask,
-                    )
-                ):
-                    pyro.sample(
-                        "guide_bcmatch_counts",
-                        dist.DirichletMultinomial(a_bcmatch, validate_args=False),
-                        obs=data.X_bcmatch_masked.permute(0, 2, 1),
-                    )
+                try:
+                    with poutine.mask(
+                        mask=torch.logical_and(
+                            data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1)
+                            > mask_thres,
+                            data.repguide_mask,
+                        )
+                    ):
+                        pyro.sample(
+                            "guide_bcmatch_counts",
+                            dist.DirichletMultinomial(a_bcmatch, validate_args=False),
+                            obs=data.X_bcmatch_masked.permute(0, 2, 1),
+                        )
+                except RuntimeError:
+                    print(data.X_bcmatch_masked.shape)
+                    print(data.repguide_mask.shape)
+                    exit(1)
 
     return alleles_p_bin
 

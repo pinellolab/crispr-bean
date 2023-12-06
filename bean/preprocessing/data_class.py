@@ -200,7 +200,8 @@ class ScreenData(abc.ABC):
         ndata.X_masked = ndata.X_masked[:, :, guide_idx]
         ndata.X_control = ndata.X_control[:, :, guide_idx]
         ndata.repguide_mask = ndata.repguide_mask[:, guide_idx]
-        ndata.a0 = ndata.a0[guide_idx]
+        if hasattr(ndata, "a0") and self.a0 is not None:
+            ndata.a0 = ndata.a0[guide_idx]
         return ndata
 
     def transform_data(self, X, n_bins=None):
@@ -369,8 +370,6 @@ class ReporterScreenData(ScreenData):
             ndata.allele_counts = ndata.allele_counts[:, :, guide_idx, :]
         if hasattr(ndata, "a0_allele"):
             ndata.a0_allele = ndata.a0_allele[guide_idx, :]
-        if hasattr(ndata, "a0") and self.a0 is not None:
-            ndata.a0 = ndata.a0[guide_idx]
         if hasattr(ndata, "pi_a0") and self.pi_a0 is not None:
             ndata.pi_a0 = ndata.pi_a0[guide_idx]
         if hasattr(ndata, "a0_bcmatch") and self.a0_bcmatch is not None:

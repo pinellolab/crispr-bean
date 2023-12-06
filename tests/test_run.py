@@ -69,7 +69,7 @@ def test_run_tiling_with_wo_negctrl_noacc():
 
 @pytest.mark.order(18)
 def test_run_tiling_with_wo_negctrl_uniform():
-    cmd = "bean-run sorting tiling tests/data/tiling_mini_screen_annotated.h5ad -o tests/test_res/tiling/ --uniform-edit --allele-df-key allele_counts_spacer_0_19_A.G_translated_prop0.1_0.3 --control-guide-tag None  --repguide-mask None"
+    cmd = "bean-run sorting tiling tests/data/tiling_mini_screen_annotated.h5ad -o tests/test_res/tiling/ --uniform-edit --allele-df-key allele_counts_spacer_0_19_A.G_translated_prop0.1_0.3 --control-guide-tag None --repguide-mask None"
     try:
         subprocess.check_output(
             cmd,

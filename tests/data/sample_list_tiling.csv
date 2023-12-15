@@ -1,0 +1,7 @@
+R1_fastq,R2_fastq,sample_id,replicate,condition,upper_quantile,lower_quantiles
+tests/data/test_tiling_R1.fastq,tests/data/test_tiling_R2.fastq,1_bot,1,bot,0.3,0.0
+tests/data/test_tiling_R1.fastq,tests/data/test_tiling_R2.fastq,1_bulk,1,bulk,1.0,0.0
+tests/data/test_tiling_R1.fastq,tests/data/test_tiling_R2.fastq,1_top,1,top,1.0,0.7
+tests/data/test_tiling_R1.fastq,tests/data/test_tiling_R2.fastq,2_bot,2,bot,0.3,0.0
+tests/data/test_tiling_R1.fastq,tests/data/test_tiling_R2.fastq,2_bulk,2,bulk,1.0,0.0
+tests/data/test_tiling_R1.fastq,tests/data/test_tiling_R2.fastq,2_top,2,top,1.0,0.7

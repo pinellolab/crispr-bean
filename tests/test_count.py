@@ -42,6 +42,19 @@ def test_count_samples():
 
 
 @pytest.mark.order(5)
+def test_count_samples_tiling():
+    cmd = "bean-count-samples --input tests/data/sample_list_tiling.csv -b A -f tests/data/test_guide_info_tiling_chrom.csv -o tests/test_res/ -r"
+    try:
+        subprocess.check_output(
+            cmd,
+            shell=True,
+            universal_newlines=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise exc
+
+
+@pytest.mark.order(6)
 def test_count_chroms():
     cmd = "bean-count --R1 tests/data/test_tiling_R1.fastq --R2 tests/data/test_tiling_R2.fastq -b A -f tests/data/test_guide_info_tiling_chrom.csv -o tests/test_res/ -r"
     try:

@@ -250,8 +250,8 @@ class ScreenData(abc.ABC):
 class ReporterScreenData(ScreenData):
     X_bcmatch: torch.Tensor
     size_factor_bcmatch: torch.Tensor
-    X_control_bcmatch: torch.Tensor
-    size_factor_control_bcmatch: torch.Tensor
+    X_bcmatch_control: torch.Tensor
+    size_factor_bcmatch_control: torch.Tensor
     allele_counts: torch.Tensor
     allele_counts_control: torch.Tensor
     a0_bcmatch: torch.Tensor

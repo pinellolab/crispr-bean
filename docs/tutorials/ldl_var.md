@@ -16,22 +16,25 @@ GWAS variant screen with per-variant gRNA tiling design, selected based on FACS 
 
 ## 1. Count gRNA & reporter ([`bean-count-samples`](../../README#bean-count-samples-count-reporter-screen-data))
 ```
+screen_id=my_sorting_tiling_screen
+
 bean-count-samples \
 --input tests/data/sample_list.csv    `# Contains fastq file path; see test file for example.`\
 -b A                                  `# Base A is edited (into G)` \
 -f tests/data/test_guide_info.csv     `# Contains gRNA metadata; see test file for example.`\
--o tests/test_res/ \
--r                                    `# Quantify reporter edits`
+-o ./                                 `# Output directory` \
+-r                                    `# Quantify reporter edits` \
+-n ${screen_id}                          `# ID of the screen to be counted`   
 ```
-Make sure you follow the [input file format](../../README#input-file-format) for seamless downstream steps. This will produce `tests/test_res/bean_count_sample_list.h5ad`. 
+Make sure you follow the [input file format](../../README#input-file-format) for seamless downstream steps. This will produce `./bean_count_${screen_id}.h5ad`. 
 
 ## 2. QC ([`bean-qc`](../../README#bean-qc-qc-of-reporter-screen-data))
 Base editing data will include QC about editing efficiency. As QC uses predefined column names and values, beware to follow the [input file guideline](../../README#input-file-format), but you can change the parameters with the full argument list of [`bean-qc`](../../README#bean-qc-qc-of-reporter-screen-data). (Common factors you may want to tweak is `--ctrl-cond=bulk` and `--lfc-conds=top,bot` if you have different sample condition labels.)
 ```
 bean-qc \
-  my_sorting_screen.h5ad    `# Input ReporterScreen .h5ad file path` \
-  -o my_sorting_screen_masked.h5ad   `# Output ReporterScreen .h5ad file path` \
-  -r qc_report_my_sorting_screen   `# Prefix for QC report` 
+  bean_count_${screen_id}.h5ad    `# Input ReporterScreen .h5ad file path` \
+  -o bean_count_${screen_id}_masked.h5ad   `# Output ReporterScreen .h5ad file path` \
+  -r qc_report_${screen_id}   `# Prefix for QC report` 
 ```
 
 
@@ -46,7 +49,7 @@ If the data does not include reporter editing data, you can provide `--no-editin
     If your gRNA metadata table (`tests/data/test_guide_info.csv` above) included per-gRNA accessibility score, 
     ```
     bean-run sorting variant \
-    tests/data/var_mini_screen_annotated.h5ad \
+    tests/data/bean_count_${screen_id}_masked.h5ad \
     -o tests/test_res/var/ \
     --fit-negctrl \
     --scale-by-acc \
@@ -55,7 +58,7 @@ If the data does not include reporter editing data, you can provide `--no-editin
     If your gRNA metadata table (`tests/data/test_guide_info.csv` above) included per-gRNA chromosome & position and you have bigWig file with accessibility signal, 
     ```
     bean-run sorting variant \
-    tests/data/var_mini_screen_annotated.h5ad \
+    tests/data/bean_count_${screen_id}_masked.h5ad \
     -o tests/test_res/var/ \
     --fit-negctrl \
     --scale-by-acc \
@@ -65,7 +68,7 @@ If the data does not include reporter editing data, you can provide `--no-editin
 2. From **reporter**
     ```
     bean-run sorting variant \
-    tests/data/var_mini_screen_annotated.h5ad \
+    tests/data/bean_count_${screen_id}_masked.h5ad \
     -o tests/test_res/var/ \
     --fit-negctrl 
     ```
@@ -73,7 +76,7 @@ If the data does not include reporter editing data, you can provide `--no-editin
     Use this option if your data don't have editing rate information.
     ```
     bean-run sorting variant \
-    tests/data/var_mini_screen_annotated.h5ad \
+    tests/data/bean_count_${screen_id}_masked.h5ad \
     -o tests/test_res/var/ \
     --fit-negctrl \
     --uniform-edit

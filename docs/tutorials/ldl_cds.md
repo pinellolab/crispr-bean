@@ -16,24 +16,27 @@ Tiling screen that tiles gRNA densely across locus or multiple loci, selected ba
 
 ## 1. Count gRNA & reporter ([`bean-count-samples`](../../README#bean-count-samples-count-reporter-screen-data))
 ```
+screen_id=my_sorting_tiling_screen
+
 bean-count-samples \
 --input tests/data/sample_list_tiling.csv          `# Contains fastq file path; see test file for example.`\
 -b A                                               `# Base A is edited (into G)` \
 -f tests/data/test_guide_info_tiling_chrom.csv     `# Contains gRNA metadata; see test file for example.`\
--o tests/test_res/ \
+-o ./                                              `# Output directory` \
 -r                                                 `# Quantify reporter edits` \
+-n ${screen_id}                                       `# ID of the screen` \
 --tiling
 ```
-Make sure you follow the [input file format](../../README#input-file-format) for seamless downstream steps. This will produce `tests/test_res/bean_count_sample_list.h5ad`. 
+Make sure you follow the [input file format](../../README#input-file-format) for seamless downstream steps. This will produce `./bean_count_${screen_id}.h5ad`. 
 
 ## 2. QC ([`bean-qc`](../../README#bean-qc-qc-of-reporter-screen-data))
 Base editing data will include QC about editing efficiency. As QC uses predefined column names and values, beware to follow the [input file guideline](../../README#input-file-format), but you can change the parameters with the full argument list of [`bean-qc`](../../README#bean-qc-qc-of-reporter-screen-data). (Common factors you may want to tweak is `--ctrl-cond=bulk` and `--lfc-conds=top,bot` if you have different sample condition labels.)
 ```
 bean-qc \
-  my_sorting_screen.h5ad           `# Input ReporterScreen .h5ad file path` \
-  -o my_sorting_screen_masked.h5ad `# Output ReporterScreen .h5ad file path` \
-  -r qc_report_my_sorting_screen   `# Prefix for QC report` \
-  [--tiling]                       `# Not required if you have passed --tiling in counting step`
+  bean_count_${screen_id}.h5ad           `# Input ReporterScreen .h5ad file path` \
+  -o bean_count_${screen_id}_masked.h5ad `# Output ReporterScreen .h5ad file path` \
+  -r qc_report_${screen_id}              `# Prefix for QC report` \
+  [--tiling]                          `# Not required if you have passed --tiling in counting step`
 ```
 
 
@@ -55,8 +58,8 @@ where `path_to_gene_names_file.txt` has one gene symbol per line, and gene symbo
 Example allele filtering given we're translating based on MANE transcript exons of multiple gene symbols:
 
 ```bash
-bean-filter tests/data/tiling_mini_screen_masked.h5ad \
--o tests/data/tiling_mini_screen_annotated \
+bean-filter ./bean_count_${screen_id}_masked.h5ad \
+-o ./bean_count_${screen_id}_alleleFiltered \
 --filter-target-basechange                             `# Filter based on intended base changes. If -b A was provided in bean-count, filters for A>G edit. If -b C was provided, filters for C>T edit.`\
 --filter-window --edit-start-pos 0 --edit-end-pos 19   `# Filter based on editing window in spacer position within reporter.`\
 --filter-allele-proportion 0.1 --filter-sample-proportion 0.3 `#Filter based on allele proportion larger than 0.1 in at least 0.3 (30%) of the control samples.` \
@@ -70,19 +73,19 @@ By default, `bean-run [sorting,survival] tiling` uses most filtered allele count
 
 `bean-run` can take 3 run options to quantify editing rate:  
 1. From **reporter + accessibility**  
-    If your gRNA metadata table (`tests/data/test_guide_info.csv` above) included per-gRNA accessibility score, 
+    1-1. If your gRNA metadata table (`tests/data/test_guide_info.csv` above) included per-gRNA accessibility score, 
     ```
     bean-run sorting tiling \
-    tests/data/tiling_mini_screen_annotated.h5ad \
+    ./bean_count_${screen_id}_alleleFiltered.h5ad \
     -o tests/test_res/var/ \
     --fit-negctrl \
     --scale-by-acc \
     --accessibility-col accessibility
     ```
-    If your gRNA metadata table (`tests/data/test_guide_info.csv` above) included per-gRNA chromosome & position and you have bigWig file with accessibility signal, 
+    1-2. If your gRNA metadata table (`tests/data/test_guide_info.csv` above) included per-gRNA chromosome & position and you have bigWig file with accessibility signal, 
     ```
     bean-run sorting tiling \
-    tests/data/tiling_mini_screen_annotated.h5ad \
+    ./bean_count_${screen_id}_alleleFiltered.h5ad \
     -o tests/test_res/var/ \
     --fit-negctrl \
     --scale-by-acc \
@@ -92,7 +95,7 @@ By default, `bean-run [sorting,survival] tiling` uses most filtered allele count
 2. From **reporter**
     ```
     bean-run sorting tiling \
-    tests/data/tiling_mini_screen_annotated.h5ad \
+    ./bean_count_${screen_id}_alleleFiltered.h5ad \
     -o tests/test_res/var/ \
     --fit-negctrl 
     ```
@@ -100,7 +103,7 @@ By default, `bean-run [sorting,survival] tiling` uses most filtered allele count
     Use this option if your data don't have editing rate information.
     ```
     bean-run sorting tiling \
-    tests/data/tiling_mini_screen_annotated.h5ad \
+    ./bean_count_${screen_id}_alleleFiltered.h5ad \
     -o tests/test_res/var/ \
     --fit-negctrl \
     --uniform-edit

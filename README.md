@@ -80,6 +80,16 @@ bean-count-samples \
   -t 12                     `# number of threads` \
   --name my_sorting_screen  `# name of this sample run`
 ```
+```python
+bean-count \
+  --R1 read1.fq[.gz]
+  --R2 read2.fq[.gz]
+  -b A                      `# base that is being edited (A/G)` \
+  -f sgRNA_info_table.csv   `# sgRNA information` \
+  -o .                      `# output directory` \
+  -r                        `# read edit/allele information from reporter` \
+  --name my_sample  `# name of this sample run`
+```
 
 ### Input file format
 #### 1. gRNA_library.csv

@@ -200,7 +200,8 @@ class ScreenData(abc.ABC):
         ndata.X_masked = ndata.X_masked[:, :, guide_idx]
         ndata.X_control = ndata.X_control[:, :, guide_idx]
         ndata.repguide_mask = ndata.repguide_mask[:, guide_idx]
-        ndata.a0 = ndata.a0[guide_idx]
+        if hasattr(ndata, "a0") and self.a0 is not None:
+            ndata.a0 = ndata.a0[guide_idx]
         return ndata
 
     def transform_data(self, X, n_bins=None):
@@ -249,8 +250,8 @@ class ScreenData(abc.ABC):
 class ReporterScreenData(ScreenData):
     X_bcmatch: torch.Tensor
     size_factor_bcmatch: torch.Tensor
-    X_control_bcmatch: torch.Tensor
-    size_factor_control_bcmatch: torch.Tensor
+    X_bcmatch_control: torch.Tensor
+    size_factor_bcmatch_control: torch.Tensor
     allele_counts: torch.Tensor
     allele_counts_control: torch.Tensor
     a0_bcmatch: torch.Tensor
@@ -369,8 +370,6 @@ class ReporterScreenData(ScreenData):
             ndata.allele_counts = ndata.allele_counts[:, :, guide_idx, :]
         if hasattr(ndata, "a0_allele"):
             ndata.a0_allele = ndata.a0_allele[guide_idx, :]
-        if hasattr(ndata, "a0") and self.a0 is not None:
-            ndata.a0 = ndata.a0[guide_idx]
         if hasattr(ndata, "pi_a0") and self.pi_a0 is not None:
             ndata.pi_a0 = ndata.pi_a0[guide_idx]
         if hasattr(ndata, "a0_bcmatch") and self.a0_bcmatch is not None:
@@ -1136,6 +1135,20 @@ class VariantSortingScreenData(VariantScreenData, SortingScreenData):
             self.sample_mask.cpu(),
         )
         self.a0_bcmatch = torch.as_tensor(a0_bcmatch)
+
+    def __getitem__(self, guide_idx):
+        ndata = super().__getitem__(guide_idx)
+        if hasattr(ndata, "X_bcmatch"):
+            ndata.X_bcmatch = ndata.X_bcmatch[:, :, guide_idx]
+        if hasattr(ndata, "X_bcmatch_masked"):
+            ndata.X_bcmatch_masked = ndata.X_bcmatch_masked[:, :, guide_idx]
+        if hasattr(ndata, "X_bcmatch_control"):
+            ndata.X_bcmatch_control = ndata.X_bcmatch_control[:, :, guide_idx]
+        if hasattr(ndata, "X_bcmatch_control_masked"):
+            ndata.X_bcmatch_control_masked = ndata.X_bcmatch_control_masked[
+                :, :, guide_idx
+            ]
+        return ndata
 
 
 @dataclass

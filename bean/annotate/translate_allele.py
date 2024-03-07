@@ -595,7 +595,8 @@ def strsplit_edit(edit_str):
 
 def annotate_edit(
     edit_info: pd.DataFrame,
-    edit_col="edit",
+    edit_col: str = "edit",
+    control_tag: str = "CONTROL",
     splice_sites: Collection[
         int
     ] = None,  # TODO: may be needed to extended into multi-chromosome case
@@ -604,6 +605,7 @@ def annotate_edit(
 
     Args
     edit_info: pd.DataFrame with at least 1 column of 'edit_col', which has 'Edit' format.
+    control_tag: String tag identifying non-targeting control guides so their variant signal are not aggregated.
     splice_sites: Collection of integer splice site positions. If the edit position matches the positions, it will be annotated as 'splicing'.
 
     """
@@ -619,8 +621,13 @@ def annotate_edit(
     edit_info.loc[
         edit_info.pos.map(lambda s: not s.startswith("A")), "coding"
     ] = "noncoding"
-    edit_info.loc[edit_info.pos.map(lambda s: "CONTROL" in s), "group"] = "negctrl"
-    edit_info.loc[edit_info.pos.map(lambda s: "CONTROL" in s), "coding"] = "negctrl"
+    if control_tag is not None:
+        edit_info.loc[
+            edit_info.pos.map(lambda s: control_tag in s), "group"
+        ] = "negctrl"
+        edit_info.loc[
+            edit_info.pos.map(lambda s: control_tag in s), "coding"
+        ] = "negctrl"
     edit_info.loc[
         (edit_info.coding == "noncoding") & (edit_info.group != "negctrl"), "int_pos"
     ] = edit_info.loc[

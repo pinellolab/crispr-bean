@@ -101,7 +101,7 @@ def main(args, bdata):
             if "edit_rate" not in ndata.screen.guides.columns:
                 ndata.screen.get_edit_from_allele()
                 ndata.screen.get_edit_mat_from_uns(rel_pos_is_reporter=True)
-                ndata.screen.get_guide_edit_rate()
+                ndata.screen.get_guide_edit_rate(unsorted_condition_label=args.control_condition_label)
         target_info_df = _get_guide_target_info(
             ndata.screen, args, cols_include=[args.negctrl_col]
         )
@@ -117,6 +117,7 @@ def main(args, bdata):
             pd.DataFrame(pd.Series(ndata.edit_index))
             .reset_index()
             .rename(columns={"index": "edit"}),
+            control_tag=args.control_guide_tag,
             splice_sites=None if args.splice_site_path is None else splice_site,
         )
         target_info_df["effective_edit_rate"] = _obtain_effective_edit_rate(ndata).cpu()
@@ -130,7 +131,6 @@ def main(args, bdata):
             print("syn idx: ", adj_negctrl_idx)
 
     guide_info_df = ndata.screen.guides
-    del bdata
 
     info(f"Running inference for {model_label}...")
 

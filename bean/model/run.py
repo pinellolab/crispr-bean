@@ -102,7 +102,7 @@ def parse_args():
     )
     parser.add_argument(
         "--condition-col",
-        default="bin",
+        default="condition",
         type=str,
         help="Column key in `bdata.samples` that describes experimental condition.",
     )
@@ -281,8 +281,21 @@ def check_args(args, bdata):
         pass
     elif args.library_design == "tiling":
         if args.allele_df_key is None:
+            key_to_use = "allele_counts"
+            n_alleles = len(bdata.uns[key_to_use])
+            for key, df in bdata.uns.items():
+                if "allele_counts" not in key or not isinstance(df, pd.DataFrame):
+                    continue
+                if len(df) < n_alleles:
+                    key_to_use = key
+                    n_alleles = len(df)
+            warn(
+                f"--allele-df-key not provided for tiling screen. Using the most filtered allele counts with {n_alleles} alleles stored in {key_to_use}."
+            )
+            args.allele_df_key = key_to_use
+        elif args.allele_df_key not in bdata.uns:
             raise ValueError(
-                "--allele-df-key not provided for tiling screen. Feed in the key then allele counts in screen.uns[allele_df_key] will be used."
+                f"--allele-df-key {args.allele_df_key} not in ReporterScreen.uns. Check your input."
             )
     else:
         raise ValueError(
@@ -293,7 +306,7 @@ def check_args(args, bdata):
             bdata.guides[args.negctrl_col].map(lambda s: s.lower())
             == args.negctrl_col_value.lower()
         ).sum()
-        if not n_negctrl >= 20:
+        if not n_negctrl >= 10:
             raise ValueError(
                 f"Not enough negative control guide in the input data: {n_negctrl}. Check your input arguments."
             )

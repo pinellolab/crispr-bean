@@ -16,21 +16,31 @@ def plot_guide_edit_rates(bdata, ax=None, figsize=(5, 3), title="", n_bins=30):
     return ax
 
 
-def plot_sample_edit_rates(
-    bdata, ax=None, figsize=(5, 3), title="", agg_method="median"
-):
+def plot_sample_edit_rates(bdata, ax=None, figsize=(5, 3), title="", agg_method="mean"):
+    if agg_method == "median":
+        agg = np.nanmedian
+    elif agg_method == "mean":
+        agg = np.nanmean
+    else:
+        raise ValueError(
+            "Invalid aggregation method provided. Please pass one of 'median' or 'mean'."
+        )
     set_sample_edit_rates(bdata, agg_method)
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     for i, sample in enumerate(bdata.samples.index):
         sns.kdeplot(
             bdata.layers["edit_rate"][:, i],
-            label=f"{sample}(median {np.nanmedian(bdata.layers['edit_rate'][:, i]):.2f})",
+            label=f"{sample}({agg_method} {agg(bdata.layers['edit_rate'][:, i]):.2f})",
             linestyle=linestyles[(i // 10) % 4],
             clip=(0, 1),
         )
     sns.kdeplot(
-        bdata.guides.edit_rate, linewidth=2, c="black", label="Bulk median", clip=(0, 1)
+        bdata.guides.edit_rate,
+        linewidth=2,
+        c="black",
+        label=f"Bulk {agg_method}",
+        clip=(0, 1),
     )
     ax.set_xlabel("Editing rate")
     ax.set_title(title)

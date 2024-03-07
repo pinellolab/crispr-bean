@@ -25,8 +25,17 @@ This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The r
 ### Screen data is saved as *ReporterScreen* object in the pipeline.
 BEAN stores mapped gRNA and allele counts in `ReporterScreen` object which is compatible with [AnnData](https://anndata.readthedocs.io/en/latest/index.html). See [Data Structure](#data-structure) section for more information.
 
-### Examples
-We provide example scripts in `tests/`. Running `pytest --sparse-ordering` generates example input/output files from running 1 and 2-4 sequentially.
+<br/><br/>
+
+## Examples
+| Tutorial link | [Library design](#pipeline-run-options-by-library-design) | Selection | Reporter |  
+|---------------| -------------- | --------- | -------- |
+| [LDL-C GWAS](docs/tutorials/ldl_var.md) | GWAS variant library | FACS sorting | Yes/No |
+| [LDL-C LDLR CDS](docs/tutorials/ldl_cds.md) | Coding sequence tiling libarary | FACS sorting | Yes/No |
+| TKO simulated (Coming soon!) | GWAS variant library | Survival / Proliferation | Yes/No |
+| TKO simulated, tiling (Coming soon!)  | Coding sequence tiling libarary | Survival / Proliferation | Yes/No |
+
+We also provide example scripts in `tests/`. Running `pytest --sparse-ordering` will generate example input/output files.
 
 ### Pipeline run options by library design
 The `bean-filter` and `bean-run` steps depend on the type of gRNA library design, where BEAN supports two modes of running.
@@ -83,8 +92,8 @@ File should contain following columns.
   * Option 2: `accessibility_signal`: ATAC-seq signal value of the target loci of each guide.  
 * For variant library (gRNAs are designed to target specific variants and ignores bystander edits)
   * `target`: This column denotes which target variant/element of each gRNA. This is not used in `bean-count[-samples]` but required to run `bean-run` in later steps.
-  * `target_group [Optional]`: If negative/positive control gRNA will be considered in `bean-qc` and/or `bean-run`, specify as "NegCtrl"/"PosCtrl" in this column. 
-  * `target_pos [Optional]`: If `--match_target_pos` flag is used, input file needs `target_pos` which specifies 0-based relative position of targeted base within Reporter sequence.
+  * `target_group`: If negative/positive control gRNA will be considered in `bean-qc` and/or `bean-run`, specify as "NegCtrl"/"PosCtrl" in this column. 
+  * `target_pos`: If `--match_target_pos` flag is used, input file needs `target_pos` which specifies 0-based relative position of targeted base within Reporter sequence.
 * For tiling library (gRNAs tile coding / noncoding sequences)
   * `strand`: Specifies gRNA strand information relative to the reference genome.
   * `chrom`: Chromosome of gRNA targeted locus.
@@ -97,12 +106,18 @@ File should contain following columns with header.
 * `R1_filepath`: Path to read 1 `.fastq[.gz]` file
 * `R2_filepath`: Path to read 1 `.fastq[.gz]` file
 * `sample_id`: ID of sequencing sample
-* `rep [Optional]`: Replicate # of this sample (Should NOT contain `.`)
-* `bin [Optional]`: Name of the sorting bin
-* `upper_quantile [Optional]`: FACS sorting upper quantile
-* `lower_quantile [Optional]`: FACS sorting lower quantile  
+* `rep`: Replicate # of this sample (Should NOT contain `.`)
+* `condition`: Name of the sorting bin (ex. `top`, `bot`), or label of timepoint (ex. `D5`, `D18`)  
 
-Optional columns are not required but can be provided for compatibility with `bean-qc` and `bean-run`. See [example](tests/data/sample_list.csv).
+For FACS sorting screens:
+* `upper_quantile`: FACS sorting upper quantile
+* `lower_quantile`: FACS sorting lower quantile  
+
+For proliferation / survival screens:
+* `time`: FACS sorting upper quantile
+
+
+Also see examples for [FACS sorting screen](tests/data/sample_list.csv).
   
 ### Output file format
 `count` or `count-samples` produces `.h5ad` and `.xlsx` file with guide and per-guide allele counts.  
@@ -111,35 +126,45 @@ Optional columns are not required but can be provided for compatibility with `be
 
 ### Parameters
 * `-b`, `--edited-base` (`str`, default: `None`): For base editors, the base that should be ignored when matching the gRNA sequence 
+* `-i`, `--input`: List of fastq and sample ids. See above for the format.
 * `-f`, `--sgRNA-filename` (`str`, default: `None`): sgRNA description file. (See above)
-* `--guide-start-seq`: Guide starts after this sequence in R1 (default: '')
-* `--guide-end-seq`: Guide ends after this sequence in R1 (default: '')
-* `-r`, `--count-reporter` (default: `False`): Count edited alleles in reporters.
-* `-q`, `--min-average-read-quality` (default: `30`): Minimum average quality score (phred33) to keep a read
-* `-s`, `--min-single-bp-quality` (default: `0`): Minimum single bp score (phred33) to keep a read (default: 0)
+
+Output formats
 * `-n`, `--name`: Name of the output file will be `bean_count_{name}.h5ad`.
 * `-o`, `--output-folder`: Output folder
+* `--tiling`: Specify that the guide library is tiling library 
+* `-r`, `--count-reporter` (default: `False`): Count edited alleles in reporters.  
+* `--string-allele` (default: `False`): Store allele as quality filtered string instead of Allele object
+* `-g`, `--count-guide-edits` (default: `False`): count the self editing of guides (default: False)
+* `-m`, `--count-guide-reporter-alleles`: count the matched allele of guide and reporter edit
+* `--match-target-pos` (default: `False`): Count the edit in the exact target position.
+* `--target-pos-col` (default: `target_pos`): Column name specifying the relative target position within *reporter* sequence. 
+* `--offset` (default: `False`): Guide file has `offest` column that will be added to the relative position of reporters. 
+* `--align-fasta` (default: ''): gRNA is aligned to this sequence to infer the offset. Can be used when the exact offset is not provided.
+
+
+Read structure
+* `--guide-start-seq`: Guide starts after this sequence in R1 (default: '')
+* `--guide-end-seq`: Guide ends after this sequence in R1 (default: '')  
+* `--guide-start-seqs-file` (default: `None`): CSV file path with per-sample `guide_start_seq` to be used, if provided. Formatted as `sample_id, guide_start_seq` 
+* `--guide-end-seqs-file` (default: `None`): CSV file path with per-sample `guide_end_seq` to be used, if provided. Formatted as `sample_id,guide_end_seq` 
 * `-l`, `--reporter-length` (default: `32`): Length of the reporter sequence.
+* `--gstart-reporter` (default: `6`): Start position of the guide sequence in the reporter
+* `--guide-bc` (default: `True`): Construct has guide barcode 
+* `--guide-bc-len` (default: `4`): Guide barcode sequence length at the beginning of the R2
+
+Mapping quality filters
+* `-q`, `--min-average-read-quality` (default: `30`): Minimum average quality score 
+(phred33) to keep a read
 * `--keep-intermediate` (default: `False`): Keep all intermediate files generated from filtering.
+* `-s`, `--min-single-bp-quality` (default: `0`): Minimum single bp score (phred33) to keep a read (default: 0)
 * `--qstart-R1` (default: `0`): Start position of the read when filtering for quality score of the read 1 
 * `--qend-R1` (default: `47`): End position of the read when filtering for quality score of the read 1 
 * `--qstart-R2` (default: `0`): Start position of the read when filtering for quality score of the read 2 
 * `--qend-R2` (default: `36`): End position of the read when filtering for quality score of the read 2 
-* `--gstart-reporter` (default: `6`): Start position of the guide sequence in the reporter
-* `--match-target-pos` (default: `False`): Count the edit in the exact target position.
-* `--target-pos-col` (default: `target_pos`): Column name specifying the relative target position within *reporter* sequence. 
-* `--guide-bc` (default: `True`): Construct has guide barcode 
-* `--guide-bc-len` (default: `4`): Guide barcode sequence length at the beginning of the R2
-* `--offset` (default: `False`): Guide file has `offest` column that will be added to the relative position of reporters. 
-* `--align-fasta` (default: ''): gRNA is aligned to this sequence to infer the offset. Can be used when the exact offset is not provided.
-* `--string-allele` (default: `False`): Store allele as quality filtered string instead of Allele object
-* `-g`, `--count-guide-edits` (default: `False`): count the self editing of guides (default: False)
-* `-m`, `--count-guide-reporter-alleles`: count the matched allele of guide and reporter edit
-* `--tiling`: Specify that the guide library is tiling library 
-* `-i`, `--input`: List of fastq and sample ids. See above for the format.
+
+Run options
 * `-t`, `--threads` (default: `10`): Number of threads to use
-* `--guide-start-seqs-file` (default: `None`): CSV file path with per-sample `guide_start_seq` to be used, if provided. Formatted as `sample_id, guide_start_seq` 
-* `--guide-end-seqs-file` (default: `None`): CSV file path with per-sample `guide_end_seq` to be used, if provided. Formatted as `sample_id,guide_end_seq` 
 * `--rerun` (default: `False`): Recount each sample. If `False`, existing count for each sample is taken.
 
 
@@ -206,20 +231,33 @@ Above command produces
 #### Additional Parameters
 * `--tiling` (default: `None`): If set as `True` or `False`, it sets the screen object to be tiling (`True`) or variant (`False`)-targeting screen when calculating editing rate. 
 * `--replicate-label` (default: `"rep"`): Label of column in `bdata.samples` that describes replicate ID.
-* `--condition-label` (default: `"bin"`)": Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.).
+* `--condition-label` (default: `"condition"`)": Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.).
 * `--sample-covariates` (default: `None`): Comma-separated list of column names in `bdata.samples` that describes non-selective experimental condition (drug treatment, etc.). The values in the `bdata.samples` should NOT contain `.`. 
 * `--no-editing` (default: `False`): Ignore QC about editing. Can be used for QC of other editing modalities.
-* `--target-pos-col` (default: `"target_pos"`): Target position column in `bdata.guides` specifying target edit position in reporter.
-* `--rel-pos-is-reporter` (default: `False`): Specifies whether `edit_start_pos` and `edit_end_pos` are relative to reporter position. If `False`, those are relative to spacer position.
-* `--edit-start-pos` (default: `2`): Edit start position to quantify editing rate on, 0-based inclusive.
-* `--edit-end-pos` (default: `7`): Edit end position to quantify editing rate on, 0-based exclusive.
-* `--count-correlation-thres` (default: `0.8`): Threshold of guide count correlation to mask out.
-* `--edit-rate-thres` (default: `0.1`): Median editing rate threshold per sample to mask out.
+
+Editing rate quantification
+* `--ctrl-cond` (default: `"bulk"`): Value in of column in `ReporterScreen.samples[condition_label]` where guide-level editing rate to be calculated
+
+  Editing rate is calculated with following parameters in variant screens: 
+  * `--target-pos-col` (default: `"target_pos"`): Target position column in `bdata.guides` specifying target edit position in reporter.
+
+  For tiling screens:
+  * `--rel-pos-is-reporter` (default: `False`): Specifies whether `edit_start_pos` and `edit_end_pos` are relative to reporter position. If `False`, those are relative to spacer position.
+  * `--edit-start-pos` (default: `2`): Edit start position to quantify editing rate on, 0-based inclusive.
+  * `--edit-end-pos` (default: `7`): Edit end position to quantify editing rate on, 0-based exclusive.
+
+LFC of positive controls
 * `--posctrl-col` (default: `group`): Column name in .h5ad.guides DataFrame that specifies guide category.
 * `--posctrl-val` (default: `PosCtrl`): Value in .h5ad.guides[`posctrl_col`] that specifies guide will be used as the positive control in calculating log fold change.
-* `--lfc-thres` (default: `0.1`): Positive guides' correlation threshold to filter out.
 * `--lfc-conds` (default: `"top,bot"`): Values in of column in `ReporterScreen.samples[condition_label]` for LFC will be calculated between, delimited by comma
-* `--ctrl-cond` (default: `"bulk"`): Value in of column in `ReporterScreen.samples[condition_label]` where guide-level editing rate to be calculated
+
+
+Sample filtering thresholds
+* `--count-correlation-thres` (default: `0.7`): Threshold of guide count correlation to mask out.
+* `--edit-rate-thres` (default: `0.1`): Mean editing rate threshold per sample to mask out.
+* `--lfc-thres` (default: `0.1`): Positive guides' correlation threshold to filter out.
+
+Other
 * `--recalculate-edits` (default: `False`): Even when `ReporterScreen.layers['edit_count']` exists, recalculate the edit counts from `ReporterScreen.uns['allele_count']`."
 
 <br/><br/>
@@ -237,7 +275,7 @@ Above command produces
 * `my_sorting_screen_filtered.h5ad` with filtered alleles stored in `.uns`,   
 * `my_sorting_screen_filtered.filtered_allele_stats.pdf`, and `my_sorting_screen_filtered.filter_log.txt` that report allele count stats in each filtering step.  
 
-You may want to adjust the flitering parameters to obtain optimal balance between # guides per variant & # variants that are scored. See example outputs of filtering step [here](docs/example_filtering_outputs/).
+You may want to adjust the flitering parameters to obtain optimal balance between # guides per variant & # variants that are scored. See example outputs of filtering step [here](docs/example_filtering_output/).
 
 
 ### Translating alleles
@@ -367,7 +405,7 @@ Above command produces
   * `--target-column` (default: `target`): Column key in `bdata.guides` that describes the target element of each guide.
   * `--guide-activity-col`: Column in `bdata.guides` DataFrame showing the editing rate estimated via external tools.
 * Sample annotations (`bdata.samples` column keys)
-  * `--condition-column` (default: `bin`): Column key in `bdata.samples` that describes experimental condition.
+  * `--condition-column` (default: `condition`): Column key in `bdata.samples` that describes experimental condition.
   * `-uq`, `--sorting-bin-upper-quantile-column` (default: `upper_quantile`): Column name with upper quantile values of each sorting bin in bdata.samples
   * `-lq`, `--sorting-bin-lower-quantile-column` (default: `lower_quantile`): Column name with lower quantile values of each sorting bin in bdata.samples
 

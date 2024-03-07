@@ -63,7 +63,7 @@ def parse_args():
         "--condition-label",
         help="Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.)",
         type=str,
-        default="bin",
+        default="condition",
     )
     parser.add_argument(
         "--no-editing",
@@ -100,7 +100,7 @@ def parse_args():
     )
     parser.add_argument(
         "--edit-rate-thres",
-        help="Median editing rate threshold per sample to mask out.",
+        help="Mean editing rate threshold per sample to mask out.",
         type=float,
         default=0.1,
     )

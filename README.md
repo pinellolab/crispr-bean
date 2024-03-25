@@ -78,8 +78,13 @@ bean-count-samples \
   -o .                      `# output directory` \
   -r                        `# read edit/allele information from reporter` \
   -t 12                     `# number of threads` \
-  --name my_sorting_screen  `# name of this sample run`
+  --name my_sorting_screen  `# name of this sample run` \
+  --guide-start-seq ATGCTTGCC `# Change this according to your read design
 ```
+
+You may need to adjust the command arguments according to your read structure. 
+   <img src="imgs/read_struct.png" alt="Read structuren" width="600"/>  
+See full detail in [Parameters](#parameters).
 
 ### Input file format
 #### 1. gRNA_library.csv

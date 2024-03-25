@@ -222,7 +222,7 @@ def parse_args():
     parser.add_argument(
         "--allele-df-key",
         type=str,
-        default="allele_counts",
+        default=None,
         help="screen.uns[allele_df_key] will be used as the allele count.",
     )
     parser.add_argument(

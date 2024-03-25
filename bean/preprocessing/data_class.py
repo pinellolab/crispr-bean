@@ -567,7 +567,6 @@ class TilingReporterScreenData(ReporterScreenData):
         else:
             allele_counts_selected = self.screen.uns[allele_df_key]
         if control_guide_tag is not None:
-
             def _set_uid_to_row(row):
                 if control_guide_tag in row.guide:
                     row[allele_col].set_uid(row.guide)

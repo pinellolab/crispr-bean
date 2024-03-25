@@ -206,9 +206,18 @@ Above command produces `prefix_editing_preference.[html,ipynb]` as editing prefe
 ## `bean-qc`: QC of reporter screen data
 ```bash
 bean-qc \
-  my_sorting_screen.h5ad    `# Input ReporterScreen .h5ad file path` \
+  my_sorting_screen.h5ad             `# Input ReporterScreen .h5ad file path` \
   -o my_sorting_screen_masked.h5ad   `# Output ReporterScreen .h5ad file path` \
-  -r qc_report_my_sorting_screen   `# Prefix for QC report` 
+  -r qc_report_my_sorting_screen     `# Prefix for QC report` \
+
+# Inspect the output qc_report_my_sorting_screen.html to tweak QC threshold
+
+bean-qc \
+  my_sorting_screen.h5ad              \
+  -o my_sorting_screen_masked.h5ad    \
+  -r qc_report_my_sorting_screen      \
+  #[--count-correlation-thres 0.7 ...]\
+  -b
 ```
 
 `bean-qc` supports following quality control and masks samples with low quality. Specifically:  
@@ -229,36 +238,68 @@ Above command produces
 
 
 #### Additional Parameters
-* `--tiling` (default: `None`): If set as `True` or `False`, it sets the screen object to be tiling (`True`) or variant (`False`)-targeting screen when calculating editing rate. 
-* `--replicate-label` (default: `"rep"`): Label of column in `bdata.samples` that describes replicate ID.
-* `--condition-label` (default: `"condition"`)": Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.).
-* `--sample-covariates` (default: `None`): Comma-separated list of column names in `bdata.samples` that describes non-selective experimental condition (drug treatment, etc.). The values in the `bdata.samples` should NOT contain `.`. 
-* `--no-editing` (default: `False`): Ignore QC about editing. Can be used for QC of other editing modalities.
+##### Optional arguments:
+* `-o OUT_SCREEN_PATH`, `--out-screen-path OUT_SCREEN_PATH`
+                        Path where quality-filtered ReporterScreen object to be written to
+* `-r OUT_REPORT_PREFIX`, `--out-report-prefix OUT_REPORT_PREFIX`
+                        Output prefix of qc report (prefix.html, prefix.ipynb)
 
-Editing rate quantification
-* `--ctrl-cond` (default: `"bulk"`): Value in of column in `ReporterScreen.samples[condition_label]` where guide-level editing rate to be calculated
+##### QC thresholds:
+* `--count-correlation-thres COUNT_CORRELATION_THRES`
+                        Correlation threshold to mask out.
+* `--edit-rate-thres EDIT_RATE_THRES`
+                        Mean editing rate threshold per sample to mask out.
+* `--lfc-thres LFC_THRES`
+                        Positive guides' correlation threshold to filter out.
 
-  Editing rate is calculated with following parameters in variant screens: 
-  * `--target-pos-col` (default: `"target_pos"`): Target position column in `bdata.guides` specifying target edit position in reporter.
+##### Run options:
+* `-b`, `--remove-bad-replicates`
+                        Remove replicates with at least two of its samples meet the QC threshold (bean-run does not support having only one sorting bin sample for a replicate).
+* `-i`, `--ignore-missing-samples`
+                        If the flag is not provided, if the ReporterScreen object does not contain all condiitons for
+                        each replicate, make fake empty samples. If the flag is provided, don't add dummy samples.
+* `--no-editing`          Ignore QC about editing. Can be used for QC of other editing modalities.
+* `--dont-recalculate-edits`
+                        When ReporterScreen.layers['edit_count'] exists, do not recalculate the edit counts from
+                        ReporterScreen.uns['allele_count'].
 
-  For tiling screens:
-  * `--rel-pos-is-reporter` (default: `False`): Specifies whether `edit_start_pos` and `edit_end_pos` are relative to reporter position. If `False`, those are relative to spacer position.
-  * `--edit-start-pos` (default: `2`): Edit start position to quantify editing rate on, 0-based inclusive.
-  * `--edit-end-pos` (default: `7`): Edit end position to quantify editing rate on, 0-based exclusive.
-
-LFC of positive controls
-* `--posctrl-col` (default: `group`): Column name in .h5ad.guides DataFrame that specifies guide category.
-* `--posctrl-val` (default: `PosCtrl`): Value in .h5ad.guides[`posctrl_col`] that specifies guide will be used as the positive control in calculating log fold change.
-* `--lfc-conds` (default: `"top,bot"`): Values in of column in `ReporterScreen.samples[condition_label]` for LFC will be calculated between, delimited by comma
-
-
-Sample filtering thresholds
-* `--count-correlation-thres` (default: `0.7`): Threshold of guide count correlation to mask out.
-* `--edit-rate-thres` (default: `0.1`): Mean editing rate threshold per sample to mask out.
-* `--lfc-thres` (default: `0.1`): Positive guides' correlation threshold to filter out.
-
-Other
-* `--recalculate-edits` (default: `False`): Even when `ReporterScreen.layers['edit_count']` exists, recalculate the edit counts from `ReporterScreen.uns['allele_count']`."
+##### Input `.h5ad` formatting:
+Note that these arguements will change the way the QC metrics are calculated for guides, samples, or replicates.
+* `--tiling TILING`       Specify that the guide library is tiling library without 'n guides per target' design
+* `--replicate-label REPLICATE_LABEL`
+                        Label of column in `bdata.samples` that describes replicate ID.
+* `--sample-covariates SAMPLE_COVARIATES`
+                        Comma-separated list of column names in `bdata.samples` that describes non-selective
+                        experimental condition. (drug treatment, etc.)
+* `--condition-label CONDITION_LABEL`
+                        Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time,
+                        etc.)
+###### Editing rate calculation
+  * `--ctrl-cond CTRL_COND`
+                        Values in of column in `ReporterScreen.samples[condition_label]` for guide-level editing rate
+                        to be calculated
+  * `--rel-pos-is-reporter`
+                        Specifies whether `edit_start_pos` and `edit_end_pos` are relative to reporter position. If
+                        `False`, those are relative to spacer position.
+  Editing rate is calculated with following parameters in 
+    * Variant screens: 
+      * `--target-pos-col TARGET_POS_COL`
+                        Target position column in `bdata.guides` specifying target edit position in reporter
+    * tiling screens:
+      * `--edit-start-pos EDIT_START_POS`
+                            Edit start position to quantify editing rate on, 0-based inclusive.
+      * `--edit-end-pos EDIT_END_POS`
+                            Edit end position to quantify editing rate on, 0-based exclusive.
+###### LFC of positive controls
+  * `--posctrl-col POSCTRL_COL`
+                          Column name in ReporterScreen.guides DataFrame that specifies guide category. To use all
+                          gRNAs, feed empty string ''.
+  * `--posctrl-val POSCTRL_VAL`
+                          Value in ReporterScreen.guides[`posctrl_col`] that specifies guide will be used as the
+                          positive control in calculating log fold change.
+  * `--lfc-conds LFC_CONDS`
+                          Values in of column in `ReporterScreen.samples[condition_label]` for LFC will be calculated
+                          between, delimited by comma
 
 <br/><br/>
 

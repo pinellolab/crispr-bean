@@ -175,7 +175,11 @@ class Allele:
             min(edit.pos for edit in self.edits),
             max(edit.pos for edit in self.edits),
         )
-
+    
+    def set_uid(self, uid):
+        self.edits = {edit.set_uid(uid) for edit in self.edits}
+        return self
+    
     def get_uid(self):
         uid = None
         if (

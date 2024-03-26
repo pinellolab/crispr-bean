@@ -47,7 +47,7 @@ class NoReadsAfterQualityFiltering(Exception):
 
 
 strand_str_to_int = {"neg": -1, "pos": 1, "-": -1, "+": 1}
-
+base_revcomp = {"A":"T", "T":"A", "G":"C", "C":"G"}
 
 def _get_stranded_guide_offset(strand: int, start_pos: int, guide_len: int) -> int:
     if strand == -1:
@@ -652,16 +652,15 @@ class GuideEditCounter:
 
     def get_barcode(self, R1_seq, R2_seq):
         if self.barcode_start_seq != "":
-            barcode_start_idx = revcomp(R2_seq).replace(
-                self.base_edited_from, self.base_edited_to
-            ).find(
-                self.barcode_start_seq.replace(self.base_edited_from, self.base_edited_to)
-            )
+            barcode_start_idx = R2_seq.replace(
+                base_revcomp[self.base_edited_from], base_revcomp[self.base_edited_to]
+            ).find(revcomp(self.barcode_start_seq).replace(base_revcomp[self.base_edited_from], base_revcomp[self.base_edited_to]))
             if barcode_start_idx == -1:
                 return -1, ""
+            barcode_start_idx += len(self.barcode_start_seq)
         else: 
             barcode_start_idx = 0
-        return barcode_start_idx, revcomp(R2_seq[barcode_start_idx: self.guide_bc_len])
+        return barcode_start_idx, revcomp(R2_seq[barcode_start_idx: (barcode_start_idx + self.guide_bc_len)])
 
     def _match_read_to_sgRNA_bcmatch_semimatch(self, R1_seq: str, R2_seq: str):
         # This should be adjusted for each experimental recipes.

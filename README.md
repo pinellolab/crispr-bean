@@ -90,7 +90,7 @@ See full detail in [Parameters](#parameters).
 File should contain following columns. 
 * `name`: gRNA ID column
 * `sequence`: gRNA sequence
-* `barcode`: R2 barcode to help match reporter to gRNA
+* `barcode`: R2 barcode to help match reporter to gRNA, written in the sense direction (as in R1)
 * In order to use accessibility in the [variant effect quantification](#bean-run-quantify-variant-effects), provide accessibility information in one of two options. (For non-targeting guides, provide NA values (empty cell).)   
   * Option 1: `chrom` & `genomic_pos`: Chromosome (ex. `chr19`) and genomic position of guide sequence. You will have to provide the path to the bigwig file with matching reference version in `bean-run`. 
   * Option 2: `accessibility_signal`: ATAC-seq signal value of the target loci of each guide.  
@@ -153,6 +153,7 @@ Read structure
 * `--barcode-start-seq` (default: ''): Barcode + reporter starts after this sequence in R2, denoted as the sense direction (the same sequence direction as R1).
 * `--guide-start-seqs-file` (default: `None`): CSV file path with per-sample `guide_start_seq` to be used, if provided. Formatted as `sample_id, guide_start_seq` 
 * `--guide-end-seqs-file` (default: `None`): CSV file path with per-sample `guide_end_seq` to be used, if provided. Formatted as `sample_id,guide_end_seq` 
+* `--guide-start-seqs-file` (default: `None`): CSV file path with per-sample `barcode_start_seq` to be used, if provided. Formatted as `sample_id, guide_start_seq` 
 * `-l`, `--reporter-length` (default: `32`): Length of the reporter sequence.
 * `--gstart-reporter` (default: `6`): Start position of the guide sequence in the reporter
 * `--guide-bc` (default: `True`): Construct has guide barcode 

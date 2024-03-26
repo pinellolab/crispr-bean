@@ -1,5 +1,8 @@
 import pytest
 import subprocess
+from bean.mapping import GuideEditCounter
+from bean.mapping.utils import _get_input_parser
+from bean.mapping._supporting_fn import revcomp
 
 
 @pytest.mark.order(2)
@@ -52,6 +55,15 @@ def test_count_samples_bcstart():
     except subprocess.CalledProcessError as exc:
         raise exc
 
+def test_barcode_start_idx():
+    args = vars(_get_input_parser().parse_args(["-b", "A", "-f", "tests/data/test_guide_info.csv",]))
+    args["barcode_start_seq"] = "gtttgaattcgctagctaggtcttg"
+    args["R1"] = "tests/data/test_R1.fastq"
+    args["R2"] = "tests/data/test_R2.fastq"
+    gc = GuideEditCounter(**args)
+    sidx, bc = gc.get_barcode("", revcomp("agtggcaccgagtcggtgcttttttTAACAGTGTAATCTGGCGAGCCACTGTTCTTTGTACCAGAAgtttgaattcgctagctaggtcttgctgg".upper()))
+    assert sidx == 29
+    assert bc == "AGAA"
 
 @pytest.mark.order(6)
 def test_count_samples_tiling():

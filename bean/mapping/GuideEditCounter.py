@@ -124,6 +124,7 @@ class GuideEditCounter:
 
         self.guide_start_seq = kwargs["guide_start_seq"].upper()
         self.guide_end_seq = kwargs["guide_end_seq"].upper()
+        self.barcode_start_seq = kwargs["barcode_start_seq"].upper()
         if not self.guide_start_seq == "":
             info(
                 f"{self.name}: Using guide_start_seq={self.guide_start_seq} for {self.output_dir}"
@@ -438,6 +439,7 @@ class GuideEditCounter:
         matched_guide_idx: int,
         R1_seq: str,
         R2_record: SeqIO.SeqRecord,
+        R2_start: int = 0,
         single_base_qual_cutoff: str = 30,
         guide_allele: Allele = None,
     ):
@@ -453,7 +455,7 @@ class GuideEditCounter:
         guide_allele: Allele from baseedit in gRNA spacer sequence when paired with guide allele.
         """
         ref_reporter_seq = self.screen.guides.reporter.iloc[matched_guide_idx]
-        read_reporter_seq, read_reporter_qual = self.get_reporter_seq_qual(R2_record)
+        read_reporter_seq, read_reporter_qual = self.get_reporter_seq_qual(R2_record, R2_start)
 
         guide_strand, offset = self._get_strand_offset_from_guide_index(
             matched_guide_idx
@@ -514,10 +516,9 @@ class GuideEditCounter:
                 R1_seq = str(r1.seq)
                 R2_seq = str(r2.seq)
 
-                bc_match, semimatch = self._match_read_to_sgRNA_bcmatch_semimatch(
+                bc_match, semimatch, R2_start = self._match_read_to_sgRNA_bcmatch_semimatch(
                     R1_seq, R2_seq
                 )
-
                 if len(bc_match) == 0:
                     if len(semimatch) == 0:  # no guide match
                         if self.keep_intermediate:
@@ -555,10 +556,10 @@ class GuideEditCounter:
                         # TODO: what if reporter seq doesn't match barcode & guide?
                         if self.count_guide_reporter_alleles:
                             self._count_reporter_edits(
-                                matched_guide_idx, R1_seq, r2, guide_allele=guide_allele
+                                matched_guide_idx, R1_seq, r2, R2_start = R2_start, guide_allele=guide_allele
                             )
                         else:
-                            self._count_reporter_edits(matched_guide_idx, R1_seq, r2)
+                            self._count_reporter_edits(matched_guide_idx, R1_seq, r2, R2_start = R2_start, )
                 tqdm_reads.postfix = f"n_read={self.bcmatch}"
                 tqdm_reads.update()
 
@@ -643,19 +644,28 @@ class GuideEditCounter:
             R2_seq[self.guide_bc_len : (self.guide_bc_len + self.reporter_length)]
         )
 
-    def get_reporter_seq_qual(self, R2_record: SeqIO.SeqRecord):
+    def get_reporter_seq_qual(self, R2_record: SeqIO.SeqRecord, R2_start = 0):
         seq = R2_record[
-            self.guide_bc_len : (self.guide_bc_len + self.reporter_length)
+            (R2_start + self.guide_bc_len) : (R2_start + self.guide_bc_len + self.reporter_length)
         ].reverse_complement()
         return (str(seq.seq), seq.letter_annotations["phred_quality"])
 
     def get_barcode(self, R1_seq, R2_seq):
-        """This can be edited by user based on the read construct."""
-        return revcomp(R2_seq[: self.guide_bc_len])
+        if self.barcode_start_seq != "":
+            barcode_start_idx = revcomp(R2_seq).replace(
+                self.base_edited_from, self.base_edited_to
+            ).find(
+                self.barcode_start_seq.replace(self.base_edited_from, self.base_edited_to)
+            )
+            if barcode_start_idx == -1:
+                return -1, ""
+        else: 
+            barcode_start_idx = 0
+        return barcode_start_idx, revcomp(R2_seq[barcode_start_idx: self.guide_bc_len])
 
     def _match_read_to_sgRNA_bcmatch_semimatch(self, R1_seq: str, R2_seq: str):
         # This should be adjusted for each experimental recipes.
-        guide_barcode = self.get_barcode(R1_seq, R2_seq)
+        bc_start_idx, guide_barcode = self.get_barcode(R1_seq, R2_seq)
         bc_match_idx = np.array([])
         semimatch_idx = np.array([])
         for guide_length in self.guide_lengths:
@@ -677,7 +687,7 @@ class GuideEditCounter:
             )
             semimatch_idx = np.append(semimatch_idx, _seq_match)
 
-        return (bc_match_idx.astype(int), semimatch_idx.astype(int))
+        return bc_match_idx.astype(int), semimatch_idx.astype(int), bc_start_idx
 
     def _get_guide_position_seq_of_read(self, seq):
         guide_start_idx = self._get_guide_start_idx(seq)

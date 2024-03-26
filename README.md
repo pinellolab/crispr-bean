@@ -79,11 +79,10 @@ bean-count-samples \
   -r                        `# read edit/allele information from reporter` \
   -t 12                     `# number of threads` \
   --name my_sorting_screen  `# name of this sample run` \
-  --guide-start-seq ATGCTTGCC `# Change this according to your read design
 ```
 
-You may need to adjust the command arguments according to your read structure. 
-   <img src="imgs/read_struct.png" alt="Read structuren" width="600"/>  
+By default, `bean-count[-samples]` assume R1 and R2 are trimmed off of the adapter sequence. You may need to adjust the command arguments according to your read structure. 
+   <img src="imgs/sequence_struct.png" alt="Read structuren" width="600"/>  
 See full detail in [Parameters](#parameters).
 
 ### Input file format
@@ -149,8 +148,9 @@ Output formats
 
 
 Read structure
-* `--guide-start-seq`: Guide starts after this sequence in R1 (default: '')
-* `--guide-end-seq`: Guide ends after this sequence in R1 (default: '')  
+* `--guide-start-seq` (default: ''): Guide starts after this sequence in R1 
+* `--guide-end-seq` (default: ''): Guide ends after this sequence in R1  
+* `--barcode-start-seq` (default: ''): Barcode + reporter starts after this sequence in R2, denoted as the sense direction (the same sequence direction as R1).
 * `--guide-start-seqs-file` (default: `None`): CSV file path with per-sample `guide_start_seq` to be used, if provided. Formatted as `sample_id, guide_start_seq` 
 * `--guide-end-seqs-file` (default: `None`): CSV file path with per-sample `guide_end_seq` to be used, if provided. Formatted as `sample_id,guide_end_seq` 
 * `-l`, `--reporter-length` (default: `32`): Length of the reporter sequence.

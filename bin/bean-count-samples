@@ -59,6 +59,13 @@ def get_input_parser() -> argparse.Namespace:
         + "Formatted as `sample_id,guide_end_seq`",
         default=None,
     )
+    parser.add_argument(
+        "--barcode-start-seqs-file",
+        type=str,
+        help="CSV file path with per-sample `barcode_start_seq` to be used."
+        + "Formatted as `sample_id,guide_end_seq`",
+        default=None,
+    )
 
     parser.add_argument(
         "--rerun", help="Recount each sample", action="store_true", default=False
@@ -91,6 +98,11 @@ def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
         and args_dict["guide_end_seqs_tbl"] is not None
     ):
         args_dict["guide_end_seq"] = args_dict["guide_end_seqs_tbl"][sample_id]
+    if (
+        "barcode_start_seqs_tbl" in args_dict
+        and args_dict["barcode_start_seqs_tbl"] is not None
+    ):
+        args_dict["barcode_start_seq"] = str(args_dict["barcode_start_seqs_tbl"][sample_id])
     counter = bean.mp.GuideEditCounter(**args_dict)
     if os.path.exists(f"{counter.output_dir}.h5ad") and not args_dict["rerun"]:
         screen = bean.read_h5ad(f"{counter.output_dir}.h5ad")
@@ -146,7 +158,7 @@ def check_arguments(args: argparse.Namespace) -> argparse.Namespace:
     for read_length in first_read_lengths:
         _check_read_length(args, read_length, warn)
 
-    def _check_return_guide_seqs_tbl(guide_seqs_file, sample_tbl):
+    def _check_return_guide_seqs_tbl(guide_seqs_file, sample_tbl, label):
         """Check if the provided `guide_[start,end]_seqs_file` contains information about all samples in `sample_tbl`."""
         guide_seqs_tbl = pd.read_csv(guide_seqs_file, header=None, dtype=str).fillna("")
         if len(guide_seqs_tbl.columns) == 1:
@@ -155,18 +167,22 @@ def check_arguments(args: argparse.Namespace) -> argparse.Namespace:
         sample_has_seq = sample_tbl.iloc[:, 2].isin(guide_seqs_tbl[0])
         if not sample_has_seq.all():
             raise InputFileError(
-                f"Sample ID(s) {sample_tbl.iloc[:,2][~sample_has_seq]} not in guides_seqs_file {guide_seqs_tbl}"
+                f"Sample ID(s) {sample_tbl.iloc[:,2][~sample_has_seq]} not in {label}_seqs_file {guide_seqs_tbl}"
             )
         guide_seqs_tbl.columns = ["sample", "seq"]
         return guide_seqs_tbl.set_index("sample")["seq"]
 
     if args.guide_start_seqs_file is not None:
         args.guide_start_seqs_tbl = _check_return_guide_seqs_tbl(
-            args.guide_start_seqs_file, sample_tbl
+            args.guide_start_seqs_file, sample_tbl, "guide_start"
         )
     if args.guide_end_seqs_file is not None:
         args.guide_end_seqs_tbl = _check_return_guide_seqs_tbl(
-            args.guide_end_seqs_file, sample_tbl
+            args.guide_end_seqs_file, sample_tbl, "guide_end"
+        )
+    if args.barcode_start_seqs_file is not None:
+        args.barcode_start_seqs_tbl = _check_return_guide_seqs_tbl(
+            args.barcode_start_seqs_file, sample_tbl, "barcode_start"
         )
     return args
 

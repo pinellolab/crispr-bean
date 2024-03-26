@@ -75,6 +75,12 @@ def _get_input_parser():
         default="",
     )
     parser.add_argument(
+        "--barcode-start-seq",
+        type=str,
+        help="Barcode + reporter starts after this sequence in R2, denoted as the sense direction (the same sequence direction as R1).",
+        default="",
+    )
+    parser.add_argument(
         "-r", "--count-reporter", help="Count reporter edits.", action="store_true"
     )
     parser.add_argument(

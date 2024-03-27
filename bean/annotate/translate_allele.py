@@ -350,7 +350,7 @@ class CDS:
                 continue
             try:
                 # print("".join(self.nt))
-                print(self.edited_nt[(3 * edited_aa_pos) : (3 * edited_aa_pos + 3)])
+                # print(self.edited_nt[(3 * edited_aa_pos) : (3 * edited_aa_pos + 3)])
                 mt_aa = _translate_single_codon(
                     self.edited_nt[(3 * edited_aa_pos) : (3 * edited_aa_pos + 3)]
                 )

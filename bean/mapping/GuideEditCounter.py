@@ -47,7 +47,8 @@ class NoReadsAfterQualityFiltering(Exception):
 
 
 strand_str_to_int = {"neg": -1, "pos": 1, "-": -1, "+": 1}
-base_revcomp = {"A":"T", "T":"A", "G":"C", "C":"G"}
+base_revcomp = {"A": "T", "T": "A", "G": "C", "C": "G"}
+
 
 def _get_stranded_guide_offset(strand: int, start_pos: int, guide_len: int) -> int:
     if strand == -1:
@@ -334,9 +335,6 @@ class GuideEditCounter:
                 self.screen.uns["guide_edit_counts"].guide
             ]
 
-    def _get_guide_counts_bcmatch(self):
-        NotImplemented
-
     def _count_guide_edits(
         self, matched_guide_idx, R1_record: SeqIO.SeqRecord, single_base_qual_cutoff=30
     ):
@@ -349,7 +347,12 @@ class GuideEditCounter:
         if "chrom" in self.screen.guides.columns.tolist():
             chrom = self.screen.guides.chrom.iloc[matched_guide_idx]
         else:
-            raise ValueError("'chrom' column denoting gRNA chromosome location column not present in the input. Please check the input file.")
+            if self.screen.tiling:
+                raise ValueError(
+                    "'chrom' column denoting gRNA chromosome location column not present in the input. Please check the input file."
+                )
+            else:
+                chrom = None
         read_guide_seq, read_guide_qual = self.get_guide_seq_qual(
             R1_record, len(ref_guide_seq)
         )
@@ -455,7 +458,9 @@ class GuideEditCounter:
         guide_allele: Allele from baseedit in gRNA spacer sequence when paired with guide allele.
         """
         ref_reporter_seq = self.screen.guides.reporter.iloc[matched_guide_idx]
-        read_reporter_seq, read_reporter_qual = self.get_reporter_seq_qual(R2_record, R2_start)
+        read_reporter_seq, read_reporter_qual = self.get_reporter_seq_qual(
+            R2_record, R2_start
+        )
 
         guide_strand, offset = self._get_strand_offset_from_guide_index(
             matched_guide_idx
@@ -516,9 +521,11 @@ class GuideEditCounter:
                 R1_seq = str(r1.seq)
                 R2_seq = str(r2.seq)
 
-                bc_match, semimatch, R2_start = self._match_read_to_sgRNA_bcmatch_semimatch(
-                    R1_seq, R2_seq
-                )
+                (
+                    bc_match,
+                    semimatch,
+                    R2_start,
+                ) = self._match_read_to_sgRNA_bcmatch_semimatch(R1_seq, R2_seq)
                 if len(bc_match) == 0:
                     if len(semimatch) == 0:  # no guide match
                         if self.keep_intermediate:
@@ -556,10 +563,19 @@ class GuideEditCounter:
                         # TODO: what if reporter seq doesn't match barcode & guide?
                         if self.count_guide_reporter_alleles:
                             self._count_reporter_edits(
-                                matched_guide_idx, R1_seq, r2, R2_start = R2_start, guide_allele=guide_allele
+                                matched_guide_idx,
+                                R1_seq,
+                                r2,
+                                R2_start=R2_start,
+                                guide_allele=guide_allele,
                             )
                         else:
-                            self._count_reporter_edits(matched_guide_idx, R1_seq, r2, R2_start = R2_start, )
+                            self._count_reporter_edits(
+                                matched_guide_idx,
+                                R1_seq,
+                                r2,
+                                R2_start=R2_start,
+                            )
                 tqdm_reads.postfix = f"n_read={self.bcmatch}"
                 tqdm_reads.update()
 
@@ -644,9 +660,11 @@ class GuideEditCounter:
             R2_seq[self.guide_bc_len : (self.guide_bc_len + self.reporter_length)]
         )
 
-    def get_reporter_seq_qual(self, R2_record: SeqIO.SeqRecord, R2_start = 0):
+    def get_reporter_seq_qual(self, R2_record: SeqIO.SeqRecord, R2_start=0):
         seq = R2_record[
-            (R2_start + self.guide_bc_len) : (R2_start + self.guide_bc_len + self.reporter_length)
+            (R2_start + self.guide_bc_len) : (
+                R2_start + self.guide_bc_len + self.reporter_length
+            )
         ].reverse_complement()
         return (str(seq.seq), seq.letter_annotations["phred_quality"])
 
@@ -654,13 +672,20 @@ class GuideEditCounter:
         if self.barcode_start_seq != "":
             barcode_start_idx = R2_seq.replace(
                 base_revcomp[self.base_edited_from], base_revcomp[self.base_edited_to]
-            ).find(revcomp(self.barcode_start_seq).replace(base_revcomp[self.base_edited_from], base_revcomp[self.base_edited_to]))
+            ).find(
+                revcomp(self.barcode_start_seq).replace(
+                    base_revcomp[self.base_edited_from],
+                    base_revcomp[self.base_edited_to],
+                )
+            )
             if barcode_start_idx == -1:
                 return -1, ""
             barcode_start_idx += len(self.barcode_start_seq)
-        else: 
+        else:
             barcode_start_idx = 0
-        return barcode_start_idx, revcomp(R2_seq[barcode_start_idx: (barcode_start_idx + self.guide_bc_len)])
+        return barcode_start_idx, revcomp(
+            R2_seq[barcode_start_idx : (barcode_start_idx + self.guide_bc_len)]
+        )
 
     def _match_read_to_sgRNA_bcmatch_semimatch(self, R1_seq: str, R2_seq: str):
         # This should be adjusted for each experimental recipes.

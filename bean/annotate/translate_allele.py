@@ -1,5 +1,6 @@
+from doctest import set_unittest_reportflags
 import os
-from typing import List, Iterable, Dict, Tuple, Collection
+from typing import List, Iterable, Dict, Tuple, Collection, Sequence
 from copy import deepcopy
 import numpy as np
 import pandas as pd
@@ -199,6 +200,11 @@ class CDS:
         self.edited_nt: List[str] = []
         self.nt: List[str] = []
         self.strand: int = 1
+        self.gene_name: str = ""
+        self.chrom: str = ""
+        self.translated_seq: List[str] = []
+        self.pos: np.ndarray = None
+        self.genomic_pos: Sequence = []
 
     @classmethod
     def from_fasta(cls, fasta_file_name, gene_name, suppressMessage=True):
@@ -338,7 +344,10 @@ class CDS:
                     self.nt[(3 * edited_aa_pos) : (3 * edited_aa_pos + 3)]
                 )
             except ValueError as e:
-                print(f"Translation mismatch in translating ref for {allele_str}: {e}")
+                print(
+                    f"Translation mismatch in translating ref for {allele_str}: {e}. Check the input .fasta or genome version used for the reporter. Ignoring this allele."
+                )
+                continue
             try:
                 # print("".join(self.nt))
                 print(self.edited_nt[(3 * edited_aa_pos) : (3 * edited_aa_pos + 3)])
@@ -347,8 +356,9 @@ class CDS:
                 )
             except ValueError as e:
                 print(
-                    f"Translation mismatch in translating mutated gene for {allele_str}: {e}"
+                    f"Translation mismatch in translating mutated gene for {allele_str}: {e}. Check the input .fasta or genome version used for the reporter. Ignoring this allele."
                 )
+                continue
             except IndexError as e:
                 print(f"End of gene reached by frameshift {allele_str}: {e}")
                 mt_aa = ">"

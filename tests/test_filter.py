@@ -1,5 +1,6 @@
 import pytest
 import subprocess
+from bean.annotate.translate_allele import CDS
 
 
 @pytest.mark.order(11)
@@ -65,3 +66,13 @@ def test_filter_tiling_screen_translate_genenames():
         )
     except subprocess.CalledProcessError as exc:
         raise exc
+
+
+def test_translate_aa():
+    abca1 = CDS.from_gene_name("ABCA1")
+    allele_str = "chr9:104903664:0:+:G>A"
+    assert str(abca1.get_aa_change(allele_str)) == "ABCA1:6:Q>*|", allele_str
+
+    abca1 = CDS.from_gene_name("ABCA1")
+    allele_str = "chr9:104903664:0:-:C>T"
+    assert str(abca1.get_aa_change(allele_str)) == "ABCA1:6:Q>*|", allele_str

@@ -20,7 +20,7 @@ warn = logging.warning
 debug = logging.debug
 info = logging.info
 
-complement_base = {"A": "T", "T": "A", "C": "G", "G": "C"}
+complement_base = {"A": "T", "T": "A", "C": "G", "G": "C", "-": "-"}
 
 
 def revcomp(nt_list: List[str]):
@@ -97,7 +97,9 @@ def get_mane_transcript_id(gene_name: str):
     return mane_transcript_id, id_version
 
 
-def get_exons_from_transcript_id(transcript_id: str, id_version: int, ref_version: str = "GRCh38"):
+def get_exons_from_transcript_id(
+    transcript_id: str, id_version: int, ref_version: str = "GRCh38"
+):
     """
     Retrieves the exons and the start position of the coding sequence (CDS) for a given transcript ID and version.
 
@@ -114,7 +116,9 @@ def get_exons_from_transcript_id(transcript_id: str, id_version: int, ref_versio
     if transcript_json["count"] != 1:
         if transcript_json["count"] > 1:
             api_url = f"http://tark.ensembl.org/api/transcript/?stable_id={transcript_id}&stable_id_version={id_version}&assembly_name={ref_version}&expand=exons"
-            response = requests.get(api_url, headers={"Content-Type": "application/json"})
+            response = requests.get(
+                api_url, headers={"Content-Type": "application/json"}
+            )
             transcript_json = response.json()
             if transcript_json["count"] != 1:
                 raise ValueError(

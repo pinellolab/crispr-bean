@@ -349,7 +349,7 @@ class GuideEditCounter:
         if "chrom" in self.screen.guides.columns.tolist():
             chrom = self.screen.guides.chrom.iloc[matched_guide_idx]
         else:
-            chrom = None
+            raise ValueError("'chrom' column denoting gRNA chromosome location column not present in the input. Please check the input file.")
         read_guide_seq, read_guide_qual = self.get_guide_seq_qual(
             R1_record, len(ref_guide_seq)
         )

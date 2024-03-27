@@ -137,6 +137,8 @@ if __name__ == "__main__":
         get_mismatch_df().to_csv(f"{args.output_prefix}.translation_ref_mismatches.csv")
 
         allele_df_keys.append(filtered_key)
+        if not any(bdata.uns[filtered_key].aa_allele.map(lambda a: a.has_coding)):
+            warn("WARNING: No alleles have been translated. Check your gene input(s).")
         info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
 
     if (

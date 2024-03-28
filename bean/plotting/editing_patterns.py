@@ -129,9 +129,9 @@ def plot_by_pos_context(
         f"C{target_base}": 0,
         f"T{target_base}": 0.2,
     }
-    edit_rates_df[
-        "spacer_pos_ctxt"
-    ] = edit_rates_df.spacer_pos + edit_rates_df.context.map(context_to_offset_map)
+    edit_rates_df["spacer_pos_ctxt"] = (
+        edit_rates_df.spacer_pos + edit_rates_df.context.map(context_to_offset_map)
+    )
     fig, ax = plt.subplots(figsize=(6, 3))
     sns.scatterplot(
         edit_rates_df.loc[

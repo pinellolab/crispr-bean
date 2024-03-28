@@ -326,9 +326,9 @@ def check_args(args, bdata):
         raise ValueError(
             f"Condition column set by `--condition-col` {args.condition_col} not in ReporterScreen.samples.columns:{bdata.samples.columns}. Check your input."
         )
-    if args.control_condition_label not in bdata.samples[args.condition_col].tolist():
+    if args.control_condition not in bdata.samples[args.condition_col].tolist():
         raise ValueError(
-            f"No sample has control label (set by `--control-condition-label`) {args.control_condition_label} in ReporterScreen.samples[{args.condition_col}]: {bdata.samples[args.condition_col]}. Check your input."
+            f"No sample has control label (set by `--control-condition`) {args.control_condition} in ReporterScreen.samples[{args.condition_col}]: {bdata.samples[args.condition_col]}. Check your input."
         )
     if args.replicate_col not in bdata.samples.columns:
         raise ValueError(

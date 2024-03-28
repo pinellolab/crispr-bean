@@ -333,7 +333,7 @@ class ReporterScreen(Screen):
                         lambda slist: ".".join(slist)
                     )
                     new_uns[k] = df.loc[guides_include, adata.var._rc.unique()]
-                    #adata.var.pop("_rc")
+                    # adata.var.pop("_rc")
                 else:
                     new_uns[k] = df.loc[guides_include, adata.var.rep.unique()]
             if not isinstance(df, pd.DataFrame):
@@ -697,8 +697,8 @@ class ReporterScreen(Screen):
 
     def filter_allele_counts_by_base(
         self,
-        ref_base="A",
-        alt_base="G",
+        ref_base: Union[List, str] = "A",
+        alt_base: Union[List, str] = "G",
         allele_uns_key="allele_counts",
         map_to_filtered=True,
         jaccard_threshold: float = 0.5,

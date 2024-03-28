@@ -100,6 +100,18 @@ if __name__ == "__main__":
         allele_df_keys.append(filtered_key)
         info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
 
+    if len(bdata.uns[allele_df_keys[-1]]) > 0 and not args.keep_indels:
+        filtered_key = f"{allele_df_keys[-1]}_noindels"
+        info(f"Filtering out indels...")
+        bdata.uns[filtered_key] = bdata.filter_allele_counts_by_base(
+            ["A", "T", "G", "C"],
+            ["A", "T", "G", "C"],
+            map_to_filtered=False,
+            allele_uns_key=allele_df_keys[-1],
+        ).reset_index(drop=True)
+        info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
+        allele_df_keys.append(filtered_key)
+
     if len(bdata.uns[allele_df_keys[-1]]) > 0 and args.filter_target_basechange:
         filtered_key = (
             f"{allele_df_keys[-1]}_{bdata.base_edited_from}.{bdata.base_edited_to}"

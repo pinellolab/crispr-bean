@@ -281,6 +281,12 @@ def parse_args():
         action="store_true",
     )
     parser.add_argument(
+        "--keep-indels",
+        "-i",
+        help="Include indels.",
+        action="store_true",
+    )
+    parser.add_argument(
         "--filter-target-basechange",
         "-b",
         help="Only consider target edit (stored in bdata.uns['target_base_change'])",

@@ -175,8 +175,8 @@ def _translate_single_codon(
 ) -> str:  # nt_seq_string: str, aa_pos: int) -> str:
     """Translate `aa_pos`-th codon of `nt_seq_string`."""
     if len(codon) != 3:
-        print("reached the end of CDS, frameshift.")
-        return "/"
+        raise ValueError("reached the end of CDS, frameshift.")
+        return ">"
     try:
         codon = "".join(codon)
         return codon_map[codon]
@@ -302,7 +302,7 @@ class CDS:
                     )
                 )
                 raise RefBaseMismatchException(
-                    f"{self.gene_name + ';' if hasattr(self, 'gene_name') else ''}ref:{self.nt[rel_pos]} at pos {rel_pos}, got edit {edit}. Gene sequence: {''.join(self.nt)}"
+                    f"{self.gene_name + ';' if hasattr(self, 'gene_name') else ''}ref:{self.nt[rel_pos]} at pos {rel_pos}, got edit {edit}."
                 )
         else:
             self.edited_nt[rel_pos] = alt_base

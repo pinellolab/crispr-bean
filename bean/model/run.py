@@ -113,7 +113,7 @@ def parse_args():
         help="Column key in `bdata.samples` that describes time elapsed.",
     )
     parser.add_argument(
-        "--control-condition-label",
+        "--control-condition",
         default="bulk",
         type=str,
         help="Value in `bdata.samples[condition_col]` that indicates control experimental condition.",
@@ -334,19 +334,21 @@ def check_args(args, bdata):
         raise ValueError(
             f"Condition column set by `--replicate-col` {args.replicate_col} not in ReporterScreen.samples.columns:{bdata.samples.columns}. Check your input."
         )
-    if (
-        args.control_guide_tag is not None
-        and not bdata.guides.index.map(lambda s: args.control_guide_tag in s).any()
-    ):
-        raise ValueError(
-            f"Negative control guide label {args.control_guide_tag} provided by `--control-guide-tag` doesn't appear in any of the guide names. Check your input."
-        )
+    if args.control_guide_tag is not None:
+        if args.library_design == "variant":
+            raise ValueError(
+                "`--control-guide-tag` is not used for the variant mode. Make sure you provide the separate `target` column for negative control guide that targets different negative control variant."
+            )
+        elif not bdata.guides.index.map(lambda s: args.control_guide_tag in s).any():
+            raise ValueError(
+                f"Negative control guide label {args.control_guide_tag} provided by `--control-guide-tag` doesn't appear in any of the guide names. Check your input."
+            )
     if args.alpha_if_overdispersion_fitting_fails is not None:
         try:
             b0, b1 = args.alpha_if_overdispersion_fitting_fails.split(",")
             args.popt = (float(b0), float(b1))
         except TypeError as e:
-            raise e(
+            raise ValueError(
                 f"Input --alpha-if-overdispersion-fitting-fails {args.alpha_if_overdispersion_fitting_fails} is malformatted! Provide [float].[float] format."
             )
     else:

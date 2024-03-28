@@ -148,7 +148,7 @@ def parse_args():
         default="top,bot",
     )
     input_parser.add_argument(
-        "--ctrl-cond",
+        "--control-condition",
         help="Values in of column in `ReporterScreen.samples[condition_label]` for guide-level editing rate to be calculated",
         type=str,
         default="bulk",

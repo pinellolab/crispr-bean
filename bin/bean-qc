@@ -31,7 +31,7 @@ def main():
             condition_label=args.condition_label,
             comp_cond1=args.lfc_cond1,
             comp_cond2=args.lfc_cond2,
-            ctrl_cond=args.ctrl_cond,
+            ctrl_cond=args.control_condition,
             exp_id=args.out_report_prefix,
             recalculate_edits=~args.dont_recalculate_edits,
             base_edit_data=args.base_edit_data,

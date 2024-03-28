@@ -476,7 +476,7 @@ class ReporterScreen(Screen):
         return_result=False,
         count_layer="X_bcmatch",
         edit_layer="edits",
-        unsorted_condition_label="bulk",
+        unsorted_condition_label=None,
     ):
         """
         prior_weight:
@@ -497,9 +497,14 @@ class ReporterScreen(Screen):
             num_targetable_sites = self.guides.sequence.map(
                 lambda s: s[editable_base_start:editable_base_end].count(edited_base)
             )
-        bulk_idx = np.where(
-            self.samples.index.astype(str).map(lambda s: unsorted_condition_label in s)
-        )[0]
+        if unsorted_condition_label is not None:
+            bulk_idx = np.where(
+                self.samples.index.astype(str).map(
+                    lambda s: unsorted_condition_label in s
+                )
+            )[0]
+        else:
+            bulk_idx = np.arange(0, len(self.samples)).astype(int)
 
         if prior_weight is None:
             prior_weight = 1

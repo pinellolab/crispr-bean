@@ -85,7 +85,7 @@ def main(args, bdata):
         use_const_pi=args.const_pi,
         condition_column=args.condition_col,
         time_column=args.time_col,
-        control_condition=args.control_condition_label,
+        control_condition=args.control_condition,
         control_can_be_selected=args.include_control_condition_for_inference,
         allele_df_key=args.allele_df_key,
         control_guide_tag=args.control_guide_tag,
@@ -101,7 +101,9 @@ def main(args, bdata):
             if "edit_rate" not in ndata.screen.guides.columns:
                 ndata.screen.get_edit_from_allele()
                 ndata.screen.get_edit_mat_from_uns(rel_pos_is_reporter=True)
-                ndata.screen.get_guide_edit_rate(unsorted_condition_label=args.control_condition_label)
+                ndata.screen.get_guide_edit_rate(
+                    unsorted_condition_label=args.control_condition
+                )
         target_info_df = _get_guide_target_info(
             ndata.screen, args, cols_include=[args.negctrl_col]
         )
@@ -182,16 +184,18 @@ def main(args, bdata):
         prefix=f"{prefix}/",
         suffix=args.result_suffix,
         guide_index=guide_index,
-        guide_acc=ndata.guide_accessibility.cpu().numpy()
-        if hasattr(ndata, "guide_accessibility")
-        and ndata.guide_accessibility is not None
-        else None,
+        guide_acc=(
+            ndata.guide_accessibility.cpu().numpy()
+            if hasattr(ndata, "guide_accessibility")
+            and ndata.guide_accessibility is not None
+            else None
+        ),
         adjust_confidence_by_negative_control=args.adjust_confidence_by_negative_control,
         adjust_confidence_negatives=adj_negctrl_idx,
         sd_is_fitted=(args.selection == "sorting"),
-        sample_covariates=ndata.sample_covariates
-        if hasattr(ndata, "sample_covariates")
-        else None,
+        sample_covariates=(
+            ndata.sample_covariates if hasattr(ndata, "sample_covariates") else None
+        ),
     )
     info("Done!")
 

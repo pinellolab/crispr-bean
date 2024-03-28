@@ -201,9 +201,9 @@ Above command produces `prefix_editing_preference.[html,ipynb]` as editing prefe
 ### Parameters
   * `-o`, `--output-prefix` (default: `None`): Output prefix of editing pattern report (prefix.html, prefix.ipynb). If not provided, base name of `bdata_path` is used.
   * `--replicate-col` (default: `"rep"`): Column name in `bdata.samples` that describes replicate ID.
-  * `--condition-col` (default: `"bin"`): Column name in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.)
+  * `--condition-col` (default: `"condition"`): Column name in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.)
   * `--pam-col` (default: `None`): Column name describing PAM of each gRNA in `bdata.guides`.
-  * `--control-condition` (default: `"bulk"`): Control condition where editing preference would be profiled at. Pre-filters data where `bdata.samples[condition_col] == control_condition`.
+  * `--control-condition` (default: `"bulk"`): Control condition where editing preference would be profiled at. Pre-filters data where `bdata.samples[condition_col] == control_condition`. DO NOT use plasmid library as control here where we do not expect editing.
   * `-w`, `--window-length` (default: `6`): Window length of editing window of maximal editing efficiency to be identified. This window is used to quantify context specificity within the window.
 
 
@@ -215,7 +215,7 @@ bean-qc \
   my_sorting_screen.h5ad             `# Input ReporterScreen .h5ad file path` \
   -o my_sorting_screen_masked.h5ad   `# Output ReporterScreen .h5ad file path` \
   -r qc_report_my_sorting_screen     `# Prefix for QC report` \
-
+  --ctrl-cond presort                `# "condition" column in the control sample before selection. Mean gRNA editing rates in these samples are reported. ` \
 # Inspect the output qc_report_my_sorting_screen.html to tweak QC threshold
 
 bean-qc \
@@ -281,9 +281,9 @@ Note that these arguements will change the way the QC metrics are calculated for
                         Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time,
                         etc.)
 ###### Editing rate calculation
-  * `--ctrl-cond CTRL_COND`
+  * `--control-condition CTRL_COND`
                         Values in of column in `ReporterScreen.samples[condition_label]` for guide-level editing rate
-                        to be calculated
+                        to be calculated. Default is `None`, which considers all samples.
   * `--rel-pos-is-reporter`
                         Specifies whether `edit_start_pos` and `edit_end_pos` are relative to reporter position. If
                         `False`, those are relative to spacer position.
@@ -453,6 +453,7 @@ Above command produces
   * `--guide-activity-col`: Column in `bdata.guides` DataFrame showing the editing rate estimated via external tools.
 * Sample annotations (`bdata.samples` column keys)
   * `--condition-column` (default: `condition`): Column key in `bdata.samples` that describes experimental condition.
+  * `--control-condition` (default: `bulk`): Value in `bdata.samples[condition_col]` that indicates control experimental condition.
   * `-uq`, `--sorting-bin-upper-quantile-column` (default: `upper_quantile`): Column name with upper quantile values of each sorting bin in bdata.samples
   * `-lq`, `--sorting-bin-lower-quantile-column` (default: `lower_quantile`): Column name with lower quantile values of each sorting bin in bdata.samples
 

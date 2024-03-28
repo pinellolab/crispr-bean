@@ -118,7 +118,7 @@ For FACS sorting screens:
 * `lower_quantile`: FACS sorting lower quantile  
 
 For proliferation / survival screens:
-* `time`: FACS sorting upper quantile
+* `time`: Numeric time following the base editing of each sample.
 
 
 Also see examples for [FACS sorting screen](tests/data/sample_list.csv).

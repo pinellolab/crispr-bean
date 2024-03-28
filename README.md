@@ -446,7 +446,7 @@ Above command produces
     * `--device`: Optionally use GPU if provided valid GPU device name (ex. cuda:0)
   * `--ignore-bcmatch` (default: `False`): If provided, even if the screen object has .X_bcmatch, ignore the count when fitting.
   * `--allele-df-key` (default: `allele_counts`): bdata.uns[allele_df_key] will be used as the allele count.
-  * `--control-guide-tag` (default: `CONTROL`): (Relevant in bean-run *tiling* mode) If this string is in guide name, treat each guide separately not to mix the position. Used for non-targeting negative controls.
+  * `--control-guide-tag` (default: `None`): (Relevant in bean-run *tiling* mode) If this string is in guide name, treat each guide separately not to mix the position. Used for non-targeting negative controls.
 * Guide annotations (`bdata.guides` column keys)
   * `--acc-col`: Column name in bdata.guides that specify raw ATAC-seq signal.
   * `--target-column` (default: `target`): Column key in `bdata.guides` that describes the target element of each guide.

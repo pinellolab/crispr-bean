@@ -234,7 +234,7 @@ def parse_args():
     parser.add_argument(
         "--control-guide-tag",
         type=none_or_str,
-        default="CONTROL",
+        default=None,
         help="If this string is in guide name, treat each guide separately not to mix the position. Used for negative controls.",
     )
     parser.add_argument(

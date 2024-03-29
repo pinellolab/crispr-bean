@@ -488,3 +488,20 @@ def identify_model_guide(args):
                 fit_noise=(not args.dont_fit_noise),
             ),
         )
+
+
+def identify_negctrl_model_guide(args, data_has_bcmatch):
+    if args.selection == "sorting":
+        m = sorting_model
+    else:
+        m = survival_model
+    negctrl_model = partial(
+        m.ControlNormalModel,
+        use_bcmatch=(not args.ignore_bcmatch and data_has_bcmatch),
+    )
+
+    negctrl_guide = partial(
+        m.ControlNormalGuide,
+        use_bcmatch=(not args.ignore_bcmatch and data_has_bcmatch),
+    )
+    return negctrl_model, negctrl_guide

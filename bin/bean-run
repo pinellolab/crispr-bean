@@ -31,6 +31,7 @@ from bean.model.run import (
     parse_args,
     check_args,
     identify_model_guide,
+    identify_negctrl_model_guide,
 )
 
 logging.basicConfig(
@@ -144,14 +145,8 @@ def main(args, bdata):
             run_inference(model, guide, ndata, num_steps=args.n_iter)
         )
         if args.fit_negctrl:
-            negctrl_model = partial(
-                m.ControlNormalModel,
-                use_bcmatch=(not args.ignore_bcmatch and "X_bcmatch" in bdata.layers),
-            )
-
-            negctrl_guide = partial(
-                m.ControlNormalGuide,
-                use_bcmatch=(not args.ignore_bcmatch and "X_bcmatch" in bdata.layers),
+            negctrl_model, negctrl_guide = identify_negctrl_model_guide(
+                args, "X_bcmatch" in bdata.layers
             )
             negctrl_idx = np.where(
                 guide_info_df[args.negctrl_col].map(lambda s: s.lower())

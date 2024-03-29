@@ -102,7 +102,6 @@ def write_result_table(
             )
 
     fit_df = pd.DataFrame(param_dict)
-    fit_df["novl"] = get_novl(fit_df, "mu", "mu_sd")
     if "negctrl" in param_hist_dict.keys():
         print("Normalizing with common negative control distribution")
         mu0 = param_hist_dict["negctrl"]["params"]["mu_loc"].detach().cpu().numpy()
@@ -114,6 +113,8 @@ def write_result_table(
                 .cpu()
                 .numpy()
             )
+        else:
+            sd0 = 1.0
         print(f"Fitted mu0={mu0}" + (f", sd0={sd0}." if sd_is_fitted else ""))
         fit_df["mu_scaled"] = (mu - mu0) / sd0
         fit_df["mu_sd_scaled"] = mu_sd / sd0
@@ -154,12 +155,12 @@ def write_result_table(
                 fit_df,
                 std,
                 suffix="_adj",
-                mu_adjusted_col="mu_scaled"
-                if "negctrl" in param_hist_dict.keys()
-                else "mu",
-                mu_sd_adjusted_col="mu_sd_scaled"
-                if "negctrl" in param_hist_dict.keys()
-                else "mu_sd",
+                mu_adjusted_col=(
+                    "mu_scaled" if "negctrl" in param_hist_dict.keys() else "mu"
+                ),
+                mu_sd_adjusted_col=(
+                    "mu_sd_scaled" if "negctrl" in param_hist_dict.keys() else "mu_sd"
+                ),
             )
             fit_df = add_credible_interval(fit_df, "mu_adj", "mu_sd_adj")
             if sample_covariates is not None:
@@ -168,12 +169,16 @@ def write_result_table(
                         fit_df,
                         std,
                         suffix=f"_{sample_cov}_adj",
-                        mu_adjusted_col=f"mu_{sample_cov}_scaled"
-                        if "negctrl" in param_hist_dict.keys()
-                        else f"mu_{sample_cov}",
-                        mu_sd_adjusted_col=f"mu_sd_{sample_cov}_scaled"
-                        if "negctrl" in param_hist_dict.keys()
-                        else f"mu_sd_{sample_cov}",
+                        mu_adjusted_col=(
+                            f"mu_{sample_cov}_scaled"
+                            if "negctrl" in param_hist_dict.keys()
+                            else f"mu_{sample_cov}"
+                        ),
+                        mu_sd_adjusted_col=(
+                            f"mu_sd_{sample_cov}_scaled"
+                            if "negctrl" in param_hist_dict.keys()
+                            else f"mu_sd_{sample_cov}"
+                        ),
                     )
                     fit_df = add_credible_interval(
                         fit_df, f"mu_{sample_cov}_adj", f"mu_sd_{sample_cov}_adj"

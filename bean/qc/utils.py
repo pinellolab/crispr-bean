@@ -24,9 +24,9 @@ def parse_args():
         "bdata_path", help="Path to the ReporterScreen object to run QC on", type=str
     )
     thres_parser = parser.add_argument_group("QC thresholds")
-    run_parser =  parser.add_argument_group("Run options")
-    input_parser =  parser.add_argument_group("Input .h5ad formatting")
-    
+    run_parser = parser.add_argument_group("Run options")
+    input_parser = parser.add_argument_group("Input .h5ad formatting")
+
     thres_parser.add_argument(
         "--count-correlation-thres",
         help="Correlation threshold to mask out.",
@@ -45,7 +45,7 @@ def parse_args():
         type=float,
         default=-0.1,
     )
-    
+
     parser.add_argument(
         "-o",
         "--out-screen-path",
@@ -60,7 +60,8 @@ def parse_args():
     )
 
     run_parser.add_argument(
-        "-b", "--remove-bad-replicates",
+        "-b",
+        "--remove-bad-replicates",
         help="Remove replicates with at least two of its samples meet the QC threshold.",
         action="store_true",
     )
@@ -91,7 +92,7 @@ def parse_args():
         "--replicate-label",
         help="Label of column in `bdata.samples` that describes replicate ID.",
         type=str,
-        default="rep",
+        default="replicate",
     )
     input_parser.add_argument(
         "--sample-covariates",
@@ -153,7 +154,6 @@ def parse_args():
         type=str,
         default="bulk",
     )
-
 
     args = parser.parse_args()
     if args.out_screen_path is None:

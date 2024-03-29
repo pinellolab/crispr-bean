@@ -327,7 +327,7 @@ class ReporterScreen(Screen):
             if k.startswith("repguide_mask"):
                 if "sample_covariates" in adata.uns:
                     adata.var["_rc"] = adata.var[
-                        ["rep"] + list(adata.uns["sample_covariates"])
+                        ["replicate"] + list(adata.uns["sample_covariates"])
                     ].values.tolist()
                     adata.var["_rc"] = adata.var["_rc"].map(
                         lambda slist: ".".join(slist)
@@ -335,7 +335,14 @@ class ReporterScreen(Screen):
                     new_uns[k] = df.loc[guides_include, adata.var._rc.unique()]
                     # adata.var.pop("_rc")
                 else:
-                    new_uns[k] = df.loc[guides_include, adata.var.rep.unique()]
+                    try:
+                        new_uns[k] = df.loc[
+                            guides_include, adata.var["replicate"].unique()
+                        ]
+                    except KeyError as e:
+                        raise ValueError(
+                            f"Replicate column should be `replicate`. Modify your ReporterScreen.samples. Current columns: {adata.var.columns.tolist()}"
+                        ) from e
             if not isinstance(df, pd.DataFrame):
                 if k == "sample_covariates":
                     new_uns[k] = df

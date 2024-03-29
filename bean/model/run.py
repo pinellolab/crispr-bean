@@ -8,6 +8,7 @@ import logging
 from functools import partial
 import pyro
 import bean.model.model as sorting_model
+import bean.model.survival_model as survival_model
 
 # import bean.model.survival_model as survival_model
 
@@ -127,7 +128,7 @@ def parse_args():
     )
     parser.add_argument(
         "--replicate-col",
-        default="rep",
+        default="replicate",
         type=str,
         help="Column key in `bdata.samples` that describes experimental replicates.",
     )
@@ -431,8 +432,8 @@ def run_inference(
 def identify_model_guide(args):
     if args.selection == "sorting":
         m = sorting_model
-    # else:
-    #     m = survival_model
+    else:
+        m = survival_model
     if args.library_design == "tiling":
         info("Using Mixture Normal model...")
         return (

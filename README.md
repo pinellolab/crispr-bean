@@ -110,7 +110,7 @@ File should contain following columns with header.
 * `R1_filepath`: Path to read 1 `.fastq[.gz]` file
 * `R2_filepath`: Path to read 1 `.fastq[.gz]` file
 * `sample_id`: ID of sequencing sample
-* `rep`: Replicate # of this sample (Should NOT contain `.`)
+* `replicate`: Replicate # of this sample (Should NOT contain `.`)
 * `condition`: Name of the sorting bin (ex. `top`, `bot`), or label of timepoint (ex. `D5`, `D18`)  
 
 For FACS sorting screens:
@@ -200,7 +200,7 @@ Above command produces `prefix_editing_preference.[html,ipynb]` as editing prefe
 
 ### Parameters
   * `-o`, `--output-prefix` (default: `None`): Output prefix of editing pattern report (prefix.html, prefix.ipynb). If not provided, base name of `bdata_path` is used.
-  * `--replicate-col` (default: `"rep"`): Column name in `bdata.samples` that describes replicate ID.
+  * `--replicate-col` (default: `"replicate"`): Column name in `bdata.samples` that describes replicate ID.
   * `--condition-col` (default: `"condition"`): Column name in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.)
   * `--pam-col` (default: `None`): Column name describing PAM of each gRNA in `bdata.guides`.
   * `--control-condition` (default: `"bulk"`): Control condition where editing preference would be profiled at. Pre-filters data where `bdata.samples[condition_col] == control_condition`. DO NOT use plasmid library as control here where we do not expect editing.
@@ -402,7 +402,7 @@ bean-run sorting[survival] variant[tiling] my_sorting_screen_filtered.h5ad \
       * `target_group [Optional]`: If negative control gRNA will be used, specify as "NegCtrl" in this column. 
     * `sample_info_table.csv` should have following columns.
       * `sample_id`: ID of sequencing sample
-      * `rep`: Replicate # of this sample
+      * `replicate`: Replicate # of this sample
       * `bin`: Name of the sorting bin
       * `upper_quantile`: FACS sorting upper quantile
       * `lower_quantile`: FACS sorting lower quantile  

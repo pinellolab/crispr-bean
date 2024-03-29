@@ -1,4 +1,4 @@
-,condition,rep,lower_quantile,upper_quantile
+,condition,replicate,lower_quantile,upper_quantile
 rep5_top,top,rep5,0.8,1.0
 rep5_high,high,rep5,0.6,0.8
 rep5_bulk,bulk,rep5,0.0,1.0

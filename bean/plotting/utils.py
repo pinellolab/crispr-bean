@@ -27,7 +27,7 @@ def parse_args():
         "--replicate-col",
         help="Column name in `bdata.samples` that describes replicate ID.",
         type=str,
-        default="rep",
+        default="replicate",
     )
     parser.add_argument(
         "--condition-col",

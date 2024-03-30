@@ -1,14 +1,14 @@
-# Variant sorting screen tutorial
+## Variant sorting screen tutorial
 GWAS variant screen with per-variant gRNA tiling design, selected based on FACS signal quantiles.  
 
 <table>
   <tr>
     <th>Library design</th>
-    <td>Variant (gRNAs tile each target variant)   <br> <img src="assets/variant.png" alt="variant library design" width="600"/></td>
+    <td>Variant (gRNAs tile each target variant)   <br> <img src="/crispr-bean/assets/variant.png" alt="variant library design" width="600"/></td>
   </tr>
   <tr>
     <th>Selection</th>
-    <td>Cells are sorted based on FACS signal quantiles  <br>  <img src="assets/sorting_bins@8x.png" alt="variant library design" width="300"/></td>
+    <td>Cells are sorted based on FACS signal quantiles  <br>  <img src="/crispr-bean/assets/sorting_bins@8x.png" alt="variant library design" width="300"/></td>
   </tr>
 </table>
 

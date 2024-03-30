@@ -4,11 +4,11 @@ Tiling screen that tiles gRNA densely across locus or multiple loci, selected ba
 <table>
   <tr>
     <th>Library design</th>
-    <td>Tiling (gRNAs tile each locus densely)   <br> <img src="assets/tiling.png" alt="tiling library design" width="300"/> </td>
+    <td>Tiling (gRNAs tile each locus densely)   <br> <img src="/crispr-bean/assets/tiling.png" alt="tiling library design" width="300"/> </td>
   </tr>
   <tr>
     <th>Selection</th>
-    <td>Cells are sorted based on FACS signal quantiles  <br>  <img src="assets/sorting_bins@8x.png" alt="variant library design" width="300"/></td>
+    <td>Cells are sorted based on FACS signal quantiles  <br>  <img src="/crispr-bean//crispr-bean/assets/sorting_bins@8x.png" alt="variant library design" width="300"/></td>
   </tr>
 </table>
 

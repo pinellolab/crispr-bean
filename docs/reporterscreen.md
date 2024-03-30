@@ -1,6 +1,6 @@
 BEAN stores mapped gRNA and allele counts in `ReporterScreen` object which is compatible with [AnnData](https://anndata.readthedocs.io/en/latest/index.html).  
 
-<img src="assets/data_structure_v2.png" alt="ReporterScreen object structure" width="700" />
+<img src="/crispr-bean/assets/data_structure_v2.png" alt="ReporterScreen object structure" width="700" />
 
   * `.guides`: guide information provided in input (`gRNA_library.csv` in above example)
   * `.samples`: sample information provided in input (`sample_list.csv` in above example)

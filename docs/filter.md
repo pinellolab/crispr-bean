@@ -16,7 +16,7 @@ You may want to adjust the flitering parameters to obtain optimal balance betwee
 # Translating alleles
 If you want to obtain **amino acid level variant** for coding sequence tiling screens, provide coding sequence positions which variants occuring within the coding sequence will be translated. *This is optional, but **highly recommended** to increase per-(coding)variant support.*  
 
-<img src="assets/translation.png" alt="Allele translation" width="500"/>  
+<img src="/crispr-bean/assets/translation.png" alt="Allele translation" width="500"/>  
   
 
 ```bash

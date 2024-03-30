@@ -1,4 +1,4 @@
-GWAS variant library
+Proliferation screen with GWAS library
 ***********************
 .. mdinclude:: profile_gwas.md
 

@@ -32,18 +32,9 @@ def none_or_str(value):
     return value
 
 
-def parse_args():
-    print(
-        r"""
-    _ _       
-  /  \ '\                 
-  |   \  \      _ _ _  _ _ _  
-   \   \  |    | '_| || | ' \ 
-    `.__|/     |_|  \_,_|_||_|
-    """
-    )
-    print("bean-run: Run model to identify targeted variants and their impact.")
-    parser = argparse.ArgumentParser(description="Run model on data.")
+def parse_args(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser(description="Run model on data.")
     parser.add_argument(
         "selection",
         type=str,
@@ -259,7 +250,7 @@ def parse_args():
         help="Load existing .pkl file if present.",
     )
 
-    return parser.parse_args()
+    return parser
 
 
 def check_args(args, bdata):

@@ -1,19 +1,9 @@
 import argparse
 
 
-def parse_args():
-    print("  \n~~~BEAN Profile~~~")
-    print("-Profile editing patterns of your editor-")
-    print(
-        r"""
-    _ _                     __ _ _     
-  /  \ '\     _ __ _ _ ___ / _(_) |___ 
-  |   \  \   | '_ \ '_/ _ \  _| | / -_)
-   \   \  |  | .__/_| \___/_| |_|_\___|
-    `.__|/   |_|                       
-    """
-    )
-    parser = argparse.ArgumentParser()
+def parse_args(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser()
     parser.add_argument(
         "bdata_path", help="Path to the ReporterScreen object to run QC on", type=str
     )
@@ -55,10 +45,7 @@ def parse_args():
         default=6,
     )
 
-    args = parser.parse_args()
-    if args.output_prefix is None:
-        args.output_prefix = f"{args.bdata_path.rsplit('.h5ad', 1)[0]}"
-    return args
+    return parser
 
 
 def check_args(args):

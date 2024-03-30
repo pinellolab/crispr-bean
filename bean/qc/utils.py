@@ -4,22 +4,12 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 import argparse
-from ..framework.ReporterScreen import ReporterScreen, concat
+from bean.framework.ReporterScreen import ReporterScreen, concat
 
 
-def parse_args():
-    print("  \n~~~BEANQC~~~")
-    print("-Check guide/sample level quality and mask / discard-")
-    print(
-        r"""
-    _ _       
-  /  \ '\        ___   ___ 
-  |   \  \      / _ \ / __|
-   \   \  |    | (_) | (__ 
-    `.__|/      \__\_\\___|
-    """
-    )
-    parser = argparse.ArgumentParser()
+def parse_args(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser()
     parser.add_argument(
         "bdata_path", help="Path to the ReporterScreen object to run QC on", type=str
     )
@@ -155,12 +145,7 @@ def parse_args():
         default="bulk",
     )
 
-    args = parser.parse_args()
-    if args.out_screen_path is None:
-        args.out_screen_path = f"{args.bdata_path.rsplit('.h5ad', 1)[0]}.filtered.h5ad"
-    if args.out_report_prefix is None:
-        args.out_report_prefix = f"{args.bdata_path.rsplit('.h5ad', 1)[0]}.qc_report"
-    return args
+    return parser
 
 
 def check_args(args):

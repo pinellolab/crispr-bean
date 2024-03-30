@@ -24,13 +24,14 @@ setup(
         "Cython",
     ],
     scripts=[
-        "bin/bean-count",
-        "bin/bean-count-samples",
-        "bin/bean-create-screen",
-        "bin/bean-profile",
-        "bin/bean-qc",
-        "bin/bean-filter",
-        "bin/bean-run",  # TODO: prevent error when extra requirements are not met.
+        "bin/bean"
+        # "bin/bean-count",
+        # "bin/bean-count-samples",
+        # "bin/bean-create-screen",
+        # "bin/bean-profile",
+        # "bin/bean-qc",
+        # "bin/bean-filter",
+        # "bin/bean-run",  # TODO: prevent error when extra requirements are not met.
     ],
     install_requires=[
         "numpy",

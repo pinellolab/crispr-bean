@@ -4,21 +4,11 @@ from perturb_tools._readwrite._funcs._read_screen_from_csvs import read_csvs
 from perturb_tools import Screen
 
 
-def get_input_parser() -> argparse.Namespace:
-    """Add multi-sample specific arguments to the base parser."""
-    print(
-        r"""
-    _ _       
-  /  \ '\                      _        
-  |   \  \     __ _ _ ___ __ _| |_ ___ 
-   \   \  |   / _| '_/ -_) _` |  _/ -_)
-    `.__|/    \__|_| \___\__,_|\__\___|
-    """
-    )
-    parser = argparse.ArgumentParser(
-        description="bean-create-screen parameters",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
+def get_input_parser(parser) -> argparse.Namespace:
+    # parser = argparse.ArgumentParser(
+    #     description="bean-create-screen parameters",
+    #     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    # )
     parser.add_argument(
         "gRNA_info_table_csv",
         type=str,

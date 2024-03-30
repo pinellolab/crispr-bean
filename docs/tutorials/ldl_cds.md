@@ -14,7 +14,45 @@ Tiling screen that tiles gRNA densely across locus or multiple loci, selected ba
 
 <br></br>
 
-## 1. Count gRNA & reporter ([`bean-count-samples`](../../README#bean-count-samples-count-reporter-screen-data))
+## Example workflow
+```bash
+screen_id=my_sorting_tiling_screen
+
+# 1. Count gRNA & reporter
+bean-count-samples \
+--input tests/data/sample_list_tiling.csv          `# Contains fastq file path; see test file for example.`\
+-b A                                               `# Base A is edited (into G)` \
+-f tests/data/test_guide_info_tiling_chrom.csv     `# Contains gRNA metadata; see test file for example.`\
+-o ./                                              `# Output directory` \
+-r                                                 `# Quantify reporter edits` \
+-n ${screen_id}                                       `# ID of the screen` \
+--tiling
+
+# 2. QC samples & guides
+bean-qc \
+  bean_count_${screen_id}.h5ad           `# Input ReporterScreen .h5ad file path` \
+  -o bean_count_${screen_id}_masked.h5ad `# Output ReporterScreen .h5ad file path` \
+  -r qc_report_${screen_id}              `# Prefix for QC report` \
+
+# 3. Filter & translate alleles
+bean-filter ./bean_count_${screen_id}_masked.h5ad \
+-o ./bean_count_${screen_id}_alleleFiltered \
+--filter-target-basechange                             `# Filter based on intended base changes. If -b A was provided in bean-count, filters for A>G edit. If -b C was provided, filters for C>T edit.`\
+--filter-window --edit-start-pos 0 --edit-end-pos 19   `# Filter based on editing window in spacer position within reporter.`\
+--filter-allele-proportion 0.1 --filter-sample-proportion 0.3 `#Filter based on allele proportion larger than 0.1 in at least 0.3 (30%) of the control samples.` \
+--translate --translate-genes-list tests/data/gene_symbols.txt
+
+# 4. Quantify variant effect
+bean-run sorting tiling \
+    ./bean_count_${screen_id}_alleleFiltered.h5ad \
+    -o tests/test_res/var/ \
+    --fit-negctrl \
+    --scale-by-acc \
+    --accessibility-col accessibility
+```
+See more details below.
+
+## 1. Count gRNA & reporter (:ref:`count_samples`)
 ```
 screen_id=my_sorting_tiling_screen
 
@@ -29,7 +67,7 @@ bean-count-samples \
 ```
 Make sure you follow the [input file format](../../README#input-file-format) for seamless downstream steps. This will produce `./bean_count_${screen_id}.h5ad`. 
 
-## 2. QC ([`bean-qc`](../../README#bean-qc-qc-of-reporter-screen-data))
+## 2. QC (:ref:`qc`)
 Base editing data will include QC about editing efficiency. As QC uses predefined column names and values, beware to follow the [input file guideline](../../README#input-file-format), but you can change the parameters with the full argument list of [`bean-qc`](../../README#bean-qc-qc-of-reporter-screen-data). (Common factors you may want to tweak is `--ctrl-cond=bulk` and `--lfc-conds=top,bot` if you have different sample condition labels.)
 ```
 bean-qc \
@@ -43,7 +81,7 @@ bean-qc \
 
 If the data does not include reporter editing data, you can provide `--no-editing` flag to omit the editing rate QC.
 
-## 3. Filter alleles ([`bean-filter`](../../README#bean-filter-filtering-and-optionally-translating-alleles))
+## 3. Filter alleles (:ref:`filter`)
 As tiling library doesn't have designated per-gRNA target variant, any base edit observed in reporter may be the candidate variant, while having too many variants with very low editing rate significantly decreases the power. Variants are filtered based on multiple criteria in `bean-fitler`.  
 
 If the screen targets coding sequence, it's beneficial to translate edits into coding varaints whenever possible for better power. For translation, provide `--translate` and one of the following:
@@ -68,7 +106,7 @@ bean-filter ./bean_count_${screen_id}_masked.h5ad \
 
 Ouptut file `` shows number of alleles per guide and number of guides per variant, where we want high enough values for the latter. See the typical output for dataset with good editing coverage & filtering result [here](../example_filtering_ouptut/).
 
-## 4. Quantify variant effect ([`bean-run`](../../README#bean-run-quantify-variant-effects))
+## 4. Quantify variant effect (:ref:`run`)
 By default, `bean-run [sorting,survival] tiling` uses most filtered allele counts table for variant identification and quantification of their effects. **Check [allele filtering output](../example_filtering_ouptut/)** and choose alternative filtered allele counts table if necessary.   
 
 `bean-run` can take 3 run options to quantify editing rate:  
@@ -108,5 +146,3 @@ By default, `bean-run [sorting,survival] tiling` uses most filtered allele count
     --fit-negctrl \
     --uniform-edit
     ```
-
-See [full argument list](../../README#optional-parameters) to accommodate different input sample & guide metadata columns/values and run options.

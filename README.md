@@ -1,13 +1,13 @@
-# <img src="imgs/bean_title2.svg" alt="crispr-bean" height="50"/>
+# <img src="docs/assets/bean_title2.svg" alt="crispr-bean" height="50"/>
 
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/crispr-bean)](https://pypi.org/project/crispr-bean/)
 [![PyPI version](https://img.shields.io/pypi/v/crispr-bean)](https://pypi.org/project/crispr-bean/)
 [![Code style](https://img.shields.io/badge/code%20style-black-black)](https://github.com/psf/black)
 
-`bean` (**B**ase **E**diting reporter screens with guide **A**ctivity **N**ormalization) is an analysis toolkit for the pooled CRISPR reporter or sensor data. The reporter technique transfects cells with plasmid with not only sgRNA but with the **target sequence surrogate** which we call **reporter** or **sensor**.  
+`bean` unconfounds variant effect of CRISPR reporter screens by considering genotypic outcome from *reporter* sequence. 
 
 
-<img src="docs/assets/summary.svg" alt="Reporter construct" width="700"/>
+<img src="docs/assets/summary.png" alt="Reporter construct" width="700"/>
 
 ## Overview
 `bean` supports end-to-end analysis of pooled sorting screens, with or without reporter.  

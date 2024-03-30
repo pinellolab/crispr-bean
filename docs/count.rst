@@ -1,6 +1,6 @@
 `bean count`
 ***********************
-.. mdinclude:: count.md
+.. mdinclude:: _count.md
 
 Full parameters
 ==================

@@ -1,7 +1,7 @@
 .. _run:
 `bean run`
 ***********************
-.. mdinclude:: run.md
+.. mdinclude:: _run.md
 
 Full parameters
 ==================

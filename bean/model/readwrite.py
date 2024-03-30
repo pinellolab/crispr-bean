@@ -62,19 +62,19 @@ def write_result_table(
     return_result: bool = False,
 ) -> Union[pd.DataFrame, None]:
     """Combine target information and scores to write result table to a csv file or return it."""
-    if param_hist_dict["params"]["mu_loc"].dim() == 2:
-        mu = param_hist_dict["params"]["mu_loc"].detach()[:, 0].cpu().numpy()
-        mu_sd = param_hist_dict["params"]["mu_scale"].detach()[:, 0].cpu().numpy()
+    if param_hist_dict["mu_loc"].dim() == 2:
+        mu = param_hist_dict["mu_loc"].detach()[:, 0].cpu().numpy()
+        mu_sd = param_hist_dict["mu_scale"].detach()[:, 0].cpu().numpy()
         if sd_is_fitted:
-            sd = param_hist_dict["params"]["sd_loc"].detach().exp()[:, 0].cpu().numpy()
-    elif param_hist_dict["params"]["mu_loc"].dim() == 1:
-        mu = param_hist_dict["params"]["mu_loc"].detach().cpu().numpy()
-        mu_sd = param_hist_dict["params"]["mu_scale"].detach().cpu().numpy()
+            sd = param_hist_dict["sd_loc"].detach().exp()[:, 0].cpu().numpy()
+    elif param_hist_dict["mu_loc"].dim() == 1:
+        mu = param_hist_dict["mu_loc"].detach().cpu().numpy()
+        mu_sd = param_hist_dict["mu_scale"].detach().cpu().numpy()
         if sd_is_fitted:
-            sd = param_hist_dict["params"]["sd_loc"].detach().exp().cpu().numpy()
+            sd = param_hist_dict["sd_loc"].detach().exp().cpu().numpy()
     else:
         raise ValueError(
-            f'`mu_loc` has invalid shape of {param_hist_dict["params"]["mu_loc"].shape}'
+            f'`mu_loc` has invalid shape of {param_hist_dict["mu_loc"].shape}'
         )
     param_dict = {
         "mu": mu,
@@ -85,17 +85,15 @@ def write_result_table(
         param_dict["sd"] = sd
     if sample_covariates is not None:
         assert (
-            "mu_cov_loc" in param_hist_dict["params"]
-            and "mu_cov_scale" in param_hist_dict["params"]
-        ), param_hist_dict["params"].keys()
+            "mu_cov_loc" in param_hist_dict and "mu_cov_scale" in param_hist_dict
+        ), param_hist_dict.keys()
         for i, sample_cov in enumerate(sample_covariates):
             param_dict[f"mu_{sample_cov}"] = (
-                mu + param_hist_dict["params"]["mu_cov_loc"].detach().cpu().numpy()[i]
+                mu + param_hist_dict["mu_cov_loc"].detach().cpu().numpy()[i]
             )
             param_dict[f"mu_sd_{sample_cov}"] = np.sqrt(
                 mu_sd**2
-                + param_hist_dict["params"]["mu_cov_scale"].detach().cpu().numpy()[i]
-                ** 2
+                + param_hist_dict["mu_cov_scale"].detach().cpu().numpy()[i] ** 2
             )
             param_dict[f"mu_z_{sample_cov}"] = (
                 param_dict[f"mu_{sample_cov}"] / param_dict[f"mu_sd_{sample_cov}"]
@@ -185,10 +183,10 @@ def write_result_table(
                     )
 
     if write_fitted_eff or guide_acc is not None:
-        if "alpha_pi" not in param_hist_dict["params"].keys():
+        if "alpha_pi" not in param_hist_dict.keys():
             pi = 1.0
         else:
-            a_fitted = param_hist_dict["params"]["alpha_pi"].detach().cpu().numpy()
+            a_fitted = param_hist_dict["alpha_pi"].detach().cpu().numpy()
             pi = a_fitted[..., 1:].sum(axis=1) / a_fitted.sum(axis=1)
         sgRNA_df = pd.DataFrame({"edit_eff": pi}, index=guide_index)
         if guide_acc is not None:
@@ -196,7 +194,7 @@ def write_result_table(
             sgRNA_df["scaled_edit_eff"] = _scale_pi(
                 pi,
                 guide_acc,
-                fitted_noise_logit=param_hist_dict["params"]["noise_scale"]
+                fitted_noise_logit=param_hist_dict["noise_scale"]
                 .detach()
                 .cpu()
                 .numpy(),

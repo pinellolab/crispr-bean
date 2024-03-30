@@ -1,4 +1,4 @@
-# <img src="imgs/bean_title.svg" alt="crispr-bean" width="300"/>
+# <img src="imgs/bean_title.svg" alt="crispr-bean" height="50"/>
 
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/crispr-bean)](https://pypi.org/project/crispr-bean/)
 [![PyPI version](https://img.shields.io/pypi/v/crispr-bean)](https://pypi.org/project/crispr-bean/)
@@ -25,7 +25,8 @@
 ### Screen data is saved as *ReporterScreen* object in the pipeline.
 BEAN stores mapped gRNA and allele counts in `ReporterScreen` object which is compatible with [AnnData](https://anndata.readthedocs.io/en/latest/index.html). See [Data Structure](#data-structure) section for more information.
 
-<br/><br/>
+## Documentaton
+See the [documentation](https://pinellolab.github.io/crispr-bean/) for tutorials and API references.
 
 ## Tutorials
 | [Library design](#pipeline-run-options-by-library-design) | Selection | Reporter |  Tutorial link |
@@ -46,7 +47,6 @@ The `bean filter` and `bean run` steps depend on the type of gRNA library design
   Ex)  
   <img src="imgs/tiling.png" alt="tiling library design" width="450"/>  
 
-<br/><br/>
 
 ## Installation 
 ### Full installation
@@ -62,7 +62,7 @@ pip install crispr-bean
 ```
 This wouldn't have variant effect size quantification (`bean run`) functionality.  
 
-<br/><br/>
+
 ## Subcommands
 See the full detail for each subcommand in the documentation.
 * [`count`, `count-samples`](docs/count.md): Count (reporter) screen data  
@@ -93,8 +93,6 @@ import bean as be
 cdata = be.read_h5ad("bean_counts_sample.h5ad")
 ```
 Python package `bean` supports multiple data wrangling functionalities for `ReporterScreen` objects. See the [**ReporterScreen API tutorial**](docs/ReporterScreen_api.ipynb) for more detail.
-
-<br></br>
 
 ## Run time
 * Installation takes 14.4 mins after pytorch installation with pytorch in Dell XPS 13 Ubuntu WSL.

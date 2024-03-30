@@ -16,11 +16,10 @@ jobs:
       run: |
         pip install sphinx sphinx_markdown_builder sphinx_rtd_theme sphinx-argparse m2r pandas bio
         sudo apt-get install python3-distutils
+    - uses: actions/checkout@v3
     - name: Build Documentation
       working-directory: docs
       run: sphinx-build . _build
-
-    - uses: actions/checkout@v3
     - name: Push documentation
       run: |
         git config --global user.name 'Your Name'

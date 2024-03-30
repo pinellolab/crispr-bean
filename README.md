@@ -7,12 +7,12 @@
 `bean` (**B**ase **E**diting reporter screens with guide **A**ctivity **N**ormalization) is an analysis toolkit for the pooled CRISPR reporter or sensor data. The reporter technique transfects cells with plasmid with not only sgRNA but with the **target sequence surrogate** which we call **reporter** or **sensor**.  
 
 
-<img src="docs/commands/imgs/summary.svg" alt="Reporter construct" width="700"/>
+<img src="docs/assets/summary.svg" alt="Reporter construct" width="700"/>
 
 ## Overview
 `bean` supports end-to-end analysis of pooled sorting screens, with or without reporter.  
 
-<img src="docs/commands/imgs/dag_bean_v2.svg" alt="dag_bean_v2.svg" height="650"/>  
+<img src="docs/assets/dag_bean_v2.svg" alt="dag_bean_v2.svg" height="650"/>  
 
 `bean` subcommands include the following: Click on the [`links`]() to see the full documentation.
 1. [`count`](https://pinellolab.github.io/crispr-bean/count.html), [`count-samples`](https://pinellolab.github.io/crispr-bean/count_samples.html): Base-editing-aware **mapping** of guide, optionally with reporter from `.fastq` files.
@@ -44,13 +44,13 @@ See the [documentation](https://pinellolab.github.io/crispr-bean/) for tutorials
 |---------------| -------------- | --------- | -------- |
 | GWAS variant library | FACS sorting | Yes/No | [GWAS variant screen](https://pinellolab.github.io/crispr-bean/gwas) 
 | Coding sequence tiling libarary | FACS sorting | Yes/No | [Coding sequence tiling screen](https://pinellolab.github.io/crispr-bean/cds) 
-| GWAS variant library | Survival / Proliferation | Yes/No |  TKO simulated (Coming soon!) 
-| Coding sequence tiling libarary | Survival / Proliferation | Yes/No | TKO simulated, tiling (Coming soon!)  
+| GWAS variant library | Survival / Proliferation | Yes/No |  [GWAS variant screen](https://pinellolab.github.io/crispr-bean/prolif_gwas)
+| Coding sequence tiling libarary | Survival / Proliferation | Yes/No | Coming soon!
 
 
 ### Library design: variant or tiling?
 The `bean filter` and `bean run` steps depend on the type of gRNA library design, where BEAN supports two modes of running.
-<img src="docs/commands/imgs/library_design.png" alt="variant library design" width="700"/>  
+<img src="docs/assets/library_design.png" alt="variant library design" width="700"/>  
 
 1. `variant` library: Several gRNAs tile each of the targeted variants. Only the editing rate of the target variant is considered and the bystander effects are ignored. 
 

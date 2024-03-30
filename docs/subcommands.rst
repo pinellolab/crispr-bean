@@ -11,3 +11,4 @@ Subcommands
     qc
     filter
     run
+    create_screen

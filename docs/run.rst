@@ -6,6 +6,6 @@
 Full parameters
 ==================
 .. argparse::
-   :filename: ../bean/model/run.py
+   :filename: ../bean/model/parser.py
    :func: parse_args
    :prog: bean run

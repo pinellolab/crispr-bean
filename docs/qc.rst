@@ -6,6 +6,6 @@
 Full parameters
 ==================
 .. argparse::
-   :filename: ../bean/qc/utils.py
+   :filename: ../bean/qc/parser.py
    :func: parse_args
    :prog: bean qc

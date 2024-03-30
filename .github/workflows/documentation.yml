@@ -13,13 +13,7 @@ jobs:
         python-version: '3.x'
 
     - name: Install Sphinx & Dependencies
-      run: pip install sphinx sphinx_markdown_builder sphinx_rtd_theme sphinx-argparse m2r
-    - name: Install bean
-      run: |
-        python -m pip install --upgrade pip
-        pip install torch torchvision torchaudio
-        pip install -r requirements.txt
-        pip install -e .
+      run: pip install sphinx sphinx_markdown_builder sphinx_rtd_theme sphinx-argparse m2r pandas bio
     - name: Build Documentation
       run: cd "$GITHUB_WORKSPACE/docs" && sphinx-build . _build
 

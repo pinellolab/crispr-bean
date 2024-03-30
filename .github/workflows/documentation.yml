@@ -19,7 +19,8 @@ jobs:
     - name: Build Documentation
       run: cd "$GITHUB_WORKSPACE/docs" && sphinx-build . _build
 
-    - uses: actions/upload-artifact@v3
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v3
       with:
-        name: Documentation
-        path: "$GITHUB_WORKSPACE/docs/_build/html/"
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: docs/_build/html

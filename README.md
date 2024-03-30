@@ -1,501 +1,75 @@
-# <img src="imgs/bean_title.svg" alt="crispr-bean" width="300"/>
+# <img src="docs/assets/bean_title2.svg" alt="crispr-bean" height="50"/>
 
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/crispr-bean)](https://pypi.org/project/crispr-bean/)
 [![PyPI version](https://img.shields.io/pypi/v/crispr-bean)](https://pypi.org/project/crispr-bean/)
 [![Code style](https://img.shields.io/badge/code%20style-black-black)](https://github.com/psf/black)
 
-**CRISPR** **B**ayesian **E**stimation of variant effect (from **B**ase **E**diting reporter screens) with guide **A**ctivity **N**ormalization  
-This is an analysis toolkit for the pooled CRISPR reporter or sensor data. The reporter technique transfects cells with plasmid with not only sgRNA but with the **target sequence surrogate** which we call **reporter** or **sensor**.  
+`bean` unconfounds variant effect from variable editing outcome of CRISPR screens by considering genotypic outcome from *reporter* sequence. 
 
 
-<img src="imgs/reporter.jpg" alt="Reporter construct" width="700"/>
+<img src="docs/assets/summary.png" alt="Reporter construct" width="700"/>
 
 ## Overview
-`crispr-bean` supports end-to-end analysis of pooled sorting screens, with or without reporter.  
+`bean` supports end-to-end analysis of pooled sorting screens, with or without reporter.  
 
-<img src="imgs/dag_bean_v2.png" alt="dag_bean_v2.svg" width="700"/>  
+<img src="docs/assets/dag_bean_v2.svg" alt="dag_bean_v2.svg" height="650"/>  
 
-1. [`bean-count-sample`](#bean-count-samples-count-reporter-screen-data): Base-editing-aware **mapping** of guide, optionally with reporter from `.fastq` files.
-  *   [`bean-count-create`](#bean-create-screen-create-reporterscreen-object-from-flat-files) creates minimal ReporterScreen object from flat gRNA count file. Note that this way, allele counts are not included and many functionalities involving allele and edit counts are not supported.
-2. [`bean-profile`](#bean-profile-profile-editing-patterns): Profile editing preferences of your editor.  
-3. [`bean-qc`](#bean-qc-qc-of-reporter-screen-data): Quality control report and filtering out / masking of aberrant sample and guides  
-4. [`bean-filter`](#bean-filter-filtering-and-optionally-translating-alleles): Filter reporter alleles; essential for `tiling` mode that allows for all alleles generated from gRNA.
-5. [`bean-run`](#bean-run-quantify-variant-effects): Quantify targeted variants' effect sizes from screen data.  
-
-### Screen data is saved as *ReporterScreen* object in the pipeline.
-BEAN stores mapped gRNA and allele counts in `ReporterScreen` object which is compatible with [AnnData](https://anndata.readthedocs.io/en/latest/index.html). See [Data Structure](#data-structure) section for more information.
-
-<br/><br/>
-
-## Examples
-| Tutorial link | [Library design](#pipeline-run-options-by-library-design) | Selection | Reporter |  
-|---------------| -------------- | --------- | -------- |
-| [LDL-C GWAS](docs/tutorials/ldl_var.md) | GWAS variant library | FACS sorting | Yes/No |
-| [LDL-C LDLR CDS](docs/tutorials/ldl_cds.md) | Coding sequence tiling libarary | FACS sorting | Yes/No |
-| TKO simulated (Coming soon!) | GWAS variant library | Survival / Proliferation | Yes/No |
-| TKO simulated, tiling (Coming soon!)  | Coding sequence tiling libarary | Survival / Proliferation | Yes/No |
-
-We also provide example scripts in `tests/`. Running `pytest --sparse-ordering` will generate example input/output files.
-
-### Pipeline run options by library design
-The `bean-filter` and `bean-run` steps depend on the type of gRNA library design, where BEAN supports two modes of running.
-1. `variant` library: Several gRNAs tile each of the targeted variants  
-  Ex)  
-  <img src="imgs/variant.png" alt="variant library design" width="700"/>  
-
-2. `tiling` library: gRNA densely tiles a long region (e.g. gene(s), exon(s), coding sequence(s))  
-  Ex)  
-  <img src="imgs/tiling.png" alt="tiling library design" width="450"/>  
-
-<br/><br/>
-
+`bean` subcommands include the following: Click on the [`links`]() to see the full documentation.
+1. [`count`](https://pinellolab.github.io/crispr-bean/count.html), [`count-samples`](https://pinellolab.github.io/crispr-bean/count_samples.html): Base-editing-aware **mapping** of guide, optionally with reporter from `.fastq` files.
+    *   [`create-screen`](https://pinellolab.github.io/crispr-bean/create_screen.html) creates minimal ReporterScreen object from flat gRNA count file. Note that this way, allele counts are not included and many functionalities involving allele and edit counts are not supported.
+2. [`profile`](https://pinellolab.github.io/crispr-bean/profile.html): Profile editing preferences of your editor.  
+3. [`qc`](https://pinellolab.github.io/crispr-bean/qc.html): Quality control report and filtering out / masking of aberrant sample and guides  
+4. [`filter`](https://pinellolab.github.io/crispr-bean/filter.html): Filter reporter alleles; essential for `tiling` mode that allows for all alleles generated from gRNA.
+5. [`run`](https://pinellolab.github.io/crispr-bean/run.html): Quantify targeted variants' effect sizes from screen data.  
+* Screen data is saved as [`ReporterScreen` object](https://pinellolab.github.io/crispr-bean/reporterscreen.html) in the pipeline.
+BEAN stores mapped gRNA and allele counts in `ReporterScreen` object which is compatible with [AnnData](https://anndata.readthedocs.io/en/latest/index.html). 
 ## Installation 
-### Full installation
-First install [pytorch](https://pytorch.org/) >=12.1,<2.
+First install [PyTorch](https://pytorch.org/get-started/).
 Then download from PyPI:
 ```
 pip install crispr-bean[model]
 ```
 
-### Mapping and data wrangling, without variant effect quantification
+Following installation without PyTorch dependency wouldn't have variant effect size quantification (`bean run`) functionality. 
 ```
 pip install crispr-bean
 ```
-This wouldn't have variant effect size quantification (`bean-run`) functionality.  
 
-<br/><br/>
 
-## `bean-count-samples`: Count (reporter) screen data  
-`bean-count-samples` (or `bean-count` for a single sample) maps guide into guide counts, **allowing for base transition in spacer sequence**. When the matched reporter information is provided, it can count the **target site edits** and **alleles produced by each guide**. Mapping is efficiently done based on [CRISPResso2](https://github.com/pinellolab/CRISPResso2) modified for base-edit-aware mapping.
+## Documentaton
+See the [documentation](https://pinellolab.github.io/crispr-bean/) for tutorials and API references.
 
+## Tutorials
+| [Library design](#pipeline-run-options-by-library-design) | Selection | Reporter |  Tutorial link |
+|---------------| -------------- | --------- | -------- |
+| GWAS variant library | FACS sorting | Yes/No | [GWAS variant screen](https://pinellolab.github.io/crispr-bean/gwas) 
+| Coding sequence tiling libarary | FACS sorting | Yes/No | [Coding sequence tiling screen](https://pinellolab.github.io/crispr-bean/cds) 
+| GWAS variant library | Survival / Proliferation | Yes/No |  [GWAS variant screen](https://pinellolab.github.io/crispr-bean/prolif_gwas)
+| Coding sequence tiling libarary | Survival / Proliferation | Yes/No | Coming soon!
 
 
-```python
-bean-count-samples \
-  --input sample_list.csv   `# sample with lines 'R1_filepath,R2_filepath,sample_name\n'` \
-  -b A                      `# base that is being edited (A/G)` \
-  -f sgRNA_info_table.csv   `# sgRNA information` \
-  -o .                      `# output directory` \
-  -r                        `# read edit/allele information from reporter` \
-  -t 12                     `# number of threads` \
-  --name my_sorting_screen  `# name of this sample run` \
-```
-```python
-bean-count \
-  --R1 read1.fq[.gz]
-  --R2 read2.fq[.gz]
-  -b A                      `# base that is being edited (A/G)` \
-  -f sgRNA_info_table.csv   `# sgRNA information` \
-  -o .                      `# output directory` \
-  -r                        `# read edit/allele information from reporter` \
-  --name my_sample  `# name of this sample run`
-```
+### Library design: variant or tiling?
+The `bean filter` and `bean run` steps depend on the type of gRNA library design, where BEAN supports two modes of running.
+<img src="docs/assets/library_design.png" alt="variant library design" width="700"/>  
 
-By default, `bean-count[-samples]` assume R1 and R2 are trimmed off of the adapter sequence. You may need to adjust the command arguments according to your read structure. 
-   <img src="imgs/sequence_struct.png" alt="Read structuren" width="600"/>  
-See full detail in [Parameters](#parameters).
+1. `variant` library: Several gRNAs tile each of the targeted variants. Only the editing rate of the target variant is considered and the bystander effects are ignored. 
 
-### Input file format
-#### 1. gRNA_library.csv
-File should contain following columns. 
-* `name`: gRNA ID column
-* `sequence`: gRNA sequence
-* `barcode`: R2 barcode to help match reporter to gRNA, written in the sense direction (as in R1)
-* In order to use accessibility in the [variant effect quantification](#bean-run-quantify-variant-effects), provide accessibility information in one of two options. (For non-targeting guides, provide NA values (empty cell).)   
-  * Option 1: `chrom` & `genomic_pos`: Chromosome (ex. `chr19`) and genomic position of guide sequence. You will have to provide the path to the bigwig file with matching reference version in `bean-run`. 
-  * Option 2: `accessibility_signal`: ATAC-seq signal value of the target loci of each guide.  
-* For variant library (gRNAs are designed to target specific variants and ignores bystander edits)
-  * `target`: This column denotes which target variant/element of each gRNA. This is not used in `bean-count[-samples]` but required to run `bean-run` in later steps.
-  * `target_group`: If negative/positive control gRNA will be considered in `bean-qc` and/or `bean-run`, specify as "NegCtrl"/"PosCtrl" in this column. 
-  * `target_pos`: If `--match_target_pos` flag is used, input file needs `target_pos` which specifies 0-based relative position of targeted base within Reporter sequence.
-* For tiling library (gRNAs tile coding / noncoding sequences)
-  * `strand`: Specifies gRNA strand information relative to the reference genome.
-  * `chrom`: Chromosome of gRNA targeted locus.
-  * `start_pos`: gRNA starting position in the genome. Required when you provide `strand` column. Should specify the smaller coordinate value among start and end position regardless of gRNA strandedness.
+2. `tiling` library: gRNA densely tiles a long region (e.g. gene(s), exon(s), coding sequence(s)). Bystander edits are considered to obtain alleles with significant fractions. Edited alleles can be "translated" to output coding variants.
 
-Also see examples for [variant library](tests/data/test_guide_info.csv) and [tiling library](tests/data/test_guide_info_tiling.csv).
-
-#### 2. sample_list.csv
-File should contain following columns with header.
-* `R1_filepath`: Path to read 1 `.fastq[.gz]` file
-* `R2_filepath`: Path to read 1 `.fastq[.gz]` file
-* `sample_id`: ID of sequencing sample
-* `replicate`: Replicate # of this sample (Should NOT contain `.`)
-* `condition`: Name of the sorting bin (ex. `top`, `bot`), or label of timepoint (ex. `D5`, `D18`)  
-
-For FACS sorting screens:
-* `upper_quantile`: FACS sorting upper quantile
-* `lower_quantile`: FACS sorting lower quantile  
-
-For proliferation / survival screens:
-* `time`: Numeric time following the base editing of each sample.
-
-
-Also see examples for [FACS sorting screen](tests/data/sample_list.csv).
-  
-### Output file format
-`count` or `count-samples` produces `.h5ad` and `.xlsx` file with guide and per-guide allele counts.  
-* `.h5ad`: This output file follows annotated matrix format compatible with `AnnData` and is based on `Screen` object in [purturb_tools](https://github.com/pinellolab/perturb-tools). See [Data Structure](#data-structure) section for more information.  
-* `.xlsx`: This output file contains `.guides`, `.samples`, `.X[_bcmatch,_edits]`. (`allele_tables` are often too large to write into an Excel!)  
-
-### Parameters
-* `-b`, `--edited-base` (`str`, default: `None`): For base editors, the base that should be ignored when matching the gRNA sequence 
-* `-i`, `--input`: List of fastq and sample ids. See above for the format.
-* `-f`, `--sgRNA-filename` (`str`, default: `None`): sgRNA description file. (See above)
-
-Output formats
-* `-n`, `--name`: Name of the output file will be `bean_count_{name}.h5ad`.
-* `-o`, `--output-folder`: Output folder
-* `--tiling`: Specify that the guide library is tiling library 
-* `-r`, `--count-reporter` (default: `False`): Count edited alleles in reporters.  
-* `--string-allele` (default: `False`): Store allele as quality filtered string instead of Allele object
-* `-g`, `--count-guide-edits` (default: `False`): count the self editing of guides (default: False)
-* `-m`, `--count-guide-reporter-alleles`: count the matched allele of guide and reporter edit
-* `--match-target-pos` (default: `False`): Count the edit in the exact target position.
-* `--target-pos-col` (default: `target_pos`): Column name specifying the relative target position within *reporter* sequence. 
-* `--offset` (default: `False`): Guide file has `offest` column that will be added to the relative position of reporters. 
-* `--align-fasta` (default: ''): gRNA is aligned to this sequence to infer the offset. Can be used when the exact offset is not provided.
-
-
-Read structure
-* `--guide-start-seq` (default: ''): Guide starts after this sequence in R1 
-* `--guide-end-seq` (default: ''): Guide ends after this sequence in R1  
-* `--barcode-start-seq` (default: ''): Barcode + reporter starts after this sequence in R2, denoted as the sense direction (the same sequence direction as R1).
-* `--guide-start-seqs-file` (default: `None`): CSV file path with per-sample `guide_start_seq` to be used, if provided. Formatted as `sample_id, guide_start_seq` 
-* `--guide-end-seqs-file` (default: `None`): CSV file path with per-sample `guide_end_seq` to be used, if provided. Formatted as `sample_id,guide_end_seq` 
-* `--guide-start-seqs-file` (default: `None`): CSV file path with per-sample `barcode_start_seq` to be used, if provided. Formatted as `sample_id, guide_start_seq` 
-* `-l`, `--reporter-length` (default: `32`): Length of the reporter sequence.
-* `--gstart-reporter` (default: `6`): Start position of the guide sequence in the reporter
-* `--guide-bc` (default: `True`): Construct has guide barcode 
-* `--guide-bc-len` (default: `4`): Guide barcode sequence length at the beginning of the R2
-
-Mapping quality filters
-* `-q`, `--min-average-read-quality` (default: `30`): Minimum average quality score 
-(phred33) to keep a read
-* `--keep-intermediate` (default: `False`): Keep all intermediate files generated from filtering.
-* `-s`, `--min-single-bp-quality` (default: `0`): Minimum single bp score (phred33) to keep a read (default: 0)
-* `--qstart-R1` (default: `0`): Start position of the read when filtering for quality score of the read 1 
-* `--qend-R1` (default: `47`): End position of the read when filtering for quality score of the read 1 
-* `--qstart-R2` (default: `0`): Start position of the read when filtering for quality score of the read 2 
-* `--qend-R2` (default: `36`): End position of the read when filtering for quality score of the read 2 
-
-Run options
-* `-t`, `--threads` (default: `10`): Number of threads to use
-* `--rerun` (default: `False`): Recount each sample. If `False`, existing count for each sample is taken.
-
-
-## `bean-create-screen`: Create ReporterScreen object from flat files
-```bash
-bean-create-screen gRNA_library.csv sample_list.csv gRNA_counts_table.csv
-```
-### Input
-  * [gRNA_library.csv](#1-gRNA_librarycsv)
-  * [sample_list.csv](#2-sample_listcsv)
-  * gRNA_counts_table.csv: Table with gRNA ID in the first column and sample IDs as the column names (first row)
-
-### Full Parameters
-  * `-e`, `--edits` (default: `None`): Path to edit counts .csv table, with index at first column and column names at the first row.
-  * `-o`, `--output-prefix` (default: `None`): Output file prefix (output will be saved as `output_prefix.h5ad`). If not provided, `gRNA_counts_table_csv` file prefix is used.
-
-<br/><br/>
-
-## `bean-profile`: Profile editing patterns
-```bash
-bean-profile my_sorting_screen.h5ad -o output_prefix `# Prefix for editing profile report` 
-```
-### Output
-Above command produces `prefix_editing_preference.[html,ipynb]` as editing preferences ([see example](notebooks/profile_editing_preference.ipynb)).  
-
-<img src="imgs/profile_output.png" alt="Allele translation" width="700" />  
-
-### Parameters
-  * `-o`, `--output-prefix` (default: `None`): Output prefix of editing pattern report (prefix.html, prefix.ipynb). If not provided, base name of `bdata_path` is used.
-  * `--replicate-col` (default: `"replicate"`): Column name in `bdata.samples` that describes replicate ID.
-  * `--condition-col` (default: `"condition"`): Column name in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.)
-  * `--pam-col` (default: `None`): Column name describing PAM of each gRNA in `bdata.guides`.
-  * `--control-condition` (default: `"bulk"`): Control condition where editing preference would be profiled at. Pre-filters data where `bdata.samples[condition_col] == control_condition`. DO NOT use plasmid library as control here where we do not expect editing.
-  * `-w`, `--window-length` (default: `6`): Window length of editing window of maximal editing efficiency to be identified. This window is used to quantify context specificity within the window.
-
-
-<br/><br/>
-
-## `bean-qc`: QC of reporter screen data
-```bash
-bean-qc \
-  my_sorting_screen.h5ad             `# Input ReporterScreen .h5ad file path` \
-  -o my_sorting_screen_masked.h5ad   `# Output ReporterScreen .h5ad file path` \
-  -r qc_report_my_sorting_screen     `# Prefix for QC report` \
-  --ctrl-cond presort                `# "condition" column in the control sample before selection. Mean gRNA editing rates in these samples are reported. ` \
-# Inspect the output qc_report_my_sorting_screen.html to tweak QC threshold
-
-bean-qc \
-  my_sorting_screen.h5ad              \
-  -o my_sorting_screen_masked.h5ad    \
-  -r qc_report_my_sorting_screen      \
-  #[--count-correlation-thres 0.7 ...]\
-  -b
-```
-
-`bean-qc` supports following quality control and masks samples with low quality. Specifically:  
-
-<img src="imgs/qc_output.png" alt="Allele translation" width="900"/>  
-
-* Plots guide coverage and the uniformity of coverage
-* Guide count correlation between samples
-* Log fold change correlation when positive controls are provided
-* Plots editing rate distribution
-* Identify samples with low guide coverage/guide count correlation/editing rate and mask the sample in `bdata.samples.mask`
-* Identify outlier guides to filter out
-
-#### Output
-Above command produces 
-* `my_sorting_screen_masked.h5ad` without problematic replicate and guides and with sample masks, and  
-* `qc_report_my_sorting_screen.[html,ipynb]` as QC report.  
-
-
-#### Additional Parameters
-##### Optional arguments:
-* `-o OUT_SCREEN_PATH`, `--out-screen-path OUT_SCREEN_PATH`
-                        Path where quality-filtered ReporterScreen object to be written to
-* `-r OUT_REPORT_PREFIX`, `--out-report-prefix OUT_REPORT_PREFIX`
-                        Output prefix of qc report (prefix.html, prefix.ipynb)
-
-##### QC thresholds:
-* `--count-correlation-thres COUNT_CORRELATION_THRES`
-                        Correlation threshold to mask out.
-* `--edit-rate-thres EDIT_RATE_THRES`
-                        Mean editing rate threshold per sample to mask out.
-* `--lfc-thres LFC_THRES`
-                        Positive guides' correlation threshold to filter out.
-
-##### Run options:
-* `-b`, `--remove-bad-replicates`
-                        Remove replicates with at least two of its samples meet the QC threshold (bean-run does not support having only one sorting bin sample for a replicate).
-* `-i`, `--ignore-missing-samples`
-                        If the flag is not provided, if the ReporterScreen object does not contain all condiitons for
-                        each replicate, make fake empty samples. If the flag is provided, don't add dummy samples.
-* `--no-editing`          Ignore QC about editing. Can be used for QC of other editing modalities.
-* `--dont-recalculate-edits`
-                        When ReporterScreen.layers['edit_count'] exists, do not recalculate the edit counts from
-                        ReporterScreen.uns['allele_count'].
-
-##### Input `.h5ad` formatting:
-Note that these arguements will change the way the QC metrics are calculated for guides, samples, or replicates.
-* `--tiling TILING`       Specify that the guide library is tiling library without 'n guides per target' design
-* `--replicate-label REPLICATE_LABEL`
-                        Label of column in `bdata.samples` that describes replicate ID.
-* `--sample-covariates SAMPLE_COVARIATES`
-                        Comma-separated list of column names in `bdata.samples` that describes non-selective
-                        experimental condition. (drug treatment, etc.)
-* `--condition-label CONDITION_LABEL`
-                        Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time,
-                        etc.)
-###### Editing rate calculation
-  * `--control-condition CTRL_COND`
-                        Values in of column in `ReporterScreen.samples[condition_label]` for guide-level editing rate
-                        to be calculated. Default is `None`, which considers all samples.
-  * `--rel-pos-is-reporter`
-                        Specifies whether `edit_start_pos` and `edit_end_pos` are relative to reporter position. If
-                        `False`, those are relative to spacer position.
-  Editing rate is calculated with following parameters in 
-    * Variant screens: 
-      * `--target-pos-col TARGET_POS_COL`
-                        Target position column in `bdata.guides` specifying target edit position in reporter
-    * tiling screens:
-      * `--edit-start-pos EDIT_START_POS`
-                            Edit start position to quantify editing rate on, 0-based inclusive.
-      * `--edit-end-pos EDIT_END_POS`
-                            Edit end position to quantify editing rate on, 0-based exclusive.
-###### LFC of positive controls
-  * `--posctrl-col POSCTRL_COL`
-                          Column name in ReporterScreen.guides DataFrame that specifies guide category. To use all
-                          gRNAs, feed empty string ''.
-  * `--posctrl-val POSCTRL_VAL`
-                          Value in ReporterScreen.guides[`posctrl_col`] that specifies guide will be used as the
-                          positive control in calculating log fold change.
-  * `--lfc-conds LFC_CONDS`
-                          Values in of column in `ReporterScreen.samples[condition_label]` for LFC will be calculated
-                          between, delimited by comma
-
-<br/><br/>
-
-
-## `bean-filter`: Filtering (and optionally translating) alleles
-As `tiling` mode of `bean-run` accounts for any robustly observed alleles, `bean-filter` filters for such alleles.
-```bash
-bean-filter my_sorting_screen_masked.h5ad \
--o my_sorting_screen_filtered.h5ad  `# Output file path` \
-```
-
-### Output
-Above command produces 
-* `my_sorting_screen_filtered.h5ad` with filtered alleles stored in `.uns`,   
-* `my_sorting_screen_filtered.filtered_allele_stats.pdf`, and `my_sorting_screen_filtered.filter_log.txt` that report allele count stats in each filtering step.  
-
-You may want to adjust the flitering parameters to obtain optimal balance between # guides per variant & # variants that are scored. See example outputs of filtering step [here](docs/example_filtering_output/).
-
-
-### Translating alleles
-If you want to obtain **amino acid level variant** for coding sequence tiling screens, provide coding sequence positions which variants occuring within the coding sequence will be translated. *This is optional, but **highly recommended** to increase per-(coding)variant support.*  
-
-<img src="imgs/translation.png" alt="Allele translation" width="500"/>  
-  
-
-```bash
-bean-filter my_sorting_screen.h5ad \
--o my_sorting_screen_masked.h5ad \
---translate   `# Translate coding variants` \
-[ --translate-gene-name GENE_SYMBOL OR
-  --translate-genes-list path_to_gene_names_file.txt OR
-  --translate-fasta gene_exon.fa, OR
-  --translate-fastas-csv gene_exon_fas.csv]
-```
-* When library covers a single gene, do either of the following:
-  1. Feed `--translate-gene-name GENE_SYMBOL` if your `genomic_pos` column of `sgRNA_info_tbl` is compatible with [MANE transcript](https://useast.ensembl.org/info/genome/genebuild/mane.html)'s reference genome. (Per 10/23/2023, GRCh38). This will automatically load the exon positions based on MANE transcript annotation.
-  2. To use your custom coding sequence and exon positions, feed `--translate-fasta gene_exon.fa` argument where `gene_exon.fa` is the FASTA file with entries of exons. [See full details here](docs/exon_fa_format.md).
-* When library covers multiple genes, do either of the following:  
-  1. Feed `--translate-genes-list path_to_gene_names_file.txt` where `path_to_gene_names_file.txt` is file with one gene symbol per line.
-  2. Feed `--translate-fastas-csv gene_exon_fas.csv` where `gene_exon_fas.csv` is the csv file with lines `gene_id,gene_exon_fasta_path` without header. Each FASTA file in `gene_exon_fasta_path` is formatted [as the single-gene FASTA file](docs/exon_fa_format.md).
-* Translation will keep the variants outside the coding sequence as nucleotide-level variants, while aggregating variants leading to the same coding sequence variants.
-
-### Full list of parameters
-* `-o`, `--output-prefix` (default: `None`): Output prefix for log and ReporterScreen file with allele assignment.
-* `-p`, `--plasmid-path` (default: `None`): Plasmid `ReporterScreen` object path. 
-  * If provided, alleles are filtered based on if a nucleotide edit is more significantly enriched in sample compared to the plasmid data. 
-  * Negative control data where no edit is expected can be fed in instead of plasmid library.
-* `-w`, `--filter-window` (default: `False`): "Only consider edit within window provided by (`edit_start_pos`, `edit_end_pos`). If this flag is not provided, `--edit-start-pos` and `--edit-end-pos` flags are ignored.
-* `-s`, `--edit-start-pos` (default: `2`): 0-based start posiiton (inclusive) of edit relative to the start of guide spacer.
-* `-e`, `--edit-end-pos` (default: `7`): 0-based end position (exclusive) of edit relative to the start of guide spacer.
-* `-b`, `--filter-target-basechange` (default: `False`): Filter for target (intended) base change of edits (stored in `bdata.uns['target_base_change']`)
-* `-j`, `--jaccard-threshold` (default: `0.3`): Jaccard Index threshold when the alleles are mapped to the most similar alleles. In each filtering step, allele counts of filtered out alleles will be mapped to the most similar allele only if they have Jaccard Index of shared edit higher than this threshold.
-* `--translate` (default: `False`): Translate nucleotide-level variants prior to allele proportion filtering.
-* `-f`, `--translate-fasta` (defulat: `None`): fasta file path with exon positions. If not provided and `--translate` flag is provided, LDLR hg19 coordinates will be used.
-* `-fs`, `--translate-fastas-csv` (defulat: `None`): .csv with two columns with gene IDs and FASTA file path corresponding to each gene.
-* `-g`, `--translate-gene-name` (default: `None`): Gene symbol for translation
-* `-gs`, `--translate-genes-list` (default: `None`): Path to the text file with gene symbols in each line
-* `-ap`, `--filter-allele-proportion` (default: `0.05`): If provided, only the alleles that exceed `filter_allele_proportion` in `filter-sample-proportion` will be retained.
-* `-ac`, `--filter-allele-count` (default: `5`): If provided, alleles that exceed `filter_allele_proportion` AND `filter_allele_count` in `filter-sample-proportion` will be retained.
-* `sp`, `--filter-sample-proportion` (default: `0.2`): "If `filter_allele_proportion` is provided, alleles that exceed `filter_allele_proportion` in `filter-sample-proportion` will be retained.
-
-
-<br/><br/>
-
-## `bean-run`: Quantify variant effects
-BEAN uses Bayesian network to incorporate gRNA editing outcome to provide posterior estimate of variant phenotype. The Bayesian network reflects data generation process. Briefly,  
-1. Cellular phenotype (either for cells are sorted upon for sorting screen, or log(proliferation rate)) is modeled as the Gaussian mixture distribution of wild-type phenotype and variant phenotype.
-2. The weight of the mixture components are inferred from the reporter editing outcome and the chromatin accessibility of the loci.
-3. Cells with each gRNA, formulated as the mixture distribution, is sorted by the phenotypic quantile to produce the gRNA counts.
-
-For the full detail, see the method section of the [BEAN manuscript](https://www.medrxiv.org/content/10.1101/2023.09.08.23295253v1).
-
-<img src="imgs/bean.gif" alt="model" width="700"/>   
-  
-<br></br>
-```bash
-bean-run sorting[survival] variant[tiling] my_sorting_screen_filtered.h5ad \
-[--uniform-edit, --scale-by-acc [--acc-bw-path accessibility_signal.bw, --acc-col accessibility]] \
--o output_prefix/ \
---fit-negctrl
-```
-
-### Input
-`my_sorting_screen_filtered.h5ad` can be produced by one of the following:  
-1. [`bean-count-samples`]((#bean-count-samples-count-reporter-screen-data)) when you have raw `.fastq` file
-2. (Limited to `bean-run variant` mode)  `bean-create-screen` when you have flat `.csv` tables of gRNA metadata table, sample metadata table, gRNA counts table (# guides x # samples), and optionally # edits table.   
-    ```bash
-    bean-create-screen gRNA_info_table.csv sample_info_table.csv gRNA_counts_table.csv \
-    [--edits edit_counts_table.csv -o output.h5ad] 
-    ```  
-    * `gRNA_info_table.csv` should have following columns.
-      * `name`: gRNA ID column
-      * `target`: This column denotes which target variant/element of each gRNA.
-      * `target_group [Optional]`: If negative control gRNA will be used, specify as "NegCtrl" in this column. 
-    * `sample_info_table.csv` should have following columns.
-      * `sample_id`: ID of sequencing sample
-      * `replicate`: Replicate # of this sample
-      * `bin`: Name of the sorting bin
-      * `upper_quantile`: FACS sorting upper quantile
-      * `lower_quantile`: FACS sorting lower quantile  
-    * `gRNA_counts_table.csv` should be formatted as follows.
-      * Columns include one of `sample_id` columns in `sample_info_table.csv` file.
-      * 1st row (row index) follows `name` (gRNA ID) in `gRNA_info_table.csv` file.
-3. You can manually create the `AnnData` object with more annotations including allele counts: see [API tutorial](#using-bean-as-python-module) for full detail.
-
-
-### Output
-<img src="imgs/model_output.png" alt="model" width="700"/>
-
-Above command produces
-* `output_prefix/bean_element_result.[model_type].csv` with following columns:
-  * Estimated variant effect sizes
-    * `mu` (Effect size): Mean of variant phenotype, given the wild type has standard normal phenotype distribution of `mu = 0, sd = 1`.
-    * `mu_sd`: Mean of variant phenotype `mu` is modeled as normal distribution. The column shows fitted standard deviation of `mu` that quantify the uncertainty of the variant effect.
-    * `mu_z`: z-score of `mu`
-    * `sd`: Standard deviation of variant phenotype, given the wild type has standard normal phenotype distribution of `mu = 0, sd = 1`.
-    * `CI[0.025`, `0.975]`: Credible interval of `mu`
-    * When negative control is provided, above columns with `_adj` suffix are provided, which are the corresponding values adjusted for negative control.  
-  * Metrics on per-variant evidence provided in input (provided in `tiling` mode)
-    * `effective_edit_rate`: Sum of per-variant editing rates over all alleles observed in the input. Allele-level editing rate is divided by the number of variants observed in the allele prior to summing up.
-    * `n_guides`: # of guides covering the variant.
-    * `n_coocc`: # of cooccurring variants with a given variant in any alleles observed in the input.
-* `output_prefix/bean_sgRNA_result.[model_type].csv`: 
-  * `edit_rate`: Estimated editing rate at the target loci.
-
-### Optional parameters
-* Run options
-  * `-o`, `--outdir`: Directory to save the run result.
-  * `--result-suffix` (default: ""): Suffix of the output files.
-  * `--uniform-edit` (default: `False`): Ignores variable editing
-  * `--scale-by-acc` (default: `False`): Scale guide editing efficiency by the target loci accessibility. Needs one of `acc_bw_path` or `acc_col` that provides per-guide accessibility information.
-    * `--acc-bw-path` : Accessibility .bigWig file to be used to assign accessibility of guides. To read accessibility information from the .bigWig file, input `.h5ad` file needs `chr` and `genomic_pos` column in `.guides` DataFrame. 
-  * `--fit-negctrl` (default: `False`): Fit the shared negative control distribution to normalize the fitted parameters.
-    * `--negctrl-col` (default: `target_group`): Column in bdata.obs specifying if a guide is negative control. If the `bdata.guides[negctrl_col].tolower() == negctrl_col_value`, it is treated as negative control guide.
-    * `--negctrl-col-value` (default: `negctrl`): Column value in bdata.guides specifying if a guide is negative control. If the `bdata.guides[negctrl_col].tolower() == negctrl_col_value`, it is treated as negative control guide.
-  * `--repguide-mask` (default: `repguide_mask`): n_replicate x n_guide mask to mask the outlier guides. bdata.uns[repguide_mask] will be used. This is calculated with `bean-qc`. 
-  * `--cuda` (default: `False`): Run on GPU
-    * `--device`: Optionally use GPU if provided valid GPU device name (ex. cuda:0)
-  * `--ignore-bcmatch` (default: `False`): If provided, even if the screen object has .X_bcmatch, ignore the count when fitting.
-  * `--allele-df-key` (default: `allele_counts`): bdata.uns[allele_df_key] will be used as the allele count.
-  * `--control-guide-tag` (default: `None`): (Relevant in bean-run *tiling* mode) If this string is in guide name, treat each guide separately not to mix the position. Used for non-targeting negative controls.
-* Guide annotations (`bdata.guides` column keys)
-  * `--acc-col`: Column name in bdata.guides that specify raw ATAC-seq signal.
-  * `--target-column` (default: `target`): Column key in `bdata.guides` that describes the target element of each guide.
-  * `--guide-activity-col`: Column in `bdata.guides` DataFrame showing the editing rate estimated via external tools.
-* Sample annotations (`bdata.samples` column keys)
-  * `--condition-column` (default: `condition`): Column key in `bdata.samples` that describes experimental condition.
-  * `--control-condition` (default: `bulk`): Value in `bdata.samples[condition_col]` that indicates control experimental condition.
-  * `-uq`, `--sorting-bin-upper-quantile-column` (default: `upper_quantile`): Column name with upper quantile values of each sorting bin in bdata.samples
-  * `-lq`, `--sorting-bin-lower-quantile-column` (default: `lower_quantile`): Column name with lower quantile values of each sorting bin in bdata.samples
-
-<br></br>
-
-## Data Structure
-### ReporterScreen object
-BEAN stores mapped gRNA and allele counts in `ReporterScreen` object which is compatible with [AnnData](https://anndata.readthedocs.io/en/latest/index.html).  
-
-<img src="imgs/data_structure_v2.png" alt="ReporterScreen object structure" width="700" />
-
-  * `.guides`: guide information provided in input (`gRNA_library.csv` in above example)
-  * `.samples`: sample information provided in input (`sample_list.csv` in above example)
-  * `.X`: Main guide count matrix, where row corresponds to each guide in `.guides` and columns correspond to samples in `.samples`.
-Following attributes are included if matched reporter is provided and you chose to read edit/allele information from the reporter using `-r` option.
-  * `.X_bcmatch [Optional]`: Contains information about number of barcode-matched reads. Information about R2 barcode should be specified as `barcode` column in your `gRNA_library.csv` file.
-  * `.X_edits [Optional]`: If target position of each guide is specified as `target_pos` in input `gRNA_library.csv` file and `--match-target-position` option is provided, the result has the matrix with the number of target edit at the specified positions.
-  * `.allele_tables [Optional]`: Dictionary with a single allele count table that counts per guide and allele combination, what is the count per sample. 
-
-### Using BEAN as Python module
+## Using BEAN as Python module
 ```
 import bean as be
 cdata = be.read_h5ad("bean_counts_sample.h5ad")
 ```
 Python package `bean` supports multiple data wrangling functionalities for `ReporterScreen` objects. See the [**ReporterScreen API tutorial**](docs/ReporterScreen_api.ipynb) for more detail.
 
-<br></br>
-
 ## Run time
 * Installation takes 14.4 mins after pytorch installation with pytorch in Dell XPS 13 Ubuntu WSL.
-* `bean-run` takes 4.6 mins with `--scale-by-acc` tag in Dell XPS 13 Ubuntu WSL for variant screen dataset with 3455 guides and 6 replicates with 4 sorting bins.
+* `bean run` takes 4.6 mins with `--scale-by-acc` tag in Dell XPS 13 Ubuntu WSL for variant screen dataset with 3455 guides and 6 replicates with 4 sorting bins.
 * Full pipeline takes 90.1s in GitHub Action for toy dataset of 2 replicates and 30 guides.
+
+## Contributing
+If you have questions or feature request, please open an issue. Please feel free to send a pull request.
 
 ## Citation
 If you have used BEAN for your analysis, please cite:  

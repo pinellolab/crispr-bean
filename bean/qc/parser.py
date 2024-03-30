@@ -1,5 +1,15 @@
 import argparse
-import distutils
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ("yes", "true", "t", "y", "1"):
+        return True
+    elif v.lower() in ("no", "false", "f", "n", "0"):
+        return False
+    else:
+        raise argparse.ArgumentTypeError("Boolean value expected.")
 
 
 def parse_args(parser=None):
@@ -70,7 +80,7 @@ def parse_args(parser=None):
     input_parser.add_argument(
         "--tiling",
         dest="tiling",
-        type=lambda x: bool(distutils.util.strtobool(x)),
+        type=str2bool,
         help="Specify that the guide library is tiling library without 'n guides per target' design",
     )
     input_parser.add_argument(

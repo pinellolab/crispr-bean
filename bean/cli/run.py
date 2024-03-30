@@ -28,7 +28,6 @@ import bean as be
 from bean.model.run import (
     run_inference,
     _get_guide_target_info,
-    parse_args,
     check_args,
     identify_model_guide,
     identify_negctrl_model_guide,

@@ -23,7 +23,7 @@ jobs:
 
     - uses: actions/upload-artifact@v3
       with:
-        name: Documentation
+        name: github-pages
         path: docs/_build/
   deploy:
     environment:

@@ -178,11 +178,11 @@ def main(args):
     if not os.path.exists(prefix):
         os.makedirs(prefix)
     with open(f"{prefix}/{model_label}.result{args.result_suffix}.pkl", "wb") as handle:
-        try:
-            pkl.dump(param_history_dict, handle)
-        except TypeError as exc:
-            print(exc.message)
-            # print(param_history_dict)
+        # try:
+        pkl.dump(param_history_dict, handle)
+        # except TypeError as exc:
+        #     print(exc.message)
+        # print(param_history_dict)
     write_result_table(
         target_info_df,
         param_history_dict,

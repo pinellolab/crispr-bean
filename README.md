@@ -12,7 +12,7 @@
 ## Overview
 `bean` supports end-to-end analysis of pooled sorting screens, with or without reporter.  
 
-<img src="imgs/dag_bean_v2.svg" alt="dag_bean_v2.svg" height="500"/>  
+<img src="imgs/dag_bean_v2.svg" alt="dag_bean_v2.svg" height="650"/>  
 
 `bean` subcommands include the following:
 1. [`count`](https://pinellolab.github.io/crispr-bean/count.html), [`count-samples`](https://pinellolab.github.io/crispr-bean/count_samples.html): Base-editing-aware **mapping** of guide, optionally with reporter from `.fastq` files.

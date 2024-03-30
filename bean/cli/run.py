@@ -152,7 +152,7 @@ def main(args):
         with open(f"{prefix}/{model_label}.result.pkl", "rb") as handle:
             param_history_dict = pkl.load(handle)
     else:
-        param_history_dict = deepcopy(
+        param_history_dict, save_dict = deepcopy(
             run_inference(model, guide, ndata, num_steps=args.n_iter)
         )
         if args.fit_negctrl:
@@ -167,7 +167,7 @@ def main(args):
                 f"Using {len(negctrl_idx)} negative control elements to adjust phenotypic effect sizes..."
             )
             ndata_negctrl = ndata[negctrl_idx]
-            param_history_dict["negctrl"] = deepcopy(
+            param_history_dict["negctrl"], save_dict["negctrl"] = deepcopy(
                 run_inference(
                     negctrl_model, negctrl_guide, ndata_negctrl, num_steps=args.n_iter
                 )
@@ -181,7 +181,7 @@ def main(args):
         os.makedirs(prefix)
     with open(f"{prefix}/{model_label}.result{args.result_suffix}.pkl", "wb") as handle:
         # try:
-        pkl.dump(param_history_dict, handle)
+        pkl.dump(save_dict, handle)
         # except TypeError as exc:
         #     print(exc.message)
         # print(param_history_dict)

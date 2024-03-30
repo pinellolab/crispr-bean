@@ -187,7 +187,7 @@ def run_inference(
         raise ValueError(
             f"Fitting halted for command: {' '.join(sys.argv)} with following error: \n {exc}"
         )
-    return {
+    return pyro.get_param_store(), {
         "loss": losses,
         "params": pyro.get_param_store().get_state(),
     }

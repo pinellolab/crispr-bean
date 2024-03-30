@@ -80,6 +80,16 @@ bean-count-samples \
   -t 12                     `# number of threads` \
   --name my_sorting_screen  `# name of this sample run` \
 ```
+```python
+bean-count \
+  --R1 read1.fq[.gz]
+  --R2 read2.fq[.gz]
+  -b A                      `# base that is being edited (A/G)` \
+  -f sgRNA_info_table.csv   `# sgRNA information` \
+  -o .                      `# output directory` \
+  -r                        `# read edit/allele information from reporter` \
+  --name my_sample  `# name of this sample run`
+```
 
 By default, `bean-count[-samples]` assume R1 and R2 are trimmed off of the adapter sequence. You may need to adjust the command arguments according to your read structure. 
    <img src="imgs/sequence_struct.png" alt="Read structuren" width="600"/>  

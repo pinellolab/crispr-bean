@@ -26,6 +26,7 @@ jobs:
       with:
         name: github-pages
         path: docs/_build/
+
   deploy:
     environment:
       name: github-pages

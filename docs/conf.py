@@ -19,7 +19,7 @@ extensions = ["sphinxarg.ext", "m2r"]
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
-root_doc = "index_"
+root_doc = "index"
 numpydoc_show_class_members = False
 
 # -- Options for HTML output -------------------------------------------------

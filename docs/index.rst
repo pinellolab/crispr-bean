@@ -16,7 +16,7 @@ Workflows
     input
 
 ===================
-`bean` subcommands
+API references
 ===================
 .. toctree::
     :maxdepth: 3
@@ -27,6 +27,7 @@ Workflows
 Screen data structure
 ===================
 .. toctree::
+    reporterscreen
     ReporterScreen_api
 
 ==================

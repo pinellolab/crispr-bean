@@ -70,7 +70,7 @@ Python package `bean` supports multiple data wrangling functionalities for `Repo
 * `bean run` takes 4.6 mins with `--scale-by-acc` tag in Dell XPS 13 Ubuntu WSL for variant screen dataset with 3455 guides and 6 replicates with 4 sorting bins.
 * Full pipeline takes 90.1s in GitHub Action for toy dataset of 2 replicates and 30 guides.
 
-## Contribution
+## Contributing
 If you have questions or feature request, please open an issue. Please feel free to send a pull request.
 
 ## Citation

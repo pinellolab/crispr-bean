@@ -15,7 +15,7 @@ from bean.cli.run import main as run
 from bean.cli.create_screen import main as create_screen
 
 
-def get_base_parser():
+def get_parser():
     parser = argparse.ArgumentParser(prog="bean")
     subparsers = parser.add_subparsers(help="Subcommands", dest="subcommand")
     count_parser = subparsers.add_parser("count", help="count")
@@ -40,7 +40,6 @@ global_parser = None
 
 def main() -> None:
     parser = get_parser()
-    global_parser = parser
     args = parser.parse_args()
     if args.subcommand == "count":
         count(args)

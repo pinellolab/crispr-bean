@@ -30,7 +30,7 @@ def get_parser():
     filter_parser = get_filter_parser(filter_parser)
     run_parser = subparsers.add_parser("run", help="run")
     run_parser = get_run_parser(run_parser)
-    create_screen_parser = subparsers.add_parser("create_screen", help="create")
+    create_screen_parser = subparsers.add_parser("create-screen", help="create")
     create_screen_parser = get_create_screen_parser(create_screen_parser)
     return parser
 

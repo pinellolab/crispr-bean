@@ -2,7 +2,7 @@
 import os
 import papermill as pm
 import bean as be
-from bean.qc.utils import parse_args, check_args
+from bean.qc.utils import check_args
 
 
 def main(args):

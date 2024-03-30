@@ -1,3 +1,5 @@
+pandas
+bio
+
 sphinx-argparse
 m2r
-furo==2021.11.16

@@ -13,6 +13,7 @@ Workflows
 
     gwas
     cds
+    prolif_gwas
     input
 
 ===================

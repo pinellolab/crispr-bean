@@ -24,13 +24,14 @@ setup(
         "Cython",
     ],
     scripts=[
-        "bin/bean-count",
-        "bin/bean-count-samples",
-        "bin/bean-create-screen",
-        "bin/bean-profile",
-        "bin/bean-qc",
-        "bin/bean-filter",
-        "bin/bean-run",  # TODO: prevent error when extra requirements are not met.
+        "bin/bean"
+        # "bin/bean-count",
+        # "bin/bean-count-samples",
+        # "bin/bean-create-screen",
+        # "bin/bean-profile",
+        # "bin/bean-qc",
+        # "bin/bean-filter",
+        # "bin/bean-run",  # TODO: prevent error when extra requirements are not met.
     ],
     install_requires=[
         "numpy",
@@ -45,7 +46,7 @@ setup(
         "openpyxl>=3.0.10",
         "papermill>=2.4.0",
         "pyBigWig>=0.3.18",
-        "pyro-ppl==1.8.1",
+        "pyro-ppl>=1.8.5",
         "scikit-learn",
         "statsmodels>=0.12.1",
         "ipykernel",

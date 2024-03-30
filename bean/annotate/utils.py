@@ -218,22 +218,12 @@ def get_cds_seq_pos_from_gene_name(gene_name: str, ref_version: str = "GRCh38"):
     return cds_chrom, cds_seq, cds_pos, strand
 
 
-def parse_args():
-    """Get the input arguments"""
-    print(
-        r"""
-    _ _         
-  /  \ '\       __ _ _ _           
-  |   \  \     / _(_) | |_ ___ _ _ 
-   \   \  |   |  _| | |  _/ -_) '_|
-    `.__|/    |_| |_|_|\__\___|_|  
-    """
-    )
-    print("bean-filter: filter alleles")
-    parser = argparse.ArgumentParser(
-        prog="allele_filter",
-        description="Filter alleles based on edit position in spacer and frequency across samples.",
-    )
+def parse_args(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser(
+            prog="allele_filter",
+            description="Filter alleles based on edit position in spacer and frequency across samples.",
+        )
     parser.add_argument(
         "bdata_path",
         type=str,
@@ -349,7 +339,7 @@ def parse_args():
         action="store_true",
         help="Load temporary file and work from there.",
     )
-    return parser.parse_args()
+    return parser
 
 
 def check_args(args):

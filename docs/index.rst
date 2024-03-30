@@ -9,7 +9,7 @@ Welcome to `bean`'s documentation!
 Workflows
 ===================
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     gwas
     cds

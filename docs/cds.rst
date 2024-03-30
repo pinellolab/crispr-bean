@@ -1,5 +1,5 @@
 Coding sequence tiling library
 ***********************
-.. mdinclude:: commands/ldl_cds.md
+.. mdinclude:: ldl_cds.md
 
 See :ref:`subcommands` for the full details.

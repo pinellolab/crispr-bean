@@ -21,7 +21,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 root_doc = "index"
 numpydoc_show_class_members = False
-
+source_suffix = [".rst", ".md"]
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 

@@ -28,6 +28,19 @@ def test_qc_tiling():
         raise exc
 
 
+@pytest.mark.order(7)
+def test_qc_survival():
+    cmd = "bean qc tests/data/survival_var_mini_screen.h5ad -o tests/data/survival_var_mini_screen_masked.h5ad -r tests/test_res/qc_report_survival_var_mini_screen --count-correlation-thres 0.6 --lfc-conds D0,D14"
+    try:
+        subprocess.check_output(
+            cmd,
+            shell=True,
+            universal_newlines=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise exc
+
+
 @pytest.mark.order(9)
 def test_dummy_insertion_varscreen():
     cmd = "bean qc tests/data/var_mini_screen_missing.h5ad -o tests/data/var_mini_screen_missing_masked.h5ad -r tests/test_res/qc_report_var_mini_screen_missing --count-correlation-thres 0.6"

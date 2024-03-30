@@ -159,3 +159,55 @@ def test_run_tiling_with_negctrl_uniform():
 
 
 # Add fit_negctrl examples
+
+
+@pytest.mark.order(17)
+def test_survival_run_variant_noacc():
+    cmd = "bean run survival variant tests/data/survival_var_mini_screen_masked.h5ad -o tests/test_res/var/ --n-iter 10 --control-condition=D7"
+    try:
+        subprocess.check_output(
+            cmd,
+            shell=True,
+            universal_newlines=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise exc
+
+
+@pytest.mark.order(18)
+def test_survival_run_variant_wo_negctrl_uniform():
+    cmd = "bean run survival variant tests/data/survival_var_mini_screen_masked.h5ad -o tests/test_res/var/ --uniform-edit --n-iter 10 --control-condition=D7"
+    try:
+        subprocess.check_output(
+            cmd,
+            shell=True,
+            universal_newlines=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise exc
+
+
+@pytest.mark.order(20)
+def test_survival_run_variant_noacc_negctrl():
+    cmd = "bean run survival variant tests/data/survival_var_mini_screen_masked.h5ad -o tests/test_res/var/ --fit-negctrl --n-iter 10 --control-condition=D7"
+    try:
+        subprocess.check_output(
+            cmd,
+            shell=True,
+            universal_newlines=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise exc
+
+
+@pytest.mark.order(21)
+def test_survival_run_variant_uniform_negctrl():
+    cmd = "bean run survival variant tests/data/survival_var_mini_screen_masked.h5ad -o tests/test_res/var/ --uniform-edit --fit-negctrl --n-iter 10 --control-condition=D7"
+    try:
+        subprocess.check_output(
+            cmd,
+            shell=True,
+            universal_newlines=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise exc

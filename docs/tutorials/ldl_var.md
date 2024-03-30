@@ -4,11 +4,11 @@ GWAS variant screen with per-variant gRNA tiling design, selected based on FACS 
 <table>
   <tr>
     <th>Library design</th>
-    <td>Variant (gRNAs tile each target variant)   <br> <img src="../../imgs/variant.png" alt="variant library design" width="600"/></td>
+    <td>Variant (gRNAs tile each target variant)   <br> <img src="assets/variant.png" alt="variant library design" width="600"/></td>
   </tr>
   <tr>
     <th>Selection</th>
-    <td>Cells are sorted based on FACS signal quantiles  <br>  <img src="../../imgs/sorting_bins@8x.png" alt="variant library design" width="300"/></td>
+    <td>Cells are sorted based on FACS signal quantiles  <br>  <img src="assets/sorting_bins@8x.png" alt="variant library design" width="300"/></td>
   </tr>
 </table>
 
@@ -17,27 +17,28 @@ GWAS variant screen with per-variant gRNA tiling design, selected based on FACS 
 ## Example workflow
 ```bash
 screen_id=my_sorting_tiling_screen
+working_dir=my_workdir
 
 # 1. Count gRNA & reporter
 bean-count-samples \
---input tests/data/sample_list.csv    `# Contains fastq file path; see test file for example.`\
+--input ${working_dir}//sample_list.csv    `# Contains fastq file path; see test file for example.`\
 -b A                                  `# Base A is edited (into G)` \
--f tests/data/test_guide_info.csv     `# Contains gRNA metadata; see test file for example.`\
+-f ${working_dir}/test_guide_info.csv     `# Contains gRNA metadata; see test file for example.`\
 -o ./                                 `# Output directory` \
 -r                                    `# Quantify reporter edits` \
 -n ${screen_id}                          `# ID of the screen to be counted`   
 
 # 2. QC samples & guides
 bean-qc \
-  bean_count_${screen_id}.h5ad             `# Input ReporterScreen .h5ad file path` \
-  -o bean_count_${screen_id}_masked.h5ad   `# Output ReporterScreen .h5ad file path` \
-  -r qc_report_${screen_id}                `# Prefix for QC report` \
+  ${working_dir}/bean_count_${screen_id}.h5ad             `# Input ReporterScreen .h5ad file path` \
+  -o ${working_dir}/bean_count_${screen_id}_masked.h5ad   `# Output ReporterScreen .h5ad file path` \
+  -r ${working_dir}/qc_report_${screen_id}                `# Prefix for QC report` \
   -b                                       ` # Remove replicates with no good samples.
 
 # 3. Quantify variant effect
 bean-run sorting variant \
-    tests/data/bean_count_${screen_id}_masked.h5ad \
-    -o tests/test_res/var/ \
+    ${working_dir}/bean_count_${screen_id}_masked.h5ad \
+    -o ${working_dir}/ \
     --fit-negctrl \
     --scale-by-acc \
     --accessibility-col accessibility
@@ -50,9 +51,9 @@ screen_id=my_sorting_tiling_screen
 
 # 1. Count gRNA & reporter
 bean-count-samples \
---input tests/data/sample_list.csv    `# Contains fastq file path; see test file for example.`\
+--input ${working_dir}/sample_list.csv    `# Contains fastq file path; see test file for example.`\
 -b A                                  `# Base A is edited (into G)` \
--f tests/data/test_guide_info.csv     `# Contains gRNA metadata; see test file for example.`\
+-f ${working_dir}/test_guide_info.csv     `# Contains gRNA metadata; see test file for example.`\
 -o ./                                 `# Output directory` \
 -r                                    `# Quantify reporter edits` \
 -n ${screen_id}                          `# ID of the screen to be counted`   
@@ -77,20 +78,20 @@ If the data does not include reporter editing data, you can provide `--no-editin
 
 `bean-run` can take 3 run options to quantify editing rate:  
 1. From **reporter + accessibility**  
-    If your gRNA metadata table (`tests/data/test_guide_info.csv` above) included per-gRNA accessibility score, 
+    If your gRNA metadata table (`${working_dir}/test_guide_info.csv` above) included per-gRNA accessibility score, 
     ```
     bean-run sorting variant \
-    tests/data/bean_count_${screen_id}_masked.h5ad \
-    -o tests/test_res/var/ \
+    ${working_dir}/bean_count_${screen_id}_masked.h5ad \
+    -o ${working_dir}/ \
     --fit-negctrl \
     --scale-by-acc \
     --accessibility-col accessibility
     ```
-    If your gRNA metadata table (`tests/data/test_guide_info.csv` above) included per-gRNA chromosome & position and you have bigWig file with accessibility signal, 
+    If your gRNA metadata table (`${working_dir}/test_guide_info.csv` above) included per-gRNA chromosome & position and you have bigWig file with accessibility signal, 
     ```
     bean-run sorting variant \
-    tests/data/bean_count_${screen_id}_masked.h5ad \
-    -o tests/test_res/var/ \
+    ${working_dir}/bean_count_${screen_id}_masked.h5ad \
+    -o ${working_dir}/ \
     --fit-negctrl \
     --scale-by-acc \
     --accessibility-bw accessibility.bw
@@ -101,16 +102,16 @@ If the data does not include reporter editing data, you can provide `--no-editin
     This assumes the all target sites have the uniform chromatin accessibility.
     ```
     bean-run sorting variant \
-    tests/data/bean_count_${screen_id}_masked.h5ad \
-    -o tests/test_res/var/ \
+    ${working_dir}/bean_count_${screen_id}_masked.h5ad \
+    -o ${working_dir}/ \
     --fit-negctrl 
     ```
 3. No reporter information, assume the same editing efficiency of all gRNAs.  
     Use this option if your data don't have editing outcome information.
     ```
     bean-run sorting variant \
-    tests/data/bean_count_${screen_id}_masked.h5ad \
-    -o tests/test_res/var/ \
+    ${working_dir}/bean_count_${screen_id}_masked.h5ad \
+    -o ${working_dir}/ \
     --fit-negctrl \
     --uniform-edit
     ```

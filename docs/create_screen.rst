@@ -1,6 +1,6 @@
 `bean create-screen`
 ***********************
-.. mdinclude:: commands/create-screen.md
+.. mdinclude:: create-screen.md
 
 Full parameters
 ==================

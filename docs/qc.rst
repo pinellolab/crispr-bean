@@ -1,7 +1,7 @@
 .. _qc:
 `bean qc`
 ***********************
-.. mdinclude:: commands/qc.md
+.. mdinclude:: qc.md
 
 Full parameters
 ==================

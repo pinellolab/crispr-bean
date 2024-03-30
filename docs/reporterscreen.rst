@@ -1,3 +1,3 @@
 ReporterScreen object
 ***********************
-.. mdinclude:: commands/reporterscreen.md
+.. mdinclude:: reporterscreen.md

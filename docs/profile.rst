@@ -1,6 +1,6 @@
 `bean profile`
 ***********************
-.. mdinclude:: commands/profile.md
+.. mdinclude:: profile.md
 
 Full parameters
 ==================

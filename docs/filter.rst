@@ -1,7 +1,7 @@
 .. _filter:
 `bean filter`
 ***********************
-.. mdinclude:: commands/filter.md
+.. mdinclude:: filter.md
 
 Full parameters
 ==================

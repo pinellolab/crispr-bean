@@ -20,7 +20,7 @@ jobs:
       working-directory: docs
       run: sphinx-build . _build
     - name: copy image files
-      run: cp -r docs/assets docs/_build/assets/
+      run: cp -r docs/assets docs/_build/
     - uses: actions/upload-pages-artifact@v3
       with:
         name: github-pages

@@ -14,8 +14,14 @@ jobs:
 
     - name: Install Sphinx & Dependencies
       run: pip install sphinx sphinx_markdown_builder sphinx_rtd_theme sphinx-argparse m2r
+    - name: Install bean
+      run: |
+        python -m pip install --upgrade pip
+        pip install torch==1.12.1+cpu torchvision==0.13.1+cpu torchaudio==0.12.1 --extra-index-url https://download.pytorch.org/whl/cpu
+        pip install -r requirements.txt
+        pip install -e .
     - name: Build Documentation
-      run: cd "$GITHUB_WORKSPACE/docs" && make html
+      run: cd "$GITHUB_WORKSPACE/docs" && sphinx-build . _build
 
     - uses: actions/upload-artifact@v3
       with:

@@ -18,7 +18,7 @@ bean count --R1 R1.fq --R2 R2.fq -b A -f sgRNA_info_table.csv -r
 ```
 By default, `bean count[-samples]` assume R1 and R2 are trimmed off of the adapter sequence. You may need to adjust the command arguments according to your read structure. 
 
-   <img src="../../imgs/sequence_struct.png" alt="Read structuren" width="600"/>  
+   <img src="../imgs/sequence_struct.png" alt="Read structuren" width="600"/>  
 
 See full detail [below](#full-parameters).
 

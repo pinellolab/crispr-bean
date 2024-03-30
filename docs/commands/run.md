@@ -6,7 +6,7 @@ BEAN uses Bayesian network to incorporate gRNA editing outcome to provide poster
 
 For the full detail, see the method section of the [BEAN manuscript](https://www.medrxiv.org/content/10.1101/2023.09.08.23295253v1).
 
-<img src="../../imgs/bean.gif" alt="model" width="700"/>   
+<img src="../imgs/bean.gif" alt="model" width="700"/>   
   
 <br></br>
 
@@ -45,7 +45,7 @@ See full list of parameters [below](#full-parameters).
 
 
 # Output
-<img src="../../imgs/model_output.png" alt="model" width="700"/>
+<img src="../imgs/model_output.png" alt="model" width="700"/>
 
 Above command produces
 * `output_prefix/bean_element_result.[model_type].csv` with following columns:

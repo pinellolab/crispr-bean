@@ -17,7 +17,7 @@ bean qc \
 
 `bean qc` supports following quality control and masks samples with low quality. Specifically:  
 
-<img src="../../imgs/qc_output.png" alt="Allele translation" width="900"/>  
+<img src="../imgs/qc_output.png" alt="Allele translation" width="900"/>  
 
 * Plots guide coverage and the uniformity of coverage
 * Guide count correlation between samples

@@ -12,18 +12,29 @@
 ## Overview
 `bean` supports end-to-end analysis of pooled sorting screens, with or without reporter.  
 
-<img src="imgs/dag_bean_v2.png" alt="dag_bean_v2.svg" width="700"/>  
+<img src="imgs/dag_bean_v2.svg" alt="dag_bean_v2.svg" width="700"/>  
 
 `bean` subcommands include the following:
-1. [`count`, `count-samples`](#bean-count-samples-count-reporter-screen-data): Base-editing-aware **mapping** of guide, optionally with reporter from `.fastq` files.
+1. [`count`](https://pinellolab.github.io/crispr-bean/count.html), [`count-samples`](https://pinellolab.github.io/crispr-bean/count_samples.html): Base-editing-aware **mapping** of guide, optionally with reporter from `.fastq` files.
     *   [`create-screen`](#bean-create-screen-create-reporterscreen-object-from-flat-files) creates minimal ReporterScreen object from flat gRNA count file. Note that this way, allele counts are not included and many functionalities involving allele and edit counts are not supported.
-2. [`profile`](#bean-profile-profile-editing-patterns): Profile editing preferences of your editor.  
+2. [`profile`](https://pinellolab.github.io/crispr-bean/profile.html): Profile editing preferences of your editor.  
 3. [`qc`](#bean-qc-qc-of-reporter-screen-data): Quality control report and filtering out / masking of aberrant sample and guides  
 4. [`filter`](#bean-filter-filtering-and-optionally-translating-alleles): Filter reporter alleles; essential for `tiling` mode that allows for all alleles generated from gRNA.
 5. [`run`](#bean-run-quantify-variant-effects): Quantify targeted variants' effect sizes from screen data.  
-
-### Screen data is saved as *ReporterScreen* object in the pipeline.
+* Screen data is saved as *ReporterScreen* object in the pipeline.
 BEAN stores mapped gRNA and allele counts in `ReporterScreen` object which is compatible with [AnnData](https://anndata.readthedocs.io/en/latest/index.html). See [Data Structure](#data-structure) section for more information.
+## Installation 
+First install [PyT}orch](https://pytorch.org/get-started/).
+Then download from PyPI:
+```
+pip install crispr-bean[model]
+```
+
+Following installation without PyTorch dependency wouldn't have variant effect size quantification (`bean run`) functionality. 
+```
+pip install crispr-bean
+```
+
 
 ## Documentaton
 See the [documentation](https://pinellolab.github.io/crispr-bean/) for tutorials and API references.
@@ -37,7 +48,7 @@ See the [documentation](https://pinellolab.github.io/crispr-bean/) for tutorials
 | Coding sequence tiling libarary | Survival / Proliferation | Yes/No | TKO simulated, tiling (Coming soon!)  
 
 
-### Pipeline run options by library design
+### Library design: variant or tiling?
 The `bean filter` and `bean run` steps depend on the type of gRNA library design, where BEAN supports two modes of running.
 1. `variant` library: Several gRNAs tile each of the targeted variants  
   Ex)  
@@ -46,32 +57,6 @@ The `bean filter` and `bean run` steps depend on the type of gRNA library design
 2. `tiling` library: gRNA densely tiles a long region (e.g. gene(s), exon(s), coding sequence(s))  
   Ex)  
   <img src="imgs/tiling.png" alt="tiling library design" width="450"/>  
-
-
-## Installation 
-### Full installation
-First install [pytorch](https://pytorch.org/) >=12.1,<2.
-Then download from PyPI:
-```
-pip install crispr-bean[model]
-```
-
-### Mapping and data wrangling, without variant effect quantification
-```
-pip install crispr-bean
-```
-This wouldn't have variant effect size quantification (`bean run`) functionality.  
-
-
-## Subcommands
-See the full detail for each subcommand in the documentation.
-* [`count`, `count-samples`](docs/count.md): Count (reporter) screen data  
-* [`profile`](docs/profile.md)
-* [`qc`](docs/qc.md)
-* [`filter`](docs/commands/filter.md)
-* [`run`](docs/commands/run.md)
-* [`create-screen`](docs/commands/create-screen.md)
-
 
 ## Data Structure
 ### ReporterScreen object
@@ -87,7 +72,7 @@ Following attributes are included if matched reporter is provided and you chose 
   * `.X_edits [Optional]`: If target position of each guide is specified as `target_pos` in input `gRNA_library.csv` file and `--match-target-position` option is provided, the result has the matrix with the number of target edit at the specified positions.
   * `.allele_tables [Optional]`: Dictionary with a single allele count table that counts per guide and allele combination, what is the count per sample. 
 
-### Using BEAN as Python module
+## Using BEAN as Python module
 ```
 import bean as be
 cdata = be.read_h5ad("bean_counts_sample.h5ad")
@@ -98,6 +83,9 @@ Python package `bean` supports multiple data wrangling functionalities for `Repo
 * Installation takes 14.4 mins after pytorch installation with pytorch in Dell XPS 13 Ubuntu WSL.
 * `bean run` takes 4.6 mins with `--scale-by-acc` tag in Dell XPS 13 Ubuntu WSL for variant screen dataset with 3455 guides and 6 replicates with 4 sorting bins.
 * Full pipeline takes 90.1s in GitHub Action for toy dataset of 2 replicates and 30 guides.
+
+## Contribution
+If you have questions or feature request, please open an issue. Please feel free to send a pull request.
 
 ## Citation
 If you have used BEAN for your analysis, please cite:  

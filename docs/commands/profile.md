@@ -5,4 +5,4 @@ bean profile my_sorting_screen.h5ad -o output_prefix `# Prefix for editing profi
 # Output
 Above command produces `prefix_editing_preference.[html,ipynb]` as editing preferences ([see example](../notebooks/profile_editing_preference.ipynb)).  
 
-<img src="../imgs/profile_output.png" alt="Allele translation" width="700" />  
+<img src="../../imgs/profile_output.png" alt="Allele translation" width="700" />  

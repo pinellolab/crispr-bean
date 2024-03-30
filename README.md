@@ -7,7 +7,7 @@
 `bean` (**B**ase **E**diting reporter screens with guide **A**ctivity **N**ormalization) is an analysis toolkit for the pooled CRISPR reporter or sensor data. The reporter technique transfects cells with plasmid with not only sgRNA but with the **target sequence surrogate** which we call **reporter** or **sensor**.  
 
 
-<img src="imgs/reporter.jpg" alt="Reporter construct" width="700"/>
+<img src="imgs/summary.svg" alt="Reporter construct" width="700"/>
 
 ## Overview
 `bean` supports end-to-end analysis of pooled sorting screens, with or without reporter.  
@@ -50,13 +50,11 @@ See the [documentation](https://pinellolab.github.io/crispr-bean/) for tutorials
 
 ### Library design: variant or tiling?
 The `bean filter` and `bean run` steps depend on the type of gRNA library design, where BEAN supports two modes of running.
-1. `variant` library: Several gRNAs tile each of the targeted variants  
-  Ex)  
-  <img src="imgs/variant.png" alt="variant library design" width="700"/>  
+<img src="imgs/library_design.svg" alt="variant library design" width="700"/>  
 
-2. `tiling` library: gRNA densely tiles a long region (e.g. gene(s), exon(s), coding sequence(s))  
-  Ex)  
-  <img src="imgs/tiling.png" alt="tiling library design" width="450"/>  
+1. `variant` library: Several gRNAs tile each of the targeted variants. Only the editing rate of the target variant is considered and the bystander effects are ignored. 
+
+2. `tiling` library: gRNA densely tiles a long region (e.g. gene(s), exon(s), coding sequence(s)). Bystander edits are considered to obtain alleles with significant fractions. Edited alleles can be "translated" to output coding variants.
 
 ## Using BEAN as Python module
 ```

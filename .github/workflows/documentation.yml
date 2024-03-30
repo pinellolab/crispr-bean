@@ -19,7 +19,8 @@ jobs:
     - name: Build Documentation
       working-directory: docs
       run: sphinx-build . _build
-
+    - name: copy image files
+      run: cp -r imgs/ docs/_build/imgs
     - uses: actions/upload-pages-artifact@v3
       with:
         name: github-pages

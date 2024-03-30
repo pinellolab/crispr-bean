@@ -167,7 +167,7 @@ def main(args):
                 f"Using {len(negctrl_idx)} negative control elements to adjust phenotypic effect sizes..."
             )
             ndata_negctrl = ndata[negctrl_idx]
-            param_history_dict["negctrl"], save_dict["negctrl"] = deepcopy(
+            param_history_dict_negctrl, save_dict["negctrl"] = deepcopy(
                 run_inference(
                     negctrl_model, negctrl_guide, ndata_negctrl, num_steps=args.n_iter
                 )
@@ -188,6 +188,7 @@ def main(args):
     write_result_table(
         target_info_df,
         param_history_dict,
+        negctrl_params=param_history_dict_negctrl,
         model_label=model_label,
         prefix=f"{prefix}/",
         suffix=args.result_suffix,

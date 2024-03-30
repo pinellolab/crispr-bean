@@ -12,7 +12,7 @@
 ## Overview
 `bean` supports end-to-end analysis of pooled sorting screens, with or without reporter.  
 
-<img src="imgs/dag_bean_v2.svg" alt="dag_bean_v2.svg" width="700"/>  
+<img src="imgs/dag_bean_v2.svg" alt="dag_bean_v2.svg" height="500"/>  
 
 `bean` subcommands include the following:
 1. [`count`](https://pinellolab.github.io/crispr-bean/count.html), [`count-samples`](https://pinellolab.github.io/crispr-bean/count_samples.html): Base-editing-aware **mapping** of guide, optionally with reporter from `.fastq` files.
@@ -24,7 +24,7 @@
 * Screen data is saved as *ReporterScreen* object in the pipeline.
 BEAN stores mapped gRNA and allele counts in `ReporterScreen` object which is compatible with [AnnData](https://anndata.readthedocs.io/en/latest/index.html). See [Data Structure](#data-structure) section for more information.
 ## Installation 
-First install [PyT}orch](https://pytorch.org/get-started/).
+First install [PyTorch](https://pytorch.org/get-started/).
 Then download from PyPI:
 ```
 pip install crispr-bean[model]

@@ -5,7 +5,7 @@
 
 Welcome to `bean`'s documentation!
 ================================
-`bean` unconfounds variant effect of CRISPR reporter screens by considering genotypic outcome from *reporter* sequence. 
+`bean` unconfounds variant effect from variable editing outcome of CRISPR screens by considering genotypic outcome from *reporter* sequence. 
 
 .. image:: assets/summary.png
   :width: 700

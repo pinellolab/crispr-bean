@@ -4,7 +4,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/crispr-bean)](https://pypi.org/project/crispr-bean/)
 [![Code style](https://img.shields.io/badge/code%20style-black-black)](https://github.com/psf/black)
 
-`bean` unconfounds variant effect of CRISPR reporter screens by considering genotypic outcome from *reporter* sequence. 
+`bean` unconfounds variant effect from variable editing outcome of CRISPR screens by considering genotypic outcome from *reporter* sequence. 
 
 
 <img src="docs/assets/summary.png" alt="Reporter construct" width="700"/>

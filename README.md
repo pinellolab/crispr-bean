@@ -1,4 +1,4 @@
-# <img src="imgs/bean_title.svg" alt="crispr-bean" height="50"/>
+# <img src="imgs/bean_title2.svg" alt="crispr-bean" height="50"/>
 
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/crispr-bean)](https://pypi.org/project/crispr-bean/)
 [![PyPI version](https://img.shields.io/pypi/v/crispr-bean)](https://pypi.org/project/crispr-bean/)

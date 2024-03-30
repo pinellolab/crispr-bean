@@ -46,7 +46,7 @@ setup(
         "openpyxl>=3.0.10",
         "papermill>=2.4.0",
         "pyBigWig>=0.3.18",
-        "pyro-ppl==1.8.1",
+        "pyro-ppl>=1.8.5",
         "scikit-learn",
         "statsmodels>=0.12.1",
         "ipykernel",

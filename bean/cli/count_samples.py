@@ -14,7 +14,6 @@ import pandas as pd
 from bean.mapping.utils import (
     InputFileError,
     _check_arguments,
-    _get_input_parser,
     _get_first_read_length,
     _check_read_length,
 )
@@ -30,48 +29,6 @@ error = logging.critical
 warn = logging.warning
 debug = logging.debug
 info = logging.info
-
-
-def get_input_parser() -> argparse.Namespace:
-    """Add multi-sample specific arguments to the base parser."""
-    parser = _get_input_parser()
-    parser.add_argument(
-        "-i",
-        "--input",
-        type=str,
-        help="List of fastq and sample ids. Formatted as `R1_filepath,R2_filepath,sample_id`",
-        required=True,
-    )
-    parser.add_argument(
-        "-t", "--threads", type=int, help="Number of threads", default=10
-    )
-    parser.add_argument(
-        "--guide-start-seqs-file",
-        type=str,
-        help="CSV file path with per-sample `guide_start_seq` to be used."
-        + "Formatted as `sample_id, guide_start_seq`",
-        default=None,
-    )
-    parser.add_argument(
-        "--guide-end-seqs-file",
-        type=str,
-        help="CSV file path with per-sample `guide_end_seq` to be used."
-        + "Formatted as `sample_id,guide_end_seq`",
-        default=None,
-    )
-    parser.add_argument(
-        "--barcode-start-seqs-file",
-        type=str,
-        help="CSV file path with per-sample `barcode_start_seq` to be used."
-        + "Formatted as `sample_id,guide_end_seq`",
-        default=None,
-    )
-
-    parser.add_argument(
-        "--rerun", help="Recount each sample", action="store_true", default=False
-    )
-
-    return parser
 
 
 def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
@@ -102,7 +59,9 @@ def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
         "barcode_start_seqs_tbl" in args_dict
         and args_dict["barcode_start_seqs_tbl"] is not None
     ):
-        args_dict["barcode_start_seq"] = str(args_dict["barcode_start_seqs_tbl"][sample_id])
+        args_dict["barcode_start_seq"] = str(
+            args_dict["barcode_start_seqs_tbl"][sample_id]
+        )
     counter = bean.mp.GuideEditCounter(**args_dict)
     if os.path.exists(f"{counter.output_dir}.h5ad") and not args_dict["rerun"]:
         screen = bean.read_h5ad(f"{counter.output_dir}.h5ad")
@@ -147,10 +106,10 @@ def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
 def check_arguments(args: argparse.Namespace) -> argparse.Namespace:
     """Checks the validity of the argument."""
     args = _check_arguments(args, info, warn, error)
-    sample_tbl = pd.read_csv(args.input)
+    sample_tbl = pd.read_csv(args.sample_list)
     if len(sample_tbl.iloc[:, 2].unique()) != len(sample_tbl.iloc[:, 2]):
         raise InputFileError(
-            f"Sample ID not unique. Please check your input file {args.input}."
+            f"Sample ID not unique. Please check your input file {args.sample_list}."
         )
     first_read_lengths = [
         _get_first_read_length(fastq_R1) for fastq_R1 in sample_tbl.iloc[:, 0]
@@ -187,11 +146,19 @@ def check_arguments(args: argparse.Namespace) -> argparse.Namespace:
     return args
 
 
-def main():
-    parser = get_input_parser()
-    args = parser.parse_args()
+def main(args):
+    """Get the input data"""
+    print(
+        r"""
+    _ _       
+  /  \ '\                       _   
+  |   \  \      __ ___ _  _ _ _| |_ 
+   \   \  |    / _/ _ \ || | ' \  _|
+    `.__|/     \__\___/\_,_|_||_\__|
+    """
+    )
     args = check_arguments(args)
-    sample_tbl = pd.read_csv(args.input)  # R1_filepath, R2_filepath, sample_name
+    sample_tbl = pd.read_csv(args.sample_list)  # R1_filepath, R2_filepath, sample_name
     sample_tbl_input = sample_tbl.iloc[:, :3]
     sample_info_tbl = sample_tbl.iloc[:, 2:].set_index(sample_tbl.columns[2])
     with Pool(processes=args.threads, maxtasksperchild=1) as p:
@@ -205,7 +172,7 @@ def main():
         # result = p.starmap(count_sample, sample_tbl[0], sample_tbl[1], sample_tbl[2])
 
     screen = bean.concat(result, axis=1)
-    database_id = args.name or os.path.basename(args.input).split(".")[0]
+    database_id = args.name or os.path.basename(args.sample_list).split(".")[0]
     output_path = os.path.join(
         os.path.abspath(args.output_folder), f"bean_count_{database_id}"
     )
@@ -230,7 +197,3 @@ def main():
     `.__|/     \__\___/\_,_|_||_\__|
     """
     )
-
-
-if __name__ == "__main__":
-    main()

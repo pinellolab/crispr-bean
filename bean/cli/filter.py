@@ -5,13 +5,12 @@ import sys
 import logging
 import pandas as pd
 import bean as be
+import bean.annotate.filter_alleles as filter_alleles
 from bean.plotting.allele_stats import (
-    plot_n_alleles_per_guide,
-    plot_n_guides_per_edit,
     plot_allele_stats,
 )
 from bean.annotate.translate_allele import get_mismatch_df
-from bean.annotate.utils import parse_args, check_args
+from bean.annotate.utils import check_args
 import matplotlib.pyplot as plt
 
 plt.style.use("default")
@@ -28,8 +27,18 @@ debug = logging.debug
 info = logging.info
 
 
-if __name__ == "__main__":
-    args = parse_args()
+def main(args):
+    """Get the input arguments"""
+    print(
+        r"""
+    _ _         
+  /  \ '\       __ _ _ _           
+  |   \  \     / _(_) | |_ ___ _ _ 
+   \   \  |   |  _| | |  _/ -_) '_|
+    `.__|/    |_| |_|_|\__\___|_|  
+    """
+    )
+    print("bean-filter: filter alleles")
     args = check_args(args)
     if not args.load_tmp:
         bdata = be.read_h5ad(args.bdata_path)
@@ -49,7 +58,7 @@ if __name__ == "__main__":
             (
                 q_val_each,
                 sig_allele_df,
-            ) = be.an.filter_alleles.filter_alleles(
+            ) = filter_alleles.filter_alleles(
                 bdata, plasmid_adata, filter_each_sample=True, run_parallel=True
             )
             bdata.uns["sig_allele_counts"] = sig_allele_df.reset_index(drop=True)
@@ -59,17 +68,15 @@ if __name__ == "__main__":
         print(len(bdata.uns[allele_df_keys[-1]]))
         if len(bdata.uns[allele_df_keys[-1]]) >= 1:
             info("Filtering out edits outside spacer position...")
-            bdata.uns[
-                f"{allele_df_keys[-1]}_spacer"
-            ] = bdata.filter_allele_counts_by_pos(
-                rel_pos_start=0,
-                rel_pos_end=20,
-                rel_pos_is_reporter=False,
-                map_to_filtered=True,
-                allele_uns_key=allele_df_keys[-1],
-                jaccard_threshold=0.2,
-            ).reset_index(
-                drop=True
+            bdata.uns[f"{allele_df_keys[-1]}_spacer"] = (
+                bdata.filter_allele_counts_by_pos(
+                    rel_pos_start=0,
+                    rel_pos_end=20,
+                    rel_pos_is_reporter=False,
+                    map_to_filtered=True,
+                    allele_uns_key=allele_df_keys[-1],
+                    jaccard_threshold=0.2,
+                ).reset_index(drop=True)
             )
             info(
                 f"Filtered down to {len(bdata.uns[f'{allele_df_keys[-1]}_spacer'])} alleles."

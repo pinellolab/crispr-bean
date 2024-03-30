@@ -60,7 +60,19 @@ warnings.filterwarnings(
 )
 
 
-def main(args, bdata):
+def main(args):
+    print(
+        r"""
+    _ _       
+  /  \ '\                 
+  |   \  \      _ _ _  _ _ _  
+   \   \  |    | '_| || | ' \ 
+    `.__|/     |_|  \_,_|_||_|
+    """
+    )
+    print("bean-run: Run model to identify targeted variants and their impact.")
+    bdata = be.read_h5ad(args.bdata_path)
+    args, bdata = check_args(args, bdata)
     if args.cuda:
         os.environ["CUDA_VISIBLE_DEVICES"] = "1"
         torch.set_default_tensor_type(torch.cuda.FloatTensor)
@@ -193,10 +205,3 @@ def main(args, bdata):
         ),
     )
     info("Done!")
-
-
-if __name__ == "__main__":
-    args = parse_args()
-    bdata = be.read_h5ad(args.bdata_path)
-    args, bdata = check_args(args, bdata)
-    main(args, bdata)

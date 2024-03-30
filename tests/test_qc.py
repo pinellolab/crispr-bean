@@ -63,5 +63,3 @@ def test_dummy_insertion_tilingscreen():
         )
     except subprocess.CalledProcessError as exc:
         raise exc
-        #if "Too small number of replicate left after QC" not in exc.output:
-            raise exc

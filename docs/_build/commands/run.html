@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>bean run: Quantify variant effects &#8212; bean 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=039e1c02" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=af2ce170"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="bean-run-quantify-variant-effects">
+<h1><code class="docutils literal notranslate"><span class="pre">bean</span> <span class="pre">run</span></code>: Quantify variant effects<a class="headerlink" href="#bean-run-quantify-variant-effects" title="Permalink to this heading">¶</a></h1>
+<p>BEAN uses Bayesian network to incorporate gRNA editing outcome to provide posterior estimate of variant phenotype. The Bayesian network reflects data generation process. Briefly,</p>
+<ol class="arabic simple">
+<li><p>Cellular phenotype (either for cells are sorted upon for sorting screen, or log(proliferation rate)) is modeled as the Gaussian mixture distribution of wild-type phenotype and variant phenotype.</p></li>
+<li><p>The weight of the mixture components are inferred from the reporter editing outcome and the chromatin accessibility of the loci.</p></li>
+<li><p>Cells with each gRNA, formulated as the mixture distribution, is sorted by the phenotypic quantile to produce the gRNA counts.</p></li>
+</ol>
+<p>For the full detail, see the method section of the <a class="reference external" href="https://www.medrxiv.org/content/10.1101/2023.09.08.23295253v1">BEAN manuscript</a>.</p>
+<p><span class="raw-html-m2r"><img src="../../imgs/bean.gif" alt="model" width="700"/></span></p>
+<p><span class="raw-html-m2r"><br></br></span></p>
+</section>
+<section id="usage-example">
+<h1>Usage example<a class="headerlink" href="#usage-example" title="Permalink to this heading">¶</a></h1>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bean<span class="w"> </span>run<span class="w"> </span>sorting<span class="o">[</span>survival<span class="o">]</span><span class="w"> </span>variant<span class="o">[</span>tiling<span class="o">]</span><span class="w"> </span>my_sorting_screen_filtered.h5ad<span class="w"> </span><span class="se">\</span>
+<span class="o">[</span>--uniform-edit,<span class="w"> </span>--scale-by-acc<span class="w"> </span><span class="o">[</span>--acc-bw-path<span class="w"> </span>accessibility_signal.bw,<span class="w"> </span>--acc-col<span class="w"> </span>accessibility<span class="o">]]</span><span class="w"> </span><span class="se">\</span>
+-o<span class="w"> </span>output_prefix/<span class="w"> </span><span class="se">\</span>
+--fit-negctrl
+</pre></div>
+</div>
+<p>See full list of parameters <a class="reference external" href="#full-parameters">below</a>.</p>
+</section>
+<section id="input">
+<h1>Input<a class="headerlink" href="#input" title="Permalink to this heading">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">my_sorting_screen_filtered.h5ad</span></code> can be produced by one of the following:</p>
+<ol class="arabic">
+<li><p><cite>``bean count-samples`</cite> &lt;(#bean-count-samples-count-reporter-screen-data&gt;`_) when you have raw <code class="docutils literal notranslate"><span class="pre">.fastq</span></code> file</p></li>
+<li><p>(Limited to <code class="docutils literal notranslate"><span class="pre">bean</span> <span class="pre">run</span> <span class="pre">variant</span></code> mode)  <code class="docutils literal notranslate"><span class="pre">bean</span> <span class="pre">create-screen</span></code> when you have flat <code class="docutils literal notranslate"><span class="pre">.csv</span></code> tables of gRNA metadata table, sample metadata table, gRNA counts table (# guides x # samples), and optionally # edits table.
+.. code-block:: bash</p>
+<blockquote>
+<div><p>bean create-screen gRNA_info_table.csv sample_info_table.csv gRNA_counts_table.csv [–edits edit_counts_table.csv -o output.h5ad]</p>
+</div></blockquote>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">gRNA_info_table.csv</span></code> should have following columns.</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: gRNA ID column</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">target</span></code>: This column denotes which target variant/element of each gRNA.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">target_group</span> <span class="pre">[Optional]</span></code>: If negative control gRNA will be used, specify as “NegCtrl” in this column.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sample_info_table.csv</span></code> should have following columns.</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">sample_id</span></code>: ID of sequencing sample</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">replicate</span></code>: Replicate # of this sample</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bin</span></code>: Name of the sorting bin</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">upper_quantile</span></code>: FACS sorting upper quantile</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lower_quantile</span></code>: FACS sorting lower quantile</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gRNA_counts_table.csv</span></code> should be formatted as follows.</p>
+<ul>
+<li><p>Columns include one of <code class="docutils literal notranslate"><span class="pre">sample_id</span></code> columns in <code class="docutils literal notranslate"><span class="pre">sample_info_table.csv</span></code> file.</p></li>
+<li><p>1st row (row index) follows <code class="docutils literal notranslate"><span class="pre">name</span></code> (gRNA ID) in <code class="docutils literal notranslate"><span class="pre">gRNA_info_table.csv</span></code> file.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>You can manually create the <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object with more annotations including allele counts: see <a class="reference external" href="#using-bean-as-python-module">API tutorial</a> for full detail.</p></li>
+</ol>
+</section>
+<section id="output">
+<h1>Output<a class="headerlink" href="#output" title="Permalink to this heading">¶</a></h1>
+<p><span class="raw-html-m2r"><img src="../../imgs/model_output.png" alt="model" width="700"/></span></p>
+<p>Above command produces</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">output_prefix/bean_element_result.[model_type].csv</span></code> with following columns:</p>
+<ul>
+<li><p>Estimated variant effect sizes</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">mu</span></code> (Effect size): Mean of variant phenotype, given the wild type has standard normal phenotype distribution of <code class="docutils literal notranslate"><span class="pre">mu</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">sd</span> <span class="pre">=</span> <span class="pre">1</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mu_sd</span></code>: Mean of variant phenotype <code class="docutils literal notranslate"><span class="pre">mu</span></code> is modeled as normal distribution. The column shows fitted standard deviation of <code class="docutils literal notranslate"><span class="pre">mu</span></code> that quantify the uncertainty of the variant effect.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mu_z</span></code>: z-score of <code class="docutils literal notranslate"><span class="pre">mu</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sd</span></code>: Standard deviation of variant phenotype, given the wild type has standard normal phenotype distribution of <code class="docutils literal notranslate"><span class="pre">mu</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">sd</span> <span class="pre">=</span> <span class="pre">1</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CI[0.025</span></code>, <code class="docutils literal notranslate"><span class="pre">0.975]</span></code>: Credible interval of <code class="docutils literal notranslate"><span class="pre">mu</span></code></p></li>
+<li><p>When negative control is provided, above columns with <code class="docutils literal notranslate"><span class="pre">_adj</span></code> suffix are provided, which are the corresponding values adjusted for negative control.</p></li>
+</ul>
+</li>
+<li><p>Metrics on per-variant evidence provided in input (provided in <code class="docutils literal notranslate"><span class="pre">tiling</span></code> mode)</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">effective_edit_rate</span></code>: Sum of per-variant editing rates over all alleles observed in the input. Allele-level editing rate is divided by the number of variants observed in the allele prior to summing up.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">n_guides</span></code>: # of guides covering the variant.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">n_coocc</span></code>: # of cooccurring variants with a given variant in any alleles observed in the input.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">output_prefix/bean_sgRNA_result.[model_type].csv</span></code>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">edit_rate</span></code>: Estimated editing rate at the target loci.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">bean</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../gwas.html">GWAS variant library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cds.html">Coding sequence tiling library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../input.html">Input file format</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../subcommands.html">Subcommands</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../ReporterScreen_api.html">ReporterScreen API tutorial</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2024, Jayoung Ryu.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/commands/run.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>bean run &#8212; bean 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=af2ce170"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="bean create-screen" href="create_screen.html" />
+    <link rel="prev" title="bean filter" href="filter.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="bean-run">
+<span id="run"></span><h1><cite>bean run</cite><a class="headerlink" href="#bean-run" title="Permalink to this heading">¶</a></h1>
+<section id="bean-run-quantify-variant-effects">
+<h2><code class="docutils literal notranslate"><span class="pre">bean</span> <span class="pre">run</span></code>: Quantify variant effects<a class="headerlink" href="#bean-run-quantify-variant-effects" title="Permalink to this heading">¶</a></h2>
+<p>BEAN uses Bayesian network to incorporate gRNA editing outcome to provide posterior estimate of variant phenotype. The Bayesian network reflects data generation process. Briefly,</p>
+<ol class="arabic simple">
+<li><p>Cellular phenotype (either for cells are sorted upon for sorting screen, or log(proliferation rate)) is modeled as the Gaussian mixture distribution of wild-type phenotype and variant phenotype.</p></li>
+<li><p>The weight of the mixture components are inferred from the reporter editing outcome and the chromatin accessibility of the loci.</p></li>
+<li><p>Cells with each gRNA, formulated as the mixture distribution, is sorted by the phenotypic quantile to produce the gRNA counts.</p></li>
+</ol>
+<p>For the full detail, see the method section of the <a class="reference external" href="https://www.medrxiv.org/content/10.1101/2023.09.08.23295253v1">BEAN manuscript</a>.</p>
+<p><span class="raw-html-m2r"><img src="../../imgs/bean.gif" alt="model" width="700"/></span></p>
+<p><span class="raw-html-m2r"><br></br></span></p>
+</section>
+<section id="usage-example">
+<h2>Usage example<a class="headerlink" href="#usage-example" title="Permalink to this heading">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bean<span class="w"> </span>run<span class="w"> </span>sorting<span class="o">[</span>survival<span class="o">]</span><span class="w"> </span>variant<span class="o">[</span>tiling<span class="o">]</span><span class="w"> </span>my_sorting_screen_filtered.h5ad<span class="w"> </span><span class="se">\</span>
+<span class="o">[</span>--uniform-edit,<span class="w"> </span>--scale-by-acc<span class="w"> </span><span class="o">[</span>--acc-bw-path<span class="w"> </span>accessibility_signal.bw,<span class="w"> </span>--acc-col<span class="w"> </span>accessibility<span class="o">]]</span><span class="w"> </span><span class="se">\</span>
+-o<span class="w"> </span>output_prefix/<span class="w"> </span><span class="se">\</span>
+--fit-negctrl
+</pre></div>
+</div>
+<p>See full list of parameters <a class="reference external" href="#full-parameters">below</a>.</p>
+</section>
+<section id="input">
+<h2>Input<a class="headerlink" href="#input" title="Permalink to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">my_sorting_screen_filtered.h5ad</span></code> can be produced by one of the following:</p>
+<ol class="arabic">
+<li><p><cite>``bean count-samples`</cite> &lt;(#bean-count-samples-count-reporter-screen-data&gt;`_) when you have raw <code class="docutils literal notranslate"><span class="pre">.fastq</span></code> file</p></li>
+<li><p>(Limited to <code class="docutils literal notranslate"><span class="pre">bean</span> <span class="pre">run</span> <span class="pre">variant</span></code> mode)  <code class="docutils literal notranslate"><span class="pre">bean</span> <span class="pre">create-screen</span></code> when you have flat <code class="docutils literal notranslate"><span class="pre">.csv</span></code> tables of gRNA metadata table, sample metadata table, gRNA counts table (# guides x # samples), and optionally # edits table.
+.. code-block:: bash</p>
+<blockquote>
+<div><p>bean create-screen gRNA_info_table.csv sample_info_table.csv gRNA_counts_table.csv [–edits edit_counts_table.csv -o output.h5ad]</p>
+</div></blockquote>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">gRNA_info_table.csv</span></code> should have following columns.</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: gRNA ID column</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">target</span></code>: This column denotes which target variant/element of each gRNA.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">target_group</span> <span class="pre">[Optional]</span></code>: If negative control gRNA will be used, specify as “NegCtrl” in this column.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sample_info_table.csv</span></code> should have following columns.</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">sample_id</span></code>: ID of sequencing sample</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">replicate</span></code>: Replicate # of this sample</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bin</span></code>: Name of the sorting bin</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">upper_quantile</span></code>: FACS sorting upper quantile</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lower_quantile</span></code>: FACS sorting lower quantile</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gRNA_counts_table.csv</span></code> should be formatted as follows.</p>
+<ul>
+<li><p>Columns include one of <code class="docutils literal notranslate"><span class="pre">sample_id</span></code> columns in <code class="docutils literal notranslate"><span class="pre">sample_info_table.csv</span></code> file.</p></li>
+<li><p>1st row (row index) follows <code class="docutils literal notranslate"><span class="pre">name</span></code> (gRNA ID) in <code class="docutils literal notranslate"><span class="pre">gRNA_info_table.csv</span></code> file.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>You can manually create the <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object with more annotations including allele counts: see <a class="reference external" href="#using-bean-as-python-module">API tutorial</a> for full detail.</p></li>
+</ol>
+</section>
+<section id="output">
+<h2>Output<a class="headerlink" href="#output" title="Permalink to this heading">¶</a></h2>
+<p><span class="raw-html-m2r"><img src="../../imgs/model_output.png" alt="model" width="700"/></span></p>
+<p>Above command produces</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">output_prefix/bean_element_result.[model_type].csv</span></code> with following columns:</p>
+<ul>
+<li><p>Estimated variant effect sizes</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">mu</span></code> (Effect size): Mean of variant phenotype, given the wild type has standard normal phenotype distribution of <code class="docutils literal notranslate"><span class="pre">mu</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">sd</span> <span class="pre">=</span> <span class="pre">1</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mu_sd</span></code>: Mean of variant phenotype <code class="docutils literal notranslate"><span class="pre">mu</span></code> is modeled as normal distribution. The column shows fitted standard deviation of <code class="docutils literal notranslate"><span class="pre">mu</span></code> that quantify the uncertainty of the variant effect.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mu_z</span></code>: z-score of <code class="docutils literal notranslate"><span class="pre">mu</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sd</span></code>: Standard deviation of variant phenotype, given the wild type has standard normal phenotype distribution of <code class="docutils literal notranslate"><span class="pre">mu</span> <span class="pre">=</span> <span class="pre">0,</span> <span class="pre">sd</span> <span class="pre">=</span> <span class="pre">1</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CI[0.025</span></code>, <code class="docutils literal notranslate"><span class="pre">0.975]</span></code>: Credible interval of <code class="docutils literal notranslate"><span class="pre">mu</span></code></p></li>
+<li><p>When negative control is provided, above columns with <code class="docutils literal notranslate"><span class="pre">_adj</span></code> suffix are provided, which are the corresponding values adjusted for negative control.</p></li>
+</ul>
+</li>
+<li><p>Metrics on per-variant evidence provided in input (provided in <code class="docutils literal notranslate"><span class="pre">tiling</span></code> mode)</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">effective_edit_rate</span></code>: Sum of per-variant editing rates over all alleles observed in the input. Allele-level editing rate is divided by the number of variants observed in the allele prior to summing up.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">n_guides</span></code>: # of guides covering the variant.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">n_coocc</span></code>: # of cooccurring variants with a given variant in any alleles observed in the input.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">output_prefix/bean_sgRNA_result.[model_type].csv</span></code>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">edit_rate</span></code>: Estimated editing rate at the target loci.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="full-parameters">
+<h2>Full parameters<a class="headerlink" href="#full-parameters" title="Permalink to this heading">¶</a></h2>
+<p><p>Run model on data.</p>
+</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">bean</span> <span class="n">run</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">rep</span><span class="o">-</span><span class="n">pi</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">uniform</span><span class="o">-</span><span class="n">edit</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">scale</span><span class="o">-</span><span class="n">by</span><span class="o">-</span><span class="n">acc</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">acc</span><span class="o">-</span><span class="n">bw</span><span class="o">-</span><span class="n">path</span> <span class="n">ACC_BW_PATH</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">acc</span><span class="o">-</span><span class="n">col</span> <span class="n">ACC_COL</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">const</span><span class="o">-</span><span class="n">pi</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">shrink</span><span class="o">-</span><span class="n">alpha</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">condition</span><span class="o">-</span><span class="n">col</span> <span class="n">CONDITION_COL</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">time</span><span class="o">-</span><span class="n">col</span> <span class="n">TIME_COL</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">control</span><span class="o">-</span><span class="n">condition</span> <span class="n">CONTROL_CONDITION</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">include</span><span class="o">-</span><span class="n">control</span><span class="o">-</span><span class="n">condition</span><span class="o">-</span><span class="k">for</span><span class="o">-</span><span class="n">inference</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">replicate</span><span class="o">-</span><span class="n">col</span> <span class="n">REPLICATE_COL</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">target</span><span class="o">-</span><span class="n">col</span> <span class="n">TARGET_COL</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">guide</span><span class="o">-</span><span class="n">activity</span><span class="o">-</span><span class="n">col</span> <span class="n">GUIDE_ACTIVITY_COL</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">outdir</span> <span class="n">OUTDIR</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">result</span><span class="o">-</span><span class="n">suffix</span> <span class="n">RESULT_SUFFIX</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">sorting</span><span class="o">-</span><span class="nb">bin</span><span class="o">-</span><span class="n">upper</span><span class="o">-</span><span class="n">quantile</span><span class="o">-</span><span class="n">col</span> <span class="n">SORTING_BIN_UPPER_QUANTILE_COL</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">sorting</span><span class="o">-</span><span class="nb">bin</span><span class="o">-</span><span class="n">lower</span><span class="o">-</span><span class="n">quantile</span><span class="o">-</span><span class="n">col</span> <span class="n">SORTING_BIN_LOWER_QUANTILE_COL</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">alpha</span><span class="o">-</span><span class="k">if</span><span class="o">-</span><span class="n">overdispersion</span><span class="o">-</span><span class="n">fitting</span><span class="o">-</span><span class="n">fails</span> <span class="n">ALPHA_IF_OVERDISPERSION_FITTING_FAILS</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">cuda</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">sample</span><span class="o">-</span><span class="n">mask</span><span class="o">-</span><span class="n">col</span> <span class="n">SAMPLE_MASK_COL</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">fit</span><span class="o">-</span><span class="n">negctrl</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">negctrl</span><span class="o">-</span><span class="n">col</span> <span class="n">NEGCTRL_COL</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">negctrl</span><span class="o">-</span><span class="n">col</span><span class="o">-</span><span class="n">value</span> <span class="n">NEGCTRL_COL_VALUE</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">repguide</span><span class="o">-</span><span class="n">mask</span> <span class="n">REPGUIDE_MASK</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">device</span> <span class="n">DEVICE</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">ignore</span><span class="o">-</span><span class="n">bcmatch</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">allele</span><span class="o">-</span><span class="n">df</span><span class="o">-</span><span class="n">key</span> <span class="n">ALLELE_DF_KEY</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">splice</span><span class="o">-</span><span class="n">site</span><span class="o">-</span><span class="n">path</span> <span class="n">SPLICE_SITE_PATH</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">control</span><span class="o">-</span><span class="n">guide</span><span class="o">-</span><span class="n">tag</span> <span class="n">CONTROL_GUIDE_TAG</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">dont</span><span class="o">-</span><span class="n">fit</span><span class="o">-</span><span class="n">noise</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">dont</span><span class="o">-</span><span class="n">adjust</span><span class="o">-</span><span class="n">confidence</span><span class="o">-</span><span class="n">by</span><span class="o">-</span><span class="n">negative</span><span class="o">-</span><span class="n">control</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">n</span><span class="o">-</span><span class="nb">iter</span> <span class="n">N_ITER</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">load</span><span class="o">-</span><span class="n">existing</span><span class="p">]</span>
+                <span class="p">{</span><span class="n">sorting</span><span class="p">,</span><span class="n">survival</span><span class="p">}</span> <span class="p">{</span><span class="n">variant</span><span class="p">,</span><span class="n">tiling</span><span class="p">}</span> <span class="n">bdata_path</span>
+</pre></div>
+</div>
+<section id="positional-arguments">
+<h3>Positional Arguments<a class="headerlink" href="#positional-arguments" title="Permalink to this heading">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>selection</kbd></dt>
+<dd><p>Possible choices: sorting, survival</p>
+<p>Screen selection type whether cells are sorted based on continuous phenotype (‘sorting’) or proliferated based on their viability (‘survival’).</p>
+</dd>
+<dt><kbd>library_design</kbd></dt>
+<dd><p>Possible choices: variant, tiling</p>
+<p>Library design type whether to run variant or tiling screen model.
+Variant library design assumes gRNA has specific target variant and bystander edits are ignored. Tiling library design considers all alleles generated by gRNA in reporter.</p>
+</dd>
+<dt><kbd>bdata_path</kbd></dt>
+<dd><p>Path of an ReporterScreen object</p>
+</dd>
+</dl>
+</section>
+<section id="named-arguments">
+<h3>Named Arguments<a class="headerlink" href="#named-arguments" title="Permalink to this heading">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>--rep-pi, -r</kbd></dt>
+<dd><p>Fit replicate specific scaling factor. Recommended to set as True if you expect variable editing activity across biological replicates.</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--uniform-edit, -p</kbd></dt>
+<dd><p>Assume uniform editing rate for all guides.</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--scale-by-acc</kbd></dt>
+<dd><p>Scale guide editing efficiency by the target loci accessibility</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--acc-bw-path</kbd></dt>
+<dd><p>Accessibility .bigWig file to be used to assign accessibility of guides.</p>
+</dd>
+<dt><kbd>--acc-col</kbd></dt>
+<dd><p>Column name in bdata.guides that specify raw ATAC-seq signal.</p>
+</dd>
+<dt><kbd>--const-pi</kbd></dt>
+<dd><p>Use constant pi provided in –guide-activity-col (instead of fitting from reporter data)</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--shrink-alpha</kbd></dt>
+<dd><p>Instead of using the trend-fitted alpha values, use estimated alpha values for each gRNA that are shrunk towards the fitted trend.</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--condition-col</kbd></dt>
+<dd><p>Column key in <cite>bdata.samples</cite> that describes experimental condition.</p>
+<p>Default: “condition”</p>
+</dd>
+<dt><kbd>--time-col</kbd></dt>
+<dd><p>Column key in <cite>bdata.samples</cite> that describes time elapsed.</p>
+<p>Default: “time”</p>
+</dd>
+<dt><kbd>--control-condition</kbd></dt>
+<dd><p>Value in <cite>bdata.samples[condition_col]</cite> that indicates control experimental condition.</p>
+<p>Default: “bulk”</p>
+</dd>
+<dt><kbd>--include-control-condition-for-inference, -ic</kbd></dt>
+<dd><p>Include control conditions for inference. Currently only supported for survival screens.</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--replicate-col</kbd></dt>
+<dd><p>Column key in <cite>bdata.samples</cite> that describes experimental replicates.</p>
+<p>Default: “replicate”</p>
+</dd>
+<dt><kbd>--target-col</kbd></dt>
+<dd><p>Column key in <cite>bdata.guides</cite> that describes the target element of each guide.</p>
+<p>Default: “target”</p>
+</dd>
+<dt><kbd>--guide-activity-col, -a</kbd></dt>
+<dd><p>Column in ReporterScreen.guides DataFrame showing the editing rate estimated via external tools</p>
+</dd>
+<dt><kbd>--outdir, -o</kbd></dt>
+<dd><p>Directory to save the run result.</p>
+<p>Default: “.”</p>
+</dd>
+<dt><kbd>--result-suffix</kbd></dt>
+<dd><p>Suffix of the output files</p>
+<p>Default: “”</p>
+</dd>
+<dt><kbd>--sorting-bin-upper-quantile-col, -uq</kbd></dt>
+<dd><p>Column name with upper quantile values of each sorting bin in [Reporter]Screen.samples (or AnnData.var)</p>
+<p>Default: “upper_quantile”</p>
+</dd>
+<dt><kbd>--sorting-bin-lower-quantile-col, -lq</kbd></dt>
+<dd><p>Column name with lower quantile values of each sorting bin in [Reporter]Screen.samples (or AnnData var)</p>
+<p>Default: “lower_quantile”</p>
+</dd>
+<dt><kbd>--alpha-if-overdispersion-fitting-fails, -af</kbd></dt>
+<dd><p>Comma-separated regression coefficient (b0, b1) of log(a0) ~ log(q) that will be used if fitting dispersion on the data fails.</p>
+</dd>
+<dt><kbd>--cuda</kbd></dt>
+<dd><p>run on GPU</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--sample-mask-col</kbd></dt>
+<dd><p>Name of the column indicating the sample mask in [Reporter]Screen.samples (or AnnData.var). Sample is ignored if the value in this column is 0. This can be used to mask out low-quality samples.</p>
+</dd>
+<dt><kbd>--fit-negctrl</kbd></dt>
+<dd><p>Fit the shared negative control distribution to normalize the fitted parameters</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--negctrl-col</kbd></dt>
+<dd><p>Column in bdata.obs specifying if a guide is negative control. If the <cite>bdata.guides[negctrl_col].lower() == negctrl_col_value</cite>, it is treated as negative control guide.</p>
+<p>Default: “target_group”</p>
+</dd>
+<dt><kbd>--negctrl-col-value</kbd></dt>
+<dd><p>Column value in bdata.guides specifying if a guide is negative control. If the <cite>bdata.guides[negctrl_col].lower() == negctrl_col_value</cite>, it is treated as negative control guide.</p>
+<p>Default: “negctrl”</p>
+</dd>
+<dt><kbd>--repguide-mask</kbd></dt>
+<dd><p>n_replicate x n_guide mask to mask the outlier guides. screen.uns[repguide_mask] will be used.</p>
+<p>Default: repguide_mask</p>
+</dd>
+<dt><kbd>--device</kbd></dt>
+<dd><p>Optionally use GPU if provided valid GPU device name (ex. cuda:0)</p>
+</dd>
+<dt><kbd>--ignore-bcmatch</kbd></dt>
+<dd><p>If provided, even if the screen object has .X_bcmatch, ignore the count when fitting.</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--allele-df-key</kbd></dt>
+<dd><p>screen.uns[allele_df_key] will be used as the allele count.</p>
+</dd>
+<dt><kbd>--splice-site-path</kbd></dt>
+<dd><p>Path to splicing site</p>
+</dd>
+<dt><kbd>--control-guide-tag</kbd></dt>
+<dd><p>If this string is in guide name, treat each guide separately not to mix the position. Used for negative controls.</p>
+</dd>
+<dt><kbd>--dont-fit-noise</kbd></dt>
+<dd><p>Default: False</p>
+</dd>
+<dt><kbd>--dont-adjust-confidence-by-negative-control</kbd></dt>
+<dd><p>Adjust confidence by negative controls. For variant library_design, this uses negative control variants. For tiling library_design, adjusts confidence by synonymous edits.</p>
+<p>Default: False</p>
+</dd>
+<dt><kbd>--n-iter</kbd></dt>
+<dd><p># of SVI steps taken for inference.</p>
+<p>Default: 2000</p>
+</dd>
+<dt><kbd>--load-existing</kbd></dt>
+<dd><p>Load existing .pkl file if present.</p>
+<p>Default: False</p>
+</dd>
+</dl>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">bean</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="gwas.html">GWAS variant library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cds.html">Coding sequence tiling library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input.html">Input file format</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="subcommands.html">Subcommands</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="count.html"><cite>bean count</cite></a></li>
+<li class="toctree-l2"><a class="reference internal" href="count_samples.html"><cite>bean count-samples</cite></a></li>
+<li class="toctree-l2"><a class="reference internal" href="profile.html"><cite>bean profile</cite></a></li>
+<li class="toctree-l2"><a class="reference internal" href="qc.html"><cite>bean qc</cite></a></li>
+<li class="toctree-l2"><a class="reference internal" href="filter.html"><cite>bean filter</cite></a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#"><cite>bean run</cite></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#bean-run-quantify-variant-effects"><code class="docutils literal notranslate"><span class="pre">bean</span> <span class="pre">run</span></code>: Quantify variant effects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#usage-example">Usage example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#input">Input</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#output">Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#full-parameters">Full parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="create_screen.html"><cite>bean create-screen</cite></a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ReporterScreen_api.html">ReporterScreen API tutorial</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="subcommands.html">Subcommands</a><ul>
+      <li>Previous: <a href="filter.html" title="previous chapter"><cite>bean filter</cite></a></li>
+      <li>Next: <a href="create_screen.html" title="next chapter"><cite>bean create-screen</cite></a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2024, Jayoung Ryu.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/run.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

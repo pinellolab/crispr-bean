@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>Input .fa file format for bean-filter &#8212; bean 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=af2ce170"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="input-fa-file-format-for-bean-filter">
+<h1>Input .fa file format for <code class="docutils literal notranslate"><span class="pre">bean-filter</span></code><a class="headerlink" href="#input-fa-file-format-for-bean-filter" title="Permalink to this heading">¶</a></h1>
+<p>You can provide custom FASTA file with exon sequence entries. Currently only supports positive strand genes.</p>
+<ul class="simple">
+<li><p>Exon FASTA files can be downloaded from UCSC Genomic sequences / Table Browser: <a class="reference external" href="https://www.youtube.com/watch?v=T4E0Ez5Vjz8">see the instruction video</a></p></li>
+<li><p>You can manually format as:</p>
+<ul>
+<li><p>Header line has <code class="docutils literal notranslate"><span class="pre">range=chrom:start-end</span></code> and <code class="docutils literal notranslate"><span class="pre">strand=+/-</span></code> tag that is parsed.</p></li>
+<li><p>fasta entry has the sequence of exons, where the first (includes 5’-UTR) and last (includes 3’-UTR) exon sequence has lower-case sequence denoting noncoding sequences.</p></li>
+</ul>
+</li>
+<li><p>See the example .fa <a class="reference external" href="../tests/data/ldlr_exons.fa">here</a>.</p></li>
+</ul>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">bean</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="gwas.html">GWAS variant library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cds.html">Coding sequence tiling library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input.html">Input file format</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="subcommands.html">Subcommands</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ReporterScreen_api.html">ReporterScreen API tutorial</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2024, Jayoung Ryu.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/exon_fa_format.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -189,7 +189,7 @@ def run_inference(
         )
     return {
         "loss": losses,
-        "params": pyro.get_param_store(),
+        "params": pyro.get_param_store().get_state(),
     }
 
 

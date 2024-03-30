@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Tiling sorting screen tutorial &#8212; bean 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=12dfc556" />
+    <script src="../_static/documentation_options.js?v=8d563738"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="tiling-sorting-screen-tutorial">
+<h1>Tiling sorting screen tutorial<a class="headerlink" href="#tiling-sorting-screen-tutorial" title="Link to this heading">¶</a></h1>
+<p>Tiling screen that tiles gRNA densely across locus or multiple loci, selected based on FACS signal quantiles.</p>
+<table>
+  <tr>
+    <th>Library design</th>
+    <td>Tiling (gRNAs tile each locus densely)   <br> <img src="../../imgs/tiling.png" alt="tiling library design" width="300"/> </td>
+  </tr>
+  <tr>
+    <th>Selection</th>
+    <td>Cells are sorted based on FACS signal quantiles  <br>  <img src="../../imgs/sorting_bins@8x.png" alt="variant library design" width="300"/></td>
+  </tr>
+</table><p><span class="raw-html-m2r"><br></br></span></p>
+<section id="example-workflow">
+<h2>Example workflow<a class="headerlink" href="#example-workflow" title="Link to this heading">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">screen_id</span><span class="o">=</span>my_sorting_tiling_screen
+
+<span class="c1"># 1. Count gRNA &amp; reporter</span>
+bean-count-samples<span class="w"> </span><span class="se">\</span>
+--input<span class="w"> </span>tests/data/sample_list_tiling.csv<span class="w">          </span><span class="sb">`</span><span class="c1"># Contains fastq file path; see test file for example.`\</span>
+-b<span class="w"> </span>A<span class="w">                                               </span><span class="sb">`</span><span class="c1"># Base A is edited (into G)` \</span>
+-f<span class="w"> </span>tests/data/test_guide_info_tiling_chrom.csv<span class="w">     </span><span class="sb">`</span><span class="c1"># Contains gRNA metadata; see test file for example.`\</span>
+-o<span class="w"> </span>./<span class="w">                                              </span><span class="sb">`</span><span class="c1"># Output directory` \</span>
+-r<span class="w">                                                 </span><span class="sb">`</span><span class="c1"># Quantify reporter edits` \</span>
+-n<span class="w"> </span><span class="si">${</span><span class="nv">screen_id</span><span class="si">}</span><span class="w">                                       </span><span class="sb">`</span><span class="c1"># ID of the screen` \</span>
+--tiling
+
+<span class="c1"># 2. QC samples &amp; guides</span>
+bean-qc<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>bean_count_<span class="si">${</span><span class="nv">screen_id</span><span class="si">}</span>.h5ad<span class="w">           </span><span class="sb">`</span><span class="c1"># Input ReporterScreen .h5ad file path` \</span>
+<span class="w">  </span>-o<span class="w"> </span>bean_count_<span class="si">${</span><span class="nv">screen_id</span><span class="si">}</span>_masked.h5ad<span class="w"> </span><span class="sb">`</span><span class="c1"># Output ReporterScreen .h5ad file path` \</span>
+<span class="w">  </span>-r<span class="w"> </span>qc_report_<span class="si">${</span><span class="nv">screen_id</span><span class="si">}</span><span class="w">              </span><span class="sb">`</span><span class="c1"># Prefix for QC report` \</span>
+
+<span class="c1"># 3. Filter &amp; translate alleles</span>
+bean-filter<span class="w"> </span>./bean_count_<span class="si">${</span><span class="nv">screen_id</span><span class="si">}</span>_masked.h5ad<span class="w"> </span><span class="se">\</span>
+-o<span class="w"> </span>./bean_count_<span class="si">${</span><span class="nv">screen_id</span><span class="si">}</span>_alleleFiltered<span class="w"> </span><span class="se">\</span>
+--filter-target-basechange<span class="w">                             </span><span class="sb">`</span><span class="c1"># Filter based on intended base changes. If -b A was provided in bean-count, filters for A&gt;G edit. If -b C was provided, filters for C&gt;T edit.`\</span>
+--filter-window<span class="w"> </span>--edit-start-pos<span class="w"> </span><span class="m">0</span><span class="w"> </span>--edit-end-pos<span class="w"> </span><span class="m">19</span><span class="w">   </span><span class="sb">`</span><span class="c1"># Filter based on editing window in spacer position within reporter.`\</span>
+--filter-allele-proportion<span class="w"> </span><span class="m">0</span>.1<span class="w"> </span>--filter-sample-proportion<span class="w"> </span><span class="m">0</span>.3<span class="w"> </span><span class="sb">`</span><span class="c1">#Filter based on allele proportion larger than 0.1 in at least 0.3 (30%) of the control samples.` \</span>
+--translate<span class="w"> </span>--translate-genes-list<span class="w"> </span>tests/data/gene_symbols.txt
+
+<span class="c1"># 4. Quantify variant effect</span>
+bean-run<span class="w"> </span>sorting<span class="w"> </span>tiling<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>./bean_count_<span class="si">${</span><span class="nv">screen_id</span><span class="si">}</span>_alleleFiltered.h5ad<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-o<span class="w"> </span>tests/test_res/var/<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--fit-negctrl<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--scale-by-acc<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--accessibility-col<span class="w"> </span>accessibility
+</pre></div>
+</div>
+<p>See more details below.</p>
+</section>
+<section id="count-grna-reporter-count-samples">
+<h2>1. Count gRNA &amp; reporter (<a class="reference internal" href="../count_samples.html#count-samples"><span class="std std-ref">bean count-samples</span></a>)<a class="headerlink" href="#count-grna-reporter-count-samples" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>screen_id=my_sorting_tiling_screen
+
+bean-count-samples \
+--input tests/data/sample_list_tiling.csv          `# Contains fastq file path; see test file for example.`\
+-b A                                               `# Base A is edited (into G)` \
+-f tests/data/test_guide_info_tiling_chrom.csv     `# Contains gRNA metadata; see test file for example.`\
+-o ./                                              `# Output directory` \
+-r                                                 `# Quantify reporter edits` \
+-n ${screen_id}                                       `# ID of the screen` \
+--tiling
+</pre></div>
+</div>
+<p>Make sure you follow the <a class="reference external" href="../../README#input-file-format">input file format</a> for seamless downstream steps. This will produce <code class="docutils literal notranslate"><span class="pre">./bean_count_${screen_id}.h5ad</span></code>.</p>
+</section>
+<section id="qc-qc">
+<h2>2. QC (<a class="reference internal" href="../qc.html#qc"><span class="std std-ref">bean qc</span></a>)<a class="headerlink" href="#qc-qc" title="Link to this heading">¶</a></h2>
+<p>Base editing data will include QC about editing efficiency. As QC uses predefined column names and values, beware to follow the <a class="reference external" href="../../README#input-file-format">input file guideline</a>, but you can change the parameters with the full argument list of <cite>``bean-qc`</cite> &lt;../../README#bean-qc-qc-of-reporter-screen-data&gt;`_. (Common factors you may want to tweak is <code class="docutils literal notranslate"><span class="pre">--ctrl-cond=bulk</span></code> and <code class="docutils literal notranslate"><span class="pre">--lfc-conds=top,bot</span></code> if you have different sample condition labels.)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>bean-qc \
+  bean_count_${screen_id}.h5ad           `# Input ReporterScreen .h5ad file path` \
+  -o bean_count_${screen_id}_masked.h5ad `# Output ReporterScreen .h5ad file path` \
+  -r qc_report_${screen_id}              `# Prefix for QC report` \
+  [--tiling]                          `# Not required if you have passed --tiling in counting step`
+</pre></div>
+</div>
+<p>If the data does not include reporter editing data, you can provide <code class="docutils literal notranslate"><span class="pre">--no-editing</span></code> flag to omit the editing rate QC.</p>
+</section>
+<section id="filter-alleles-filter">
+<h2>3. Filter alleles (<a class="reference internal" href="../filter.html#filter"><span class="std std-ref">bean filter</span></a>)<a class="headerlink" href="#filter-alleles-filter" title="Link to this heading">¶</a></h2>
+<p>As tiling library doesn’t have designated per-gRNA target variant, any base edit observed in reporter may be the candidate variant, while having too many variants with very low editing rate significantly decreases the power. Variants are filtered based on multiple criteria in <code class="docutils literal notranslate"><span class="pre">bean-fitler</span></code>.</p>
+<p>If the screen targets coding sequence, it’s beneficial to translate edits into coding varaints whenever possible for better power. For translation, provide <code class="docutils literal notranslate"><span class="pre">--translate</span></code> and one of the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span> <span class="o">--</span><span class="n">translate</span><span class="o">-</span><span class="n">gene</span><span class="o">-</span><span class="n">name</span> <span class="n">GENE_SYMBOL</span> <span class="n">OR</span>
+  <span class="o">--</span><span class="n">translate</span><span class="o">-</span><span class="n">genes</span><span class="o">-</span><span class="nb">list</span> <span class="n">path_to_gene_names_file</span><span class="o">.</span><span class="n">txt</span> <span class="n">OR</span>
+  <span class="o">--</span><span class="n">translate</span><span class="o">-</span><span class="n">fasta</span> <span class="n">gene_exon</span><span class="o">.</span><span class="n">fa</span><span class="p">,</span> <span class="n">OR</span>
+  <span class="o">--</span><span class="n">translate</span><span class="o">-</span><span class="n">fastas</span><span class="o">-</span><span class="n">csv</span> <span class="n">gene_exon_fas</span><span class="o">.</span><span class="n">csv</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">path_to_gene_names_file.txt</span></code> has one gene symbol per line, and gene symbol uses its MANE transcript (hg38) coordinates of exons. In order to use other reference versions or transcript ID, you’ll need to feed in fasta file. See detailed formatting of fasta file <a class="reference external" href="../../README#translating-alleles">here</a>.</p>
+<p>Example allele filtering given we’re translating based on MANE transcript exons of multiple gene symbols:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bean-filter<span class="w"> </span>./bean_count_<span class="si">${</span><span class="nv">screen_id</span><span class="si">}</span>_masked.h5ad<span class="w"> </span><span class="se">\</span>
+-o<span class="w"> </span>./bean_count_<span class="si">${</span><span class="nv">screen_id</span><span class="si">}</span>_alleleFiltered<span class="w"> </span><span class="se">\</span>
+--filter-target-basechange<span class="w">                             </span><span class="sb">`</span><span class="c1"># Filter based on intended base changes. If -b A was provided in bean-count, filters for A&gt;G edit. If -b C was provided, filters for C&gt;T edit.`\</span>
+--filter-window<span class="w"> </span>--edit-start-pos<span class="w"> </span><span class="m">0</span><span class="w"> </span>--edit-end-pos<span class="w"> </span><span class="m">19</span><span class="w">   </span><span class="sb">`</span><span class="c1"># Filter based on editing window in spacer position within reporter.`\</span>
+--filter-allele-proportion<span class="w"> </span><span class="m">0</span>.1<span class="w"> </span>--filter-sample-proportion<span class="w"> </span><span class="m">0</span>.3<span class="w"> </span><span class="sb">`</span><span class="c1">#Filter based on allele proportion larger than 0.1 in at least 0.3 (30%) of the control samples.` \</span>
+--translate<span class="w"> </span>--translate-genes-list<span class="w"> </span>tests/data/gene_symbols.txt
+</pre></div>
+</div>
+<p>Ouptut file `` shows number of alleles per guide and number of guides per variant, where we want high enough values for the latter. See the typical output for dataset with good editing coverage &amp; filtering result <a class="reference external" href="../example_filtering_ouptut/">here</a>.</p>
+</section>
+<section id="quantify-variant-effect-run">
+<h2>4. Quantify variant effect (<a class="reference internal" href="../run.html#run"><span class="std std-ref">bean run</span></a>)<a class="headerlink" href="#quantify-variant-effect-run" title="Link to this heading">¶</a></h2>
+<p>By default, <code class="docutils literal notranslate"><span class="pre">bean-run</span> <span class="pre">[sorting,survival]</span> <span class="pre">tiling</span></code> uses most filtered allele counts table for variant identification and quantification of their effects. <a href="#id2"><span class="problematic" id="id3">**</span></a>Check <a class="reference external" href="../example_filtering_ouptut/">allele filtering output</a>** and choose alternative filtered allele counts table if necessary.</p>
+<p><code class="docutils literal notranslate"><span class="pre">bean-run</span></code> can take 3 run options to quantify editing rate:</p>
+<ol class="arabic">
+<li><dl class="simple">
+<dt>From <strong>reporter + accessibility</strong><span class="raw-html-m2r"><br></span></dt><dd><p>1-1. If your gRNA metadata table (<code class="docutils literal notranslate"><span class="pre">tests/data/test_guide_info.csv</span></code> above) included per-gRNA accessibility score,</p>
+</dd>
+</dl>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>   bean-run sorting tiling \
+   ./bean_count_${screen_id}_alleleFiltered.h5ad \
+   -o tests/test_res/var/ \
+   --fit-negctrl \
+   --scale-by-acc \
+   --accessibility-col accessibility
+
+1-2. If your gRNA metadata table (\ ``tests/data/test_guide_info.csv`` above) included per-gRNA chromosome &amp; position and you have bigWig file with accessibility signal,
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>bean-run sorting tiling \
+./bean_count_${screen_id}_alleleFiltered.h5ad \
+-o tests/test_res/var/ \
+--fit-negctrl \
+--scale-by-acc \
+--accessibility-bw accessibility.bw
+</pre></div>
+</div>
+</li>
+<li><p>From <strong>reporter</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>bean-run sorting tiling \
+./bean_count_${screen_id}_alleleFiltered.h5ad \
+-o tests/test_res/var/ \
+--fit-negctrl
+</pre></div>
+</div>
+</li>
+<li><dl class="simple">
+<dt>No reporter information, assume the same editing efficiency of all gRNAs.<span class="raw-html-m2r"><br></span></dt><dd><p>Use this option if your data don’t have editing rate information.</p>
+</dd>
+</dl>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>bean-run sorting tiling \
+./bean_count_${screen_id}_alleleFiltered.h5ad \
+-o tests/test_res/var/ \
+--fit-negctrl \
+--uniform-edit
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index_.html">bean</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../gwas.html">GWAS variant library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cds.html">Coding sequence tiling library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../input.html">Input file format</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../subcommands.html">Subcommands</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../ReporterScreen_api.html">ReporterScreen API tutorial</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index_.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Jayoung Ryu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="../_sources/tutorials/ldl_cds.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

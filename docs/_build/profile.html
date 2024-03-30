@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>bean profile &#8212; bean 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <script src="_static/documentation_options.js?v=8d563738"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="bean qc" href="qc.html" />
+    <link rel="prev" title="bean count-samples" href="count_samples.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="bean-profile">
+<h1><cite>bean profile</cite><a class="headerlink" href="#bean-profile" title="Link to this heading">¶</a></h1>
+<section id="bean-profile-profile-editing-patterns">
+<h2><code class="docutils literal notranslate"><span class="pre">bean</span> <span class="pre">profile</span></code>: Profile editing patterns<a class="headerlink" href="#bean-profile-profile-editing-patterns" title="Link to this heading">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bean<span class="w"> </span>profile<span class="w"> </span>my_sorting_screen.h5ad<span class="w"> </span>-o<span class="w"> </span>output_prefix<span class="w"> </span><span class="sb">`</span><span class="c1"># Prefix for editing profile report`</span>
+</pre></div>
+</div>
+</section>
+<section id="output">
+<h2>Output<a class="headerlink" href="#output" title="Link to this heading">¶</a></h2>
+<p>Above command produces <code class="docutils literal notranslate"><span class="pre">prefix_editing_preference.[html,ipynb]</span></code> as editing preferences (<a class="reference external" href="../../notebooks/profile_editing_preference.ipynb">see example</a>).</p>
+<p><span class="raw-html-m2r"><img src="../../imgs/profile_output.png" alt="Allele translation" width="700" /></span></p>
+</section>
+<section id="full-parameters">
+<h2>Full parameters<a class="headerlink" href="#full-parameters" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">bean</span> <span class="n">profile</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">o</span> <span class="n">OUTPUT_PREFIX</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">replicate</span><span class="o">-</span><span class="n">col</span> <span class="n">REPLICATE_COL</span><span class="p">]</span>
+                    <span class="p">[</span><span class="o">--</span><span class="n">condition</span><span class="o">-</span><span class="n">col</span> <span class="n">CONDITION_COL</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">pam</span><span class="o">-</span><span class="n">col</span> <span class="n">PAM_COL</span><span class="p">]</span>
+                    <span class="p">[</span><span class="o">--</span><span class="n">control</span><span class="o">-</span><span class="n">condition</span> <span class="n">CONTROL_CONDITION</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">w</span> <span class="n">WINDOW_LENGTH</span><span class="p">]</span>
+                    <span class="n">bdata_path</span>
+</pre></div>
+</div>
+<section id="positional-arguments">
+<h3>Positional Arguments<a class="headerlink" href="#positional-arguments" title="Link to this heading">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>bdata_path</kbd></dt>
+<dd><p>Path to the ReporterScreen object to run QC on</p>
+</dd>
+</dl>
+</section>
+<section id="named-arguments">
+<h3>Named Arguments<a class="headerlink" href="#named-arguments" title="Link to this heading">¶</a></h3>
+<dl class="option-list">
+<dt><kbd>-o, --output-prefix</kbd></dt>
+<dd><p>Output prefix of editing pattern report (prefix.html, prefix.ipynb). If not provided, base name of <cite>bdata_path</cite> is used.</p>
+</dd>
+<dt><kbd>--replicate-col</kbd></dt>
+<dd><p>Column name in <cite>bdata.samples</cite> that describes replicate ID.</p>
+<p>Default: “replicate”</p>
+</dd>
+<dt><kbd>--condition-col</kbd></dt>
+<dd><p>Column name in <cite>bdata.samples</cite> that describes experimental condition. (sorting bin, time, etc.)</p>
+<p>Default: “bin”</p>
+</dd>
+<dt><kbd>--pam-col</kbd></dt>
+<dd><p>Column name describing PAM of each gRNA in <cite>bdata.guides</cite>.</p>
+</dd>
+<dt><kbd>--control-condition</kbd></dt>
+<dd><p>Control condition where editing preference would be profiled at. Pre-filters data where <cite>bdata.samples[condition_col] == control_condition</cite>.</p>
+<p>Default: “bulk”</p>
+</dd>
+<dt><kbd>-w, --window-length</kbd></dt>
+<dd><p>Window length of editing window of maximal editing efficiency to be identified. This window is used to quantify context specificity within the window.</p>
+<p>Default: 6</p>
+</dd>
+</dl>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index_.html">bean</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="gwas.html">GWAS variant library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cds.html">Coding sequence tiling library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input.html">Input file format</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="subcommands.html">Subcommands</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="count.html"><cite>bean count</cite></a></li>
+<li class="toctree-l2"><a class="reference internal" href="count_samples.html"><cite>bean count-samples</cite></a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#"><cite>bean profile</cite></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#bean-profile-profile-editing-patterns"><code class="docutils literal notranslate"><span class="pre">bean</span> <span class="pre">profile</span></code>: Profile editing patterns</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#output">Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#full-parameters">Full parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="qc.html"><cite>bean qc</cite></a></li>
+<li class="toctree-l2"><a class="reference internal" href="filter.html"><cite>bean filter</cite></a></li>
+<li class="toctree-l2"><a class="reference internal" href="run.html"><cite>bean run</cite></a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ReporterScreen_api.html">ReporterScreen API tutorial</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index_.html">Documentation overview</a><ul>
+  <li><a href="subcommands.html">Subcommands</a><ul>
+      <li>Previous: <a href="count_samples.html" title="previous chapter"><cite>bean count-samples</cite></a></li>
+      <li>Next: <a href="qc.html" title="next chapter"><cite>bean qc</cite></a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Jayoung Ryu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/profile.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

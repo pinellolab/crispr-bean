@@ -53,6 +53,8 @@ setup(
         "pytest-order",
         "nbconvert",
         "logomaker",
+        "sphinx-argparse>=0.4",
+        "m2r",
     ],
     extras_require={"model": ["pyBigWig", "pyro-ppl<=1.8.1", "statsmodels", "torch<2"]},
     include_package_data=True,

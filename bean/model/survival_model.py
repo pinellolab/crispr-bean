@@ -151,15 +151,17 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
             a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
-
-            assert (
-                data.X.shape
-                == data.X_bcmatch.shape
-                == (
+            assert data.X.shape == (
+                data.n_reps,
+                data.n_condits,
+                data.n_guides,
+            ), (
+                data.X.shape,
+                (
                     data.n_reps,
                     data.n_condits,
                     data.n_guides,
-                )
+                ),
             )
             with poutine.mask(
                 mask=torch.logical_and(
@@ -307,7 +309,7 @@ def MixtureNormalModel(
             # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_condits)
             assert (
                 data.X.shape
-                == data.X_bcmatch.shape
+                == data.X_bcmatch_masked.shape
                 == (
                     data.n_reps,
                     data.n_condits,
@@ -563,7 +565,7 @@ def MultiMixtureNormalModel(
             # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_condits)
             assert (
                 data.X.shape
-                == data.X_bcmatch.shape
+                == data.X_bcmatch_masked.shape
                 == (
                     data.n_reps,
                     data.n_condits,

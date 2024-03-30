@@ -1296,6 +1296,20 @@ class VariantSurvivalScreenData(VariantScreenData, SurvivalScreenData):
                 screen,
             )
 
+    def __getitem__(self, guide_idx):
+        ndata = super().__getitem__(guide_idx)
+        if hasattr(ndata, "X_bcmatch"):
+            ndata.X_bcmatch = ndata.X_bcmatch[:, :, guide_idx]
+        if hasattr(ndata, "X_bcmatch_masked"):
+            ndata.X_bcmatch_masked = ndata.X_bcmatch_masked[:, :, guide_idx]
+        if hasattr(ndata, "X_bcmatch_control"):
+            ndata.X_bcmatch_control = ndata.X_bcmatch_control[:, :, guide_idx]
+        if hasattr(ndata, "X_bcmatch_control_masked"):
+            ndata.X_bcmatch_control_masked = ndata.X_bcmatch_control_masked[
+                :, :, guide_idx
+            ]
+        return ndata
+
     def set_bcmatch(self, screen):
         screen.samples["size_factor_bcmatch"] = self.get_size_factor(
             screen.layers["X_bcmatch"]

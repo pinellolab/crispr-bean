@@ -5,8 +5,18 @@ import bean as be
 from bean.plotting.utils import parse_args, check_args
 
 
-def main():
-    args = parse_args()
+def main(args):
+    print("  \n~~~BEAN Profile~~~")
+    print("-Profile editing patterns of your editor-")
+    print(
+        r"""
+    _ _                     __ _ _     
+  /  \ '\     _ __ _ _ ___ / _(_) |___ 
+  |   \  \   | '_ \ '_/ _ \  _| | / -_)
+   \   \  |  | .__/_| \___/_| |_|_\___|
+    `.__|/   |_|                       
+    """
+    )
     args = check_args(args)
     os.system(
         "python -m ipykernel install --user --name bean_python3 --display-name bean_python3"
@@ -28,7 +38,3 @@ def main():
     os.system(
         f"jupyter nbconvert --to html {args.output_prefix}_editing_preference.ipynb"
     )
-
-
-if __name__ == "__main__":
-    main()

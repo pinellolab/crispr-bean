@@ -28,7 +28,6 @@ import bean as be
 from bean.model.run import (
     run_inference,
     _get_guide_target_info,
-    parse_args,
     check_args,
     identify_model_guide,
     identify_negctrl_model_guide,
@@ -60,7 +59,19 @@ warnings.filterwarnings(
 )
 
 
-def main(args, bdata):
+def main(args):
+    print(
+        r"""
+    _ _       
+  /  \ '\                 
+  |   \  \      _ _ _  _ _ _  
+   \   \  |    | '_| || | ' \ 
+    `.__|/     |_|  \_,_|_||_|
+    """
+    )
+    print("bean-run: Run model to identify targeted variants and their impact.")
+    bdata = be.read_h5ad(args.bdata_path)
+    args, bdata = check_args(args, bdata)
     if args.cuda:
         os.environ["CUDA_VISIBLE_DEVICES"] = "1"
         torch.set_default_tensor_type(torch.cuda.FloatTensor)
@@ -141,7 +152,7 @@ def main(args, bdata):
         with open(f"{prefix}/{model_label}.result.pkl", "rb") as handle:
             param_history_dict = pkl.load(handle)
     else:
-        param_history_dict = deepcopy(
+        param_history_dict, save_dict = deepcopy(
             run_inference(model, guide, ndata, num_steps=args.n_iter)
         )
         if args.fit_negctrl:
@@ -156,9 +167,13 @@ def main(args, bdata):
                 f"Using {len(negctrl_idx)} negative control elements to adjust phenotypic effect sizes..."
             )
             ndata_negctrl = ndata[negctrl_idx]
-            param_history_dict["negctrl"] = run_inference(
-                negctrl_model, negctrl_guide, ndata_negctrl, num_steps=args.n_iter
+            param_history_dict_negctrl, save_dict["negctrl"] = deepcopy(
+                run_inference(
+                    negctrl_model, negctrl_guide, ndata_negctrl, num_steps=args.n_iter
+                )
             )
+        else:
+            param_history_dict_negctrl = None
 
     outfile_path = (
         f"{prefix}/bean_element[sgRNA]_result.{model_label}{args.result_suffix}.csv"
@@ -167,14 +182,15 @@ def main(args, bdata):
     if not os.path.exists(prefix):
         os.makedirs(prefix)
     with open(f"{prefix}/{model_label}.result{args.result_suffix}.pkl", "wb") as handle:
-        try:
-            pkl.dump(param_history_dict, handle)
-        except TypeError as exc:
-            print(exc.message)
-            # print(param_history_dict)
+        # try:
+        pkl.dump(save_dict, handle)
+        # except TypeError as exc:
+        #     print(exc.message)
+        # print(param_history_dict)
     write_result_table(
         target_info_df,
         param_history_dict,
+        negctrl_params=param_history_dict_negctrl,
         model_label=model_label,
         prefix=f"{prefix}/",
         suffix=args.result_suffix,
@@ -193,10 +209,3 @@ def main(args, bdata):
         ),
     )
     info("Done!")
-
-
-if __name__ == "__main__":
-    args = parse_args()
-    bdata = be.read_h5ad(args.bdata_path)
-    args, bdata = check_args(args, bdata)
-    main(args, bdata)

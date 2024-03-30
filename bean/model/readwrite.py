@@ -103,9 +103,9 @@ def write_result_table(
     fit_df = pd.DataFrame(param_dict)
     if negctrl_params is not None:
         print("Normalizing with common negative control distribution")
-        mu0 = negctrl_params["params"]["mu_loc"].detach().cpu().numpy()
+        mu0 = negctrl_params["mu_loc"].detach().cpu().numpy()
         if sd_is_fitted:
-            sd0 = negctrl_params["params"]["sd_loc"].detach().exp().cpu().numpy()
+            sd0 = negctrl_params["sd_loc"].detach().exp().cpu().numpy()
         else:
             sd0 = 1.0
         print(f"Fitted mu0={mu0}" + (f", sd0={sd0}." if sd_is_fitted else ""))

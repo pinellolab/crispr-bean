@@ -172,6 +172,8 @@ def main(args):
                     negctrl_model, negctrl_guide, ndata_negctrl, num_steps=args.n_iter
                 )
             )
+        else:
+            param_history_dict_negctrl = None
 
     outfile_path = (
         f"{prefix}/bean_element[sgRNA]_result.{model_label}{args.result_suffix}.csv"

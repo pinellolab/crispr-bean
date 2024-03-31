@@ -123,12 +123,12 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
     mu_alleles = pyro.sample("mu_alleles", dist.Laplace(0, 1))
     mu = mu_alleles.repeat(data.n_guides).unsqueeze(-1)
     r = torch.exp(mu)
+    with pyro.plate("rep_plate1", data.n_reps, dim=-1):
+        q_0 = pyro.sample(
+            "initial_guide_abundance",
+            dist.Dirichlet(torch.ones((data.n_reps, data.n_guides))),
+        )
     with replicate_plate:
-        with pyro.plate("guide_plate2", data.n_guides):
-            q_0 = pyro.sample(
-                "initial_guide_abundance",
-                dist.Dirichlet(torch.ones((data.n_reps, data.n_guides))),
-            )
         with time_plate as t:
             time = data.timepoints[t]
             assert time.shape == (data.n_condits,)
@@ -151,15 +151,17 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
             a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
-
-            assert (
-                data.X.shape
-                == data.X_bcmatch.shape
-                == (
+            assert data.X.shape == (
+                data.n_reps,
+                data.n_condits,
+                data.n_guides,
+            ), (
+                data.X.shape,
+                (
                     data.n_reps,
                     data.n_condits,
                     data.n_guides,
-                )
+                ),
             )
             with poutine.mask(
                 mask=torch.logical_and(
@@ -307,7 +309,7 @@ def MixtureNormalModel(
             # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_condits)
             assert (
                 data.X.shape
-                == data.X_bcmatch.shape
+                == data.X_bcmatch_masked.shape
                 == (
                     data.n_reps,
                     data.n_condits,
@@ -563,7 +565,7 @@ def MultiMixtureNormalModel(
             # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_condits)
             assert (
                 data.X.shape
-                == data.X_bcmatch.shape
+                == data.X_bcmatch_masked.shape
                 == (
                     data.n_reps,
                     data.n_condits,

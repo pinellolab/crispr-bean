@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="crispr-bean",
-    version="0.3.1",
+    version="1.0.0",
     python_requires=">=3.8.0",
     author="Jayoung Ryu",
     author_email="jayoung_ryu@g.harvard.edu",
@@ -24,13 +24,14 @@ setup(
         "Cython",
     ],
     scripts=[
-        "bin/bean-count",
-        "bin/bean-count-samples",
-        "bin/bean-create-screen",
-        "bin/bean-profile",
-        "bin/bean-qc",
-        "bin/bean-filter",
-        "bin/bean-run",  # TODO: prevent error when extra requirements are not met.
+        "bin/bean"
+        # "bin/bean-count",
+        # "bin/bean-count-samples",
+        # "bin/bean-create-screen",
+        # "bin/bean-profile",
+        # "bin/bean-qc",
+        # "bin/bean-filter",
+        # "bin/bean-run",  # TODO: prevent error when extra requirements are not met.
     ],
     install_requires=[
         "numpy",
@@ -45,7 +46,7 @@ setup(
         "openpyxl>=3.0.10",
         "papermill>=2.4.0",
         "pyBigWig>=0.3.18",
-        "pyro-ppl==1.8.1",
+        "pyro-ppl>=1.8.5",
         "scikit-learn",
         "statsmodels>=0.12.1",
         "ipykernel",

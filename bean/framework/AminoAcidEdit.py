@@ -244,6 +244,9 @@ class CodingNoncodingAllele(Allele):
         nt_jaccards = np.array(nt_jaccards)
         return (aa_jaccards, nt_jaccards)
 
+    def has_coding(self):
+        return len(self.aa_allele.edits) > 0
+
     def map_to_closest(
         self,
         allele_list,

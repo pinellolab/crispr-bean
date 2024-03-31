@@ -1,5 +1,6 @@
+from doctest import set_unittest_reportflags
 import os
-from typing import List, Iterable, Dict, Tuple, Collection
+from typing import List, Iterable, Dict, Tuple, Collection, Sequence
 from copy import deepcopy
 import numpy as np
 import pandas as pd
@@ -169,24 +170,24 @@ def get_cds_seq_pos_from_fasta(fasta_file_name: str) -> Tuple[List[str], List[in
     return (exon_chrom, translated_seq, genomic_pos, strand)
 
 
-def _translate_single_codon(nt_seq_string: str, aa_pos: int) -> str:
+def _translate_single_codon(
+    codon: List[str],
+) -> str:  # nt_seq_string: str, aa_pos: int) -> str:
     """Translate `aa_pos`-th codon of `nt_seq_string`."""
-    codon = "".join(nt_seq_string[aa_pos * 3 : (aa_pos * 3 + 3)])
     if len(codon) != 3:
-        print("reached the end of CDS, frameshift.")
-        return "/"
+        raise ValueError("reached the end of CDS, frameshift.")
+        return ">"
     try:
+        codon = "".join(codon)
         return codon_map[codon]
     except KeyError:
         if codon[-1] == "N" and codon[0] in BASE_SET and codon[1] in BASE_SET:
             aa_set = {codon_map[codon[:2] + N] for N in BASE_SET}
             if len(aa_set) == 1:
                 return next(iter(aa_set))
-            print(f"warning: no matching aa with codon {codon}")
+            raise ValueError(f"warning: no matching aa with codon {codon}")
         else:
-            print(f"Cannot translate codon due to ambiguity: {codon}")
-
-        return "_"
+            raise ValueError(f"Cannot translate codon due to ambiguity: {codon}")
 
 
 class CDS:
@@ -196,14 +197,22 @@ class CDS:
     def __init__(self):
         self.edited_aa_pos = set()
         self.edits_noncoding = set()
+        self.edited_nt: List[str] = []
+        self.nt: List[str] = []
+        self.strand: int = 1
+        self.gene_name: str = ""
+        self.chrom: str = ""
+        self.translated_seq: List[str] = []
+        self.pos: np.ndarray = None
+        self.genomic_pos: Sequence = []
 
     @classmethod
     def from_fasta(cls, fasta_file_name, gene_name, suppressMessage=True):
         cds = cls()
-        if fasta_file_name is None:
-            if not suppressMessage:
-                print("No fasta file provided as reference: using LDLR")
-            fasta_file_name = os.path.dirname(be.__file__) + "/annotate/ldlr_exons.fa"
+        # if fasta_file_name is not None:
+        #     if not suppressMessage:
+        #         raise ValueError("No fasta file provided as reference: using LDLR")
+        #     fasta_file_name = os.path.dirname(be.__file__) + "/annotate/ldlr_exons.fa"
         if gene_name not in cls.gene_info_dict:
             chrom, translated_seq, genomic_pos, strand = get_cds_seq_pos_from_fasta(
                 fasta_file_name
@@ -242,28 +251,36 @@ class CDS:
         cds.chrom = cls.gene_info_dict[gene_name]["chrom"]
         cds.translated_seq = deepcopy(cls.gene_info_dict[gene_name]["translated_seq"])
         cds.genomic_pos = cls.gene_info_dict[gene_name]["genomic_pos"]
-        cds.nt = cds.gene_info_dict[gene_name]["translated_seq"]
+        cds.nt = cds.gene_info_dict[gene_name]["translated_seq"]  # in sense strand
+        # print(cds.gene_name + ":" + "".join(cds.nt))
+        # if cds.strand == -1:
+        #     cds.nt = revcomp(cds.nt)
         cds.pos = np.array(cds.genomic_pos)
         cds.edited_nt = deepcopy(cds.nt)
         return cds
 
-    def translate(self):
-        if self.strand == -1:
-            self.edited_nt = revcomp(self.edited_nt)
-        self.aa = _translate(self.edited_nt, codon_map)
+    # def translate(self):
+    #     if self.strand == -1:
+    #         self.edited_nt = revcomp(self.edited_nt)
+    #     self.aa = _translate(self.edited_nt, codon_map)
 
     def _get_relative_nt_pos(self, absolute_pos):
+        """0-based relative position"""
         nt_relative_pos = np.where(self.pos == absolute_pos)[0]
         assert len(nt_relative_pos) <= 1, nt_relative_pos
         return nt_relative_pos.astype(int).item() if nt_relative_pos else -1
 
     def _edit_pos_to_aa_pos(self, edit_pos):
+        """0-based nt position. Adds in sense direction, needs to be reversed for antisense gene"""
         nt_relative_pos = self._get_relative_nt_pos(edit_pos)
         if nt_relative_pos != -1:
             self.edited_aa_pos.add(nt_relative_pos // 3)
+
         return nt_relative_pos
 
     def edit_single(self, edit_str):
+        """Add a mutation induced by a single `edit_str` to CDS.
+        For the negative CDS, nt and edited_nt are antisense."""
         edit = Edit.from_str(edit_str)
         rel_pos = self._edit_pos_to_aa_pos(edit.pos)
         if edit.strand == "-":
@@ -285,13 +302,16 @@ class CDS:
                     )
                 )
                 raise RefBaseMismatchException(
-                    f"{self.gene_name + ';' if hasattr(self, 'gene_name') else ''}ref:{self.nt[rel_pos]} at pos {rel_pos}, got edit {edit}"
+                    f"{self.gene_name + ';' if hasattr(self, 'gene_name') else ''}ref:{self.nt[rel_pos]} at pos {rel_pos}, got edit {edit}."
                 )
         else:
             self.edited_nt[rel_pos] = alt_base
         if alt_base == "-":  # frameshift
             # self.edited_nt.pop(rel_pos)
-            self.edited_aa_pos.update(list(range(rel_pos, len(self.nt) // 3)))
+            if self.strand == 1:
+                self.edited_aa_pos.update(list(range(rel_pos, len(self.nt) // 3)))
+            else:
+                self.edited_aa_pos.update(list(range(0, rel_pos)))
 
     def edit_allele(self, allele_str):
         if isinstance(allele_str, Allele):
@@ -301,7 +321,13 @@ class CDS:
         for edit_str in edit_strs:
             self.edit_single(edit_str)
         if "-" in self.edited_nt:
-            self.edited_nt.remove("-")
+            self.edited_nt = [nt for nt in self.edited_nt if nt != "-"]
+        if self.strand == -1:
+            # Reverse logged edited positions as it was in the sense direction.
+            # rev_pos = self.edited_aa_pos[::-1]
+            self.edited_aa_pos = {len(self.nt) // 3 - 1 - r for r in self.edited_aa_pos}
+            self.nt = revcomp(self.nt)
+            self.edited_nt = revcomp(self.edited_nt)
 
     def get_aa_change(
         self, allele_str, include_synonymous=True
@@ -311,10 +337,31 @@ class CDS:
         mutations = CodingNoncodingAllele()
         mutations.nt_allele.update(self.edits_noncoding)
         for edited_aa_pos in self.edited_aa_pos:
-            ref_aa = _translate_single_codon(self.nt, edited_aa_pos)
-            mt_aa = _translate_single_codon(self.edited_nt, edited_aa_pos)
-            if mt_aa == "_":
-                return "translation error"
+            try:
+                # print("".join(self.nt))
+                # print((3 * edited_aa_pos), (3 * edited_aa_pos + 3))
+                ref_aa = _translate_single_codon(
+                    self.nt[(3 * edited_aa_pos) : (3 * edited_aa_pos + 3)]
+                )
+            except ValueError as e:
+                print(
+                    f"Translation mismatch in translating ref for {allele_str}: {e}. Check the input .fasta or genome version used for the reporter. Ignoring this allele."
+                )
+                continue
+            try:
+                # print("".join(self.nt))
+                # print(self.edited_nt[(3 * edited_aa_pos) : (3 * edited_aa_pos + 3)])
+                mt_aa = _translate_single_codon(
+                    self.edited_nt[(3 * edited_aa_pos) : (3 * edited_aa_pos + 3)]
+                )
+            except ValueError as e:
+                print(
+                    f"Translation mismatch in translating mutated gene for {allele_str}: {e}. Check the input .fasta or genome version used for the reporter. Ignoring this allele."
+                )
+                continue
+            except IndexError as e:
+                print(f"End of gene reached by frameshift {allele_str}: {e}")
+                mt_aa = ">"
             if not include_synonymous and ref_aa == mt_aa:
                 continue
             mutations.aa_allele.add(

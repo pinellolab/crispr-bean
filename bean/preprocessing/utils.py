@@ -37,7 +37,7 @@ def prepare_bdata(bdata: be.ReporterScreen, args, warn, prefix: str):
         n_no_support_targets, bdata = filter_no_info_target(
             bdata,
             condit_col=args.condition_col,
-            control_condition=args.control_condition_label,
+            control_condition=args.control_condition,
             target_col=args.target_col,
             write_no_support_targets=True,
             no_support_target_write_path=f"{prefix}/no_support_targets.csv",

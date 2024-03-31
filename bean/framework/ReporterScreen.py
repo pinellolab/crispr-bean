@@ -327,15 +327,22 @@ class ReporterScreen(Screen):
             if k.startswith("repguide_mask"):
                 if "sample_covariates" in adata.uns:
                     adata.var["_rc"] = adata.var[
-                        ["rep"] + list(adata.uns["sample_covariates"])
+                        ["replicate"] + list(adata.uns["sample_covariates"])
                     ].values.tolist()
                     adata.var["_rc"] = adata.var["_rc"].map(
                         lambda slist: ".".join(slist)
                     )
                     new_uns[k] = df.loc[guides_include, adata.var._rc.unique()]
-                    #adata.var.pop("_rc")
+                    # adata.var.pop("_rc")
                 else:
-                    new_uns[k] = df.loc[guides_include, adata.var.rep.unique()]
+                    try:
+                        new_uns[k] = df.loc[
+                            guides_include, adata.var["replicate"].unique()
+                        ]
+                    except KeyError as e:
+                        raise ValueError(
+                            f"Replicate column should be `replicate`. Modify your ReporterScreen.samples. Current columns: {adata.var.columns.tolist()}"
+                        ) from e
             if not isinstance(df, pd.DataFrame):
                 if k == "sample_covariates":
                     new_uns[k] = df
@@ -476,7 +483,7 @@ class ReporterScreen(Screen):
         return_result=False,
         count_layer="X_bcmatch",
         edit_layer="edits",
-        unsorted_condition_label="bulk",
+        unsorted_condition_label=None,
     ):
         """
         prior_weight:
@@ -497,9 +504,14 @@ class ReporterScreen(Screen):
             num_targetable_sites = self.guides.sequence.map(
                 lambda s: s[editable_base_start:editable_base_end].count(edited_base)
             )
-        bulk_idx = np.where(
-            self.samples.index.astype(str).map(lambda s: unsorted_condition_label in s)
-        )[0]
+        if unsorted_condition_label is not None:
+            bulk_idx = np.where(
+                self.samples.index.astype(str).map(
+                    lambda s: unsorted_condition_label in s
+                )
+            )[0]
+        else:
+            bulk_idx = np.arange(0, len(self.samples)).astype(int)
 
         if prior_weight is None:
             prior_weight = 1
@@ -697,8 +709,8 @@ class ReporterScreen(Screen):
 
     def filter_allele_counts_by_base(
         self,
-        ref_base="A",
-        alt_base="G",
+        ref_base: Union[List, str] = "A",
+        alt_base: Union[List, str] = "G",
         allele_uns_key="allele_counts",
         map_to_filtered=True,
         jaccard_threshold: float = 0.5,

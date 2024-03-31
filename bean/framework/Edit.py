@@ -68,7 +68,7 @@ class Edit:
     def match_str(cls, edit_str):
         if isinstance(edit_str, Edit):
             return True
-        pattern = r"(((chr)?\d+|nan):)?-?\d+:-?\d+:[+-]:[A-Z*-]>[A-Z*-]"
+        pattern = r"(((chr)?\w+|nan):)?-?\d+:-?\d+:[+-]:[A-Z*-]>[A-Z*-]"
         pattern2 = r"[\w*]!-?\d+:-?\d+:[+-]:[A-Z*-]>[A-Z*-]"
         return re.fullmatch(pattern, edit_str) or re.fullmatch(pattern2, edit_str)
 
@@ -175,6 +175,10 @@ class Allele:
             min(edit.pos for edit in self.edits),
             max(edit.pos for edit in self.edits),
         )
+
+    def set_uid(self, uid):
+        self.edits = {edit.set_uid(uid) for edit in self.edits}
+        return self
 
     def get_uid(self):
         uid = None

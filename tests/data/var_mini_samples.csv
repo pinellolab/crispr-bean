@@ -1,0 +1,11 @@
+,condition,replicate,lower_quantile,upper_quantile
+rep5_top,top,rep5,0.8,1.0
+rep5_high,high,rep5,0.6,0.8
+rep5_bulk,bulk,rep5,0.0,1.0
+rep5_low,low,rep5,0.2,0.4
+rep5_bot,bot,rep5,0.0,0.2
+rep6_top,top,rep6,0.8,1.0
+rep6_high,high,rep6,0.6,0.8
+rep6_bulk,bulk,rep6,0.0,1.0
+rep6_low,low,rep6,0.2,0.4
+rep6_bot,bot,rep6,0.0,0.2

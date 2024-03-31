@@ -52,6 +52,7 @@ def write_result_table(
     model_label: str,
     prefix: str = "",
     suffix: str = "",
+    negctrl_params=None,
     write_fitted_eff: bool = True,
     adjust_confidence_by_negative_control: bool = True,
     adjust_confidence_negatives: np.ndarray = None,
@@ -62,19 +63,19 @@ def write_result_table(
     return_result: bool = False,
 ) -> Union[pd.DataFrame, None]:
     """Combine target information and scores to write result table to a csv file or return it."""
-    if param_hist_dict["params"]["mu_loc"].dim() == 2:
-        mu = param_hist_dict["params"]["mu_loc"].detach()[:, 0].cpu().numpy()
-        mu_sd = param_hist_dict["params"]["mu_scale"].detach()[:, 0].cpu().numpy()
+    if param_hist_dict["mu_loc"].dim() == 2:
+        mu = param_hist_dict["mu_loc"].detach()[:, 0].cpu().numpy()
+        mu_sd = param_hist_dict["mu_scale"].detach()[:, 0].cpu().numpy()
         if sd_is_fitted:
-            sd = param_hist_dict["params"]["sd_loc"].detach().exp()[:, 0].cpu().numpy()
-    elif param_hist_dict["params"]["mu_loc"].dim() == 1:
-        mu = param_hist_dict["params"]["mu_loc"].detach().cpu().numpy()
-        mu_sd = param_hist_dict["params"]["mu_scale"].detach().cpu().numpy()
+            sd = param_hist_dict["sd_loc"].detach().exp()[:, 0].cpu().numpy()
+    elif param_hist_dict["mu_loc"].dim() == 1:
+        mu = param_hist_dict["mu_loc"].detach().cpu().numpy()
+        mu_sd = param_hist_dict["mu_scale"].detach().cpu().numpy()
         if sd_is_fitted:
-            sd = param_hist_dict["params"]["sd_loc"].detach().exp().cpu().numpy()
+            sd = param_hist_dict["sd_loc"].detach().exp().cpu().numpy()
     else:
         raise ValueError(
-            f'`mu_loc` has invalid shape of {param_hist_dict["params"]["mu_loc"].shape}'
+            f'`mu_loc` has invalid shape of {param_hist_dict["mu_loc"].shape}'
         )
     param_dict = {
         "mu": mu,
@@ -85,35 +86,28 @@ def write_result_table(
         param_dict["sd"] = sd
     if sample_covariates is not None:
         assert (
-            "mu_cov_loc" in param_hist_dict["params"]
-            and "mu_cov_scale" in param_hist_dict["params"]
-        ), param_hist_dict["params"].keys()
+            "mu_cov_loc" in param_hist_dict and "mu_cov_scale" in param_hist_dict
+        ), param_hist_dict.keys()
         for i, sample_cov in enumerate(sample_covariates):
             param_dict[f"mu_{sample_cov}"] = (
-                mu + param_hist_dict["params"]["mu_cov_loc"].detach().cpu().numpy()[i]
+                mu + param_hist_dict["mu_cov_loc"].detach().cpu().numpy()[i]
             )
             param_dict[f"mu_sd_{sample_cov}"] = np.sqrt(
                 mu_sd**2
-                + param_hist_dict["params"]["mu_cov_scale"].detach().cpu().numpy()[i]
-                ** 2
+                + param_hist_dict["mu_cov_scale"].detach().cpu().numpy()[i] ** 2
             )
             param_dict[f"mu_z_{sample_cov}"] = (
                 param_dict[f"mu_{sample_cov}"] / param_dict[f"mu_sd_{sample_cov}"]
             )
 
     fit_df = pd.DataFrame(param_dict)
-    fit_df["novl"] = get_novl(fit_df, "mu", "mu_sd")
-    if "negctrl" in param_hist_dict.keys():
+    if negctrl_params is not None:
         print("Normalizing with common negative control distribution")
-        mu0 = param_hist_dict["negctrl"]["params"]["mu_loc"].detach().cpu().numpy()
+        mu0 = negctrl_params["mu_loc"].detach().cpu().numpy()
         if sd_is_fitted:
-            sd0 = (
-                param_hist_dict["negctrl"]["params"]["sd_loc"]
-                .detach()
-                .exp()
-                .cpu()
-                .numpy()
-            )
+            sd0 = negctrl_params["sd_loc"].detach().exp().cpu().numpy()
+        else:
+            sd0 = 1.0
         print(f"Fitted mu0={mu0}" + (f", sd0={sd0}." if sd_is_fitted else ""))
         fit_df["mu_scaled"] = (mu - mu0) / sd0
         fit_df["mu_sd_scaled"] = mu_sd / sd0
@@ -154,12 +148,12 @@ def write_result_table(
                 fit_df,
                 std,
                 suffix="_adj",
-                mu_adjusted_col="mu_scaled"
-                if "negctrl" in param_hist_dict.keys()
-                else "mu",
-                mu_sd_adjusted_col="mu_sd_scaled"
-                if "negctrl" in param_hist_dict.keys()
-                else "mu_sd",
+                mu_adjusted_col=(
+                    "mu_scaled" if "negctrl" in param_hist_dict.keys() else "mu"
+                ),
+                mu_sd_adjusted_col=(
+                    "mu_sd_scaled" if "negctrl" in param_hist_dict.keys() else "mu_sd"
+                ),
             )
             fit_df = add_credible_interval(fit_df, "mu_adj", "mu_sd_adj")
             if sample_covariates is not None:
@@ -168,22 +162,26 @@ def write_result_table(
                         fit_df,
                         std,
                         suffix=f"_{sample_cov}_adj",
-                        mu_adjusted_col=f"mu_{sample_cov}_scaled"
-                        if "negctrl" in param_hist_dict.keys()
-                        else f"mu_{sample_cov}",
-                        mu_sd_adjusted_col=f"mu_sd_{sample_cov}_scaled"
-                        if "negctrl" in param_hist_dict.keys()
-                        else f"mu_sd_{sample_cov}",
+                        mu_adjusted_col=(
+                            f"mu_{sample_cov}_scaled"
+                            if "negctrl" in param_hist_dict.keys()
+                            else f"mu_{sample_cov}"
+                        ),
+                        mu_sd_adjusted_col=(
+                            f"mu_sd_{sample_cov}_scaled"
+                            if "negctrl" in param_hist_dict.keys()
+                            else f"mu_sd_{sample_cov}"
+                        ),
                     )
                     fit_df = add_credible_interval(
                         fit_df, f"mu_{sample_cov}_adj", f"mu_sd_{sample_cov}_adj"
                     )
 
     if write_fitted_eff or guide_acc is not None:
-        if "alpha_pi" not in param_hist_dict["params"].keys():
+        if "alpha_pi" not in param_hist_dict.keys():
             pi = 1.0
         else:
-            a_fitted = param_hist_dict["params"]["alpha_pi"].detach().cpu().numpy()
+            a_fitted = param_hist_dict["alpha_pi"].detach().cpu().numpy()
             pi = a_fitted[..., 1:].sum(axis=1) / a_fitted.sum(axis=1)
         sgRNA_df = pd.DataFrame({"edit_eff": pi}, index=guide_index)
         if guide_acc is not None:
@@ -191,7 +189,7 @@ def write_result_table(
             sgRNA_df["scaled_edit_eff"] = _scale_pi(
                 pi,
                 guide_acc,
-                fitted_noise_logit=param_hist_dict["params"]["noise_scale"]
+                fitted_noise_logit=param_hist_dict["noise_scale"]
                 .detach()
                 .cpu()
                 .numpy(),

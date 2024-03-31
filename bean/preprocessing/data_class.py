@@ -45,7 +45,7 @@ class ScreenData(abc.ABC):
         accessibility_col: str = None,
         accessibility_bw_path: str = None,
         device: str = None,
-        replicate_column: str = "rep",
+        replicate_column: str = "replicate",
         popt: Optional[Tuple[float]] = None,
         pi_popt: Optional[Tuple[float]] = None,
         control_can_be_selected: bool = False,
@@ -149,7 +149,9 @@ class ScreenData(abc.ABC):
         if self.repguide_mask is None:
             self.repguide_mask = ~(self.X == 0).any(axis=1)
         else:
-            print(f"Using repguide mask {self.repguide_mask}")
+            info(
+                f"Using replicate x guide mask in ReporterScreen.uns['{self.repguide_mask}'] to filter out outlier guides."
+            )
             assert (
                 self.repguide_mask in self.screen.uns.keys()
             ), f"{self.repguide_mask} not in screen.uns"
@@ -234,12 +236,12 @@ class ScreenData(abc.ABC):
         return size_factor
 
     def get_sample_ids_and_sort(self, screen: be.ReporterScreen, condit_id_col: str):
-        screen.samples["rep_id"] = -1
-        for i, rep in enumerate(sorted(screen.samples.rep.unique())):
-            screen.var.loc[screen.samples.rep == rep, "rep_id"] = i
+        screen.samples["replicate_id"] = -1
+        for i, rep in enumerate(sorted(screen.samples.replicate.unique())):
+            screen.var.loc[screen.samples.replicate == rep, "replicate_id"] = i
         if condit_id_col in screen.samples.columns:
             screen = screen[
-                :, screen.samples.sort_values(["rep_id", condit_id_col]).index
+                :, screen.samples.sort_values(["replicate_id", condit_id_col]).index
             ]
         else:
             raise ValueError("AnnData doesn't have condition id provided.")
@@ -634,16 +636,16 @@ class TilingReporterScreenData(ReporterScreenData):
         Returns
             allele_edit_assignment: Binary tensor of shape (n_guides, n_max_alleles_per_guide, n_edits. allele_edit_assignment(i, j, k) is 1 if jth allele of ith guide has kth edit.
         """
-        guide_allele_id_to_allele_df[
-            "edits"
-        ] = guide_allele_id_to_allele_df.aa_allele.map(
-            lambda a: list(a.aa_allele.edits) + list(a.nt_allele.edits)
+        guide_allele_id_to_allele_df["edits"] = (
+            guide_allele_id_to_allele_df.aa_allele.map(
+                lambda a: list(a.aa_allele.edits) + list(a.nt_allele.edits)
+            )
         )
         guide_allele_id_to_allele_df = guide_allele_id_to_allele_df.reset_index()
-        guide_allele_id_to_allele_df[
-            "edit_idx"
-        ] = guide_allele_id_to_allele_df.edits.map(
-            lambda es: [edits_to_index[e.get_abs_edit()] for e in es]
+        guide_allele_id_to_allele_df["edit_idx"] = (
+            guide_allele_id_to_allele_df.edits.map(
+                lambda es: [edits_to_index[e.get_abs_edit()] for e in es]
+            )
         )
         guide_allele_id_to_edit_df = guide_allele_id_to_allele_df[
             ["guide", "allele_id_for_guide", "edit_idx"]
@@ -709,7 +711,7 @@ class TilingReporterScreenData(ReporterScreenData):
         for i in range(self.n_reps):
             for j in range(self.n_condits):
                 condit_idx = np.where(
-                    (adata.samples.rep_id == i)
+                    (adata.samples.replicate_id == i)
                     & (adata.samples[f"{self.condition_column}_id"] == j)
                 )[0]
                 assert len(condit_idx) == 1, print(i, j, condit_idx)
@@ -763,7 +765,7 @@ class TilingReporterScreenData(ReporterScreenData):
         if self.device is not None:
             allele_tensor = allele_tensor.cuda()
         for i in range(self.n_reps):
-            condit_idx = np.where(adata.samples.rep_id == i)[0]
+            condit_idx = np.where(adata.samples.replicate_id == i)[0]
             assert len(condit_idx) == 1, print(i, self.control_condition, condit_idx)
             condit_idx = condit_idx.item()
             condit_name = adata.samples.index[condit_idx]
@@ -845,7 +847,7 @@ class SortingScreenData(ScreenData):
         control_condition: str = "bulk",
         lower_quantile_column: str = "lower_quantile",
         upper_quantile_column: str = "upper_quantile",
-        replicate_column: str = "rep",
+        replicate_column: str = "replicate",
         **kwargs,
     ):
         """
@@ -956,7 +958,7 @@ class SurvivalScreenData(ScreenData):
         control_condition: str = "bulk",
         control_can_be_selected=True,
         time_column: str = "time",
-        replicate_column: str = "rep",
+        replicate_column: str = "replicate",
         **kwargs,
     ):
         self._pre_init(condition_column)
@@ -974,10 +976,14 @@ class SurvivalScreenData(ScreenData):
 
     def _pre_init(self, time_column: str, condition_column: str):
         self.time_column = time_column
-        if not np.issubdtype(self.screen.samples[time_column].dtype, np.number):
+        try:
+            self.screen.samples[time_column] = self.screen.samples[time_column].astype(
+                float
+            )
+        except ValueError as e:
             raise ValueError(
                 f"Invalid timepoint value({self.screen.samples[time_column]}) in screen.samples[{time_column}]: check input."
-            )
+            ) from e
 
         if not (
             self.screen.samples.groupby(condition_column).size()
@@ -1018,7 +1024,9 @@ class SurvivalScreenData(ScreenData):
                 self.sample_covariates
             ].values
         self.screen_selected = _assign_rep_ids_and_sort(
-            self.screen_selected, self.replicate_column, self.condition_column
+            self.screen_selected,
+            self.replicate_column,
+            self.time_column,
         )
         self.screen_control = _assign_rep_ids_and_sort(
             self.screen_control,
@@ -1074,7 +1082,7 @@ class VariantSortingScreenData(VariantScreenData, SortingScreenData):
         *args,
         lower_quantile_column="lower_quantile",
         upper_quantile_column="upper_quantile",
-        replicate_column="rep",
+        replicate_column="replicate",
         condition_column="bin",
         target_col="target",
         sample_mask_column="mask",
@@ -1159,7 +1167,7 @@ class VariantSortingReporterScreenData(VariantReporterScreenData, SortingScreenD
         *args,
         lower_quantile_column="lower_quantile",
         upper_quantile_column="upper_quantile",
-        replicate_column="rep",
+        replicate_column="replicate",
         condition_column="bin",
         target_col="target",
         sample_mask_column="mask",
@@ -1206,7 +1214,7 @@ class TilingSortingReporterScreenData(TilingReporterScreenData, SortingScreenDat
         *args,
         lower_quantile_column="lower_quantile",
         upper_quantile_column="upper_quantile",
-        replicate_column="rep",
+        replicate_column="replicate",
         condition_column="bin",
         sample_mask_column="mask",
         use_const_pi: bool = False,
@@ -1257,7 +1265,7 @@ class VariantSurvivalScreenData(VariantScreenData, SurvivalScreenData):
         self,
         screen,
         *args,
-        replicate_column="rep",
+        replicate_column="replicate",
         condition_column="condition",
         time_column="time",
         control_can_be_selected=True,
@@ -1287,6 +1295,20 @@ class VariantSurvivalScreenData(VariantScreenData, SurvivalScreenData):
             self.set_bcmatch(
                 screen,
             )
+
+    def __getitem__(self, guide_idx):
+        ndata = super().__getitem__(guide_idx)
+        if hasattr(ndata, "X_bcmatch"):
+            ndata.X_bcmatch = ndata.X_bcmatch[:, :, guide_idx]
+        if hasattr(ndata, "X_bcmatch_masked"):
+            ndata.X_bcmatch_masked = ndata.X_bcmatch_masked[:, :, guide_idx]
+        if hasattr(ndata, "X_bcmatch_control"):
+            ndata.X_bcmatch_control = ndata.X_bcmatch_control[:, :, guide_idx]
+        if hasattr(ndata, "X_bcmatch_control_masked"):
+            ndata.X_bcmatch_control_masked = ndata.X_bcmatch_control_masked[
+                :, :, guide_idx
+            ]
+        return ndata
 
     def set_bcmatch(self, screen):
         screen.samples["size_factor_bcmatch"] = self.get_size_factor(
@@ -1327,7 +1349,7 @@ class VariantSurvivalReporterScreenData(VariantReporterScreenData, SurvivalScree
         self,
         screen,
         *args,
-        replicate_column="rep",
+        replicate_column="replicate",
         condition_column="condition",
         time_column="time",
         control_can_be_selected=True,
@@ -1373,7 +1395,7 @@ class TilingSurvivalReporterScreenData(TilingReporterScreenData, SurvivalScreenD
         self,
         screen,
         *args,
-        replicate_column="rep",
+        replicate_column="replicate",
         condition_column="condition",
         time_column="time",
         control_can_be_selected=True,

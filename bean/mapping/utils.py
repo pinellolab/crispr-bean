@@ -30,22 +30,76 @@ def _check_library(library_name):
         ) from exc
 
 
-def _get_input_parser():
-    """Get the input data"""
-    print(
-        r"""
-    _ _       
-  /  \ '\                       _   
-  |   \  \      __ ___ _  _ _ _| |_ 
-   \   \  |    / _/ _ \ || | ' \  _|
-    `.__|/     \__\___/\_,_|_||_\__|
-    """
+def get_input_parser(parser=None):
+    """Add multi-sample specific arguments to the base parser."""
+    if parser is None:
+        parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-i",
+        "--sample-list",
+        type=str,
+        help="List of fastq and sample ids. Formatted as `R1_filepath,R2_filepath,sample_id`",
+        required=True,
+    )
+    parser = _get_input_parser(parser)
+    parser.add_argument(
+        "-t", "--threads", type=int, help="Number of threads", default=10
+    )
+    parser.add_argument(
+        "--guide-start-seqs-file",
+        type=str,
+        help="CSV file path with per-sample `guide_start_seq` to be used."
+        + "Formatted as `sample_id, guide_start_seq`",
+        default=None,
+    )
+    parser.add_argument(
+        "--guide-end-seqs-file",
+        type=str,
+        help="CSV file path with per-sample `guide_end_seq` to be used."
+        + "Formatted as `sample_id,guide_end_seq`",
+        default=None,
+    )
+    parser.add_argument(
+        "--barcode-start-seqs-file",
+        type=str,
+        help="CSV file path with per-sample `barcode_start_seq` to be used."
+        + "Formatted as `sample_id,guide_end_seq`",
+        default=None,
     )
 
-    parser = argparse.ArgumentParser(
-        description="bean-count parameters",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    parser.add_argument(
+        "--rerun", help="Recount each sample", action="store_true", default=False
     )
+
+    return parser
+
+
+def get_input_parser_count(parser=None):
+    """Get single-sample specific argument parser."""
+    if parser is None:
+        parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--R1",
+        type=str,
+        help="FASTQ file path for read 1",
+        required=True,
+    )
+    parser.add_argument(
+        "--R2",
+        type=str,
+        help="FASTQ file path for read 2.",
+        required=True,
+    )
+    parser = _get_input_parser(parser)
+    return parser
+
+
+def _get_input_parser(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser(
+            description="bean-count parameters",
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        )
 
     parser.add_argument(
         "-b",
@@ -72,6 +126,12 @@ def _get_input_parser():
         "--guide-end-seq",
         type=str,
         help="Guide starts after this sequence in R1",
+        default="",
+    )
+    parser.add_argument(
+        "--barcode-start-seq",
+        type=str,
+        help="Barcode + reporter starts after this sequence in R2, denoted as the sense direction (the same sequence direction as R1).",
         default="",
     )
     parser.add_argument(

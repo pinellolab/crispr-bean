@@ -20,7 +20,7 @@ warn = logging.warning
 debug = logging.debug
 info = logging.info
 
-complement_base = {"A": "T", "T": "A", "C": "G", "G": "C"}
+complement_base = {"A": "T", "T": "A", "C": "G", "G": "C", "-": "-"}
 
 
 def revcomp(nt_list: List[str]):
@@ -97,7 +97,9 @@ def get_mane_transcript_id(gene_name: str):
     return mane_transcript_id, id_version
 
 
-def get_exons_from_transcript_id(transcript_id: str, id_version: int, ref_version: str = "GRCh38"):
+def get_exons_from_transcript_id(
+    transcript_id: str, id_version: int, ref_version: str = "GRCh38"
+):
     """
     Retrieves the exons and the start position of the coding sequence (CDS) for a given transcript ID and version.
 
@@ -114,7 +116,9 @@ def get_exons_from_transcript_id(transcript_id: str, id_version: int, ref_versio
     if transcript_json["count"] != 1:
         if transcript_json["count"] > 1:
             api_url = f"http://tark.ensembl.org/api/transcript/?stable_id={transcript_id}&stable_id_version={id_version}&assembly_name={ref_version}&expand=exons"
-            response = requests.get(api_url, headers={"Content-Type": "application/json"})
+            response = requests.get(
+                api_url, headers={"Content-Type": "application/json"}
+            )
             transcript_json = response.json()
             if transcript_json["count"] != 1:
                 raise ValueError(
@@ -214,22 +218,12 @@ def get_cds_seq_pos_from_gene_name(gene_name: str, ref_version: str = "GRCh38"):
     return cds_chrom, cds_seq, cds_pos, strand
 
 
-def parse_args():
-    """Get the input arguments"""
-    print(
-        r"""
-    _ _         
-  /  \ '\       __ _ _ _           
-  |   \  \     / _(_) | |_ ___ _ _ 
-   \   \  |   |  _| | |  _/ -_) '_|
-    `.__|/    |_| |_|_|\__\___|_|  
-    """
-    )
-    print("bean-filter: filter alleles")
-    parser = argparse.ArgumentParser(
-        prog="allele_filter",
-        description="Filter alleles based on edit position in spacer and frequency across samples.",
-    )
+def parse_args(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser(
+            prog="allele_filter",
+            description="Filter alleles based on edit position in spacer and frequency across samples.",
+        )
     parser.add_argument(
         "bdata_path",
         type=str,
@@ -274,6 +268,12 @@ def parse_args():
         "--filter-window",
         "-w",
         help="Only consider edit within window provided by (edit-start-pos, edit-end-pos). If this flag is not provided, `--edit-start-pos` and `--edit-end-pos` flags are ignored.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--keep-indels",
+        "-i",
+        help="Include indels.",
         action="store_true",
     )
     parser.add_argument(
@@ -339,7 +339,7 @@ def parse_args():
         action="store_true",
         help="Load temporary file and work from there.",
     )
-    return parser.parse_args()
+    return parser
 
 
 def check_args(args):

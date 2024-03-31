@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from tqdm.auto import tqdm
 from ..framework.Edit import Edit, Allele
 from ..framework.AminoAcidEdit import CodingNoncodingAllele
@@ -43,14 +43,18 @@ def filter_allele_by_pos(
 def filter_allele_by_base(
     allele: Allele,
     allowed_base_changes: List[Tuple] = None,
-    allowed_ref_base: str = None,
-    allowed_alt_base: str = None,
+    allowed_ref_base: Union[List, str] = None,
+    allowed_alt_base: Union[List, str] = None,
 ):
     """
     Filter alleles based on position and return the filtered allele and
     number of filtered edits.
     """
     filtered_edits = 0
+    if isinstance(allowed_ref_base, str):
+        allowed_ref_base = [allowed_ref_base]
+    if isinstance(allowed_alt_base, str):
+        allowed_alt_base = [allowed_alt_base]
     if (
         not (allowed_ref_base is None and allowed_alt_base is None)
         + (allowed_base_changes is None)
@@ -64,15 +68,15 @@ def filter_allele_by_base(
                 allele.edits.remove(edit)
     elif not allowed_ref_base is None:
         for edit in allele.edits.copy():
-            if edit.ref_base != allowed_ref_base:
+            if edit.ref_base not in allowed_ref_base:
                 filtered_edits += 1
                 allele.edits.remove(edit)
-            elif not allowed_alt_base is None and edit.alt_base != allowed_alt_base:
+            elif not allowed_alt_base is None and edit.alt_base not in allowed_alt_base:
                 filtered_edits += 1
                 allele.edits.remove(edit)
     else:
         for edit in allele.edits.copy():
-            if edit.alt_base != allowed_alt_base:
+            if edit.alt_base not in allowed_alt_base:
                 filtered_edits += 1
                 allele.edits.remove(edit)
     return (allele, filtered_edits)
@@ -145,7 +149,6 @@ def _map_alleles_to_filtered(
         raw_allele_counts.groupby("guide"),
         desc="Mapping alleles to closest filtered alleles",
     ):
-
         guide_filtered_allele_counts = filtered_allele_counts.loc[
             filtered_allele_counts.guide == guide, :
         ].set_index(allele_col)

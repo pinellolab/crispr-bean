@@ -1,3 +1,5 @@
+.. _gwas:
+
 GWAS variant library
 ***********************
 .. mdinclude:: _ldl_var.md

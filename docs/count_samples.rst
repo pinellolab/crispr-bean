@@ -1,7 +1,9 @@
 .. _count_samples:
+
 `bean count-samples`
 ***********************
 .. mdinclude:: _count.md
+
 
 Full parameters
 ==================

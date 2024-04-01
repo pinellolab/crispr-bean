@@ -1,0 +1,5 @@
+allele_counts	400734
+allele_counts_spacer	210363
+allele_counts_spacer_noindels	207500
+allele_counts_spacer_noindels_translated	193445
+allele_counts_spacer_noindels_translated_prop0.05_0.2	31517

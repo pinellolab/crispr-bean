@@ -4,8 +4,8 @@
    contain the root `toctree` directive.
 
 Welcome to `bean`'s documentation!
-================================
-`bean` unconfounds variant effect from variable editing outcome of CRISPR screens by considering genotypic outcome from *reporter* sequence. 
+================================================================
+`bean` improves CRISPR pooled screen analysis by 1) unconfounding variable per-guide editing outcome by considering genotypic outcome from *reporter* sequence and 2) through accurate modeling of screen procedure.
 
 .. image:: assets/summary.png
   :width: 700
@@ -15,11 +15,9 @@ Welcome to `bean`'s documentation!
 Workflows
 ===================
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
-    gwas
-    cds
-    prolif_gwas
+    tutorials
 
 ===================
 API references
@@ -30,17 +28,16 @@ API references
     input
     subcommands
 
-===================
+===========================
 Screen data structure
-===================
+===========================
 .. toctree::
-    
-    reporterscreen
-    ReporterScreen_api
 
-==================
+    reporterscreen
+
+=========================
 Indices and tables
-==================
+=========================
 
 * :ref:`genindex`
 * :ref:`modindex`

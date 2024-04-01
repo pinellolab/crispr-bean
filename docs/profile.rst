@@ -1,3 +1,5 @@
+.. _profile:
+
 `bean profile`
 ***********************
 .. mdinclude:: _profile.md

@@ -20,7 +20,6 @@ Workflows
     gwas
     cds
     prolif_gwas
-    input
 
 ===================
 API references
@@ -28,12 +27,14 @@ API references
 .. toctree::
     :maxdepth: 3
 
+    input
     subcommands
 
 ===================
 Screen data structure
 ===================
 .. toctree::
+    
     reporterscreen
     ReporterScreen_api
 

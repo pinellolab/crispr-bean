@@ -2,7 +2,9 @@
 
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/crispr-bean)](https://pypi.org/project/crispr-bean/)
 [![PyPI version](https://img.shields.io/pypi/v/crispr-bean)](https://pypi.org/project/crispr-bean/)
-[![Code style](https://img.shields.io/badge/code%20style-black-black)](https://github.com/psf/black)
+[![Test](https://github.com/pinellolab/crispr-bean/actions/workflows/CI.yml/badge.svg)](https://github.com/pinellolab/crispr-bean/actions/workflows/CI.yml)
+[![Documentation](https://github.com/pinellolab/crispr-bean/actions/workflows/documentation.yml/badge.svg)](https://github.com/pinellolab/crispr-bean/actions/workflows/documentation.yml)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 `bean` improves CRISPR pooled screen analysis by 1) unconfounding variable per-guide editing outcome by considering genotypic outcome from *reporter* sequence and 2) through accurate modeling of screen procedure.
 

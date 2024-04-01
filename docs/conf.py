@@ -53,3 +53,4 @@ html_sidebars = {
         "searchbox.html",
     ]
 }
+html_favicon = "assets/beans_32.ico"

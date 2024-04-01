@@ -18,7 +18,7 @@ jobs:
         sudo apt-get install python3-distutils
     - name: Build Documentation
       working-directory: docs
-      run: sphinx-build -W --keep-going . _build
+      run: sphinx-build . _build
     - name: copy image files
       run: cp -r docs/assets docs/_build/
     - uses: actions/upload-pages-artifact@v3

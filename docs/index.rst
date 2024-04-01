@@ -20,7 +20,6 @@ Workflows
     gwas
     cds
     prolif_gwas
-    input
 
 ===================
 API references
@@ -28,6 +27,7 @@ API references
 .. toctree::
     :maxdepth: 3
 
+    input
     subcommands
 
 ===================

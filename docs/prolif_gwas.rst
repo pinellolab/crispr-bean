@@ -1,5 +1,5 @@
 Proliferation screen with GWAS library
 **********************************************
-.. mdinclude:: _profile_gwas.md
+.. mdinclude:: _prolif_gwas.md
 
 See :ref:`subcommands` for the full details.

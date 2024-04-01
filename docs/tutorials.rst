@@ -1,7 +1,7 @@
 .. _tutorials:
 
 ===================
-Tutorial workflows
+Workflow tutorials
 ===================
 .. toctree::
     :maxdepth: 2

@@ -78,6 +78,7 @@ def main(args):
         + "/bean_run_result."
         + os.path.basename(args.bdata_path).rsplit(".", 1)[0]
     )
+    os.makedirs(prefix, exist_ok=True)
     file_logger = logging.FileHandler(f"{prefix}.log")
     file_logger.setLevel(logging.INFO)
     logging.getLogger().addHandler(file_logger)
@@ -87,7 +88,6 @@ def main(args):
     else:
         torch.set_default_tensor_type(torch.FloatTensor)
 
-    os.makedirs(prefix, exist_ok=True)
     model_label, model, guide = identify_model_guide(args)
     info("Done loading data. Preprocessing...")
     bdata = prepare_bdata(bdata, args, warn, prefix)

@@ -44,6 +44,7 @@ error = logging.critical
 warn = logging.warning
 debug = logging.debug
 info = logging.info
+
 pyro.set_rng_seed(101)
 
 warnings.filterwarnings(
@@ -72,16 +73,20 @@ def main(args):
     print("bean-run: Run model to identify targeted variants and their impact.")
     bdata = be.read_h5ad(args.bdata_path)
     args, bdata = check_args(args, bdata)
-    if args.cuda:
-        os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-        torch.set_default_tensor_type(torch.cuda.FloatTensor)
-    else:
-        torch.set_default_tensor_type(torch.FloatTensor)
     prefix = (
         args.outdir
         + "/bean_run_result."
         + os.path.basename(args.bdata_path).rsplit(".", 1)[0]
     )
+    file_logger = logging.FileHandler(f"{prefix}.log")
+    file_logger.setLevel(logging.INFO)
+    logging.getLogger().addHandler(file_logger)
+    if args.cuda:
+        os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+        torch.set_default_tensor_type(torch.cuda.FloatTensor)
+    else:
+        torch.set_default_tensor_type(torch.FloatTensor)
+
     os.makedirs(prefix, exist_ok=True)
     model_label, model, guide = identify_model_guide(args)
     info("Done loading data. Preprocessing...")

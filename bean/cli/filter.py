@@ -194,5 +194,43 @@ def main(args):
         f"Saving plotting result and log at {args.output_prefix}.[filtered_allele_stats.pdf, filter_log.txt]."
     )
     with open(f"{args.output_prefix}.filter_log.txt", "w") as out_log:
+        out_log.write(
+            "filter_step\tn_alleles\tn_var\tn_noncoding_var\tn_coding_var\tn_synonymous_var\n"
+        )
         for key in allele_df_keys:
-            out_log.write(f"{key}\t{len(bdata.uns[key])}\n")
+            if "translate" in key:
+                n_coding_vars = len(
+                    set().union(
+                        *bdata.uns[key]
+                        .aa_allele.map(lambda a: list(a.aa_allele.edits))
+                        .tolist()
+                    )
+                )
+                n_syn_vars = len(
+                    set().union(
+                        *bdata.uns[key]
+                        .aa_allele.map(
+                            lambda a: {e for e in a.aa_allele.edits if e.ref == e.alt}
+                        )
+                        .tolist()
+                    )
+                )
+                n_noncoding_vars = len(
+                    set().union(
+                        *bdata.uns[key]
+                        .aa_allele.map(lambda a: list(a.nt_allele.edits))
+                        .tolist()
+                    )
+                )
+                out_log.write(
+                    f"{key}\t{len(bdata.uns[key])}\t{n_coding_vars + n_noncoding_vars}\t{n_noncoding_vars}\t{n_coding_vars}\t{n_syn_vars}\n"
+                )
+            else:
+                n_noncoding_vars = len(
+                    set().union(
+                        *bdata.uns[key].allele.map(lambda a: list(a.edits)).tolist()
+                    )
+                )
+                out_log.write(
+                    f"{key}\t{len(bdata.uns[key])}\t{n_noncoding_vars}\t{n_noncoding_vars}\t{0}\t{0}\n"
+                )

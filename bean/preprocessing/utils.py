@@ -24,9 +24,7 @@ class Alias:
 def prepare_bdata(bdata: be.ReporterScreen, args, warn, prefix: str):
     """Utility function for formatting bdata for bean-run"""
     bdata = bdata.copy()
-    bdata.samples[args.replicate_col] = bdata.samples[args.replicate_col].astype(
-        "category"
-    )
+    bdata.samples["replicate"] = bdata.samples[args.replicate_col].astype("category")
     bdata.guides = bdata.guides.loc[:, ~bdata.guides.columns.duplicated()].copy()
     if args.library_design == "variant":
         if bdata.guides[args.target_col].isnull().any():

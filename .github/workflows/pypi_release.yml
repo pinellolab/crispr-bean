@@ -23,7 +23,7 @@ jobs:
     - name: Install pypa/setuptools
       run: >-
         python -m
-        pip install wheel
+        pip install wheel numpy Cython
     - name: Extract tag name
       id: tag
       run: echo ::set-output name=TAG_NAME::$(echo $GITHUB_REF | cut -d / -f 3)

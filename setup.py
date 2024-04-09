@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="crispr-bean",
-    version="1.1.0",
+    version="1.1.1",
     python_requires=">=3.8.0",
     author="Jayoung Ryu",
     author_email="jayoung_ryu@g.harvard.edu",
@@ -23,9 +23,7 @@ setup(
         "setuptools>=18.0",
         "Cython",
     ],
-    scripts=[
-        "bin/bean"
-    ],
+    scripts=["bin/bean"],
     install_requires=[
         "numpy",
         "pandas",

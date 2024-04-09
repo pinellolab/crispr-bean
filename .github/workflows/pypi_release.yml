@@ -1,9 +1,8 @@
 name: Publish to PyPI
 
 on:
-  push:
-    tags:
-     - '*'
+  release:
+    types: [created]
 
 jobs:
   build-n-publish:
@@ -23,7 +22,7 @@ jobs:
     - name: Install pypa/setuptools
       run: >-
         python -m
-        pip install wheel numpy Cython
+        pip install wheel numpy setuptools Cython
     - name: Extract tag name
       id: tag
       run: echo ::set-output name=TAG_NAME::$(echo $GITHUB_REF | cut -d / -f 3)

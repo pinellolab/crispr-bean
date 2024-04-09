@@ -45,13 +45,22 @@ def parse_args(parser=None):
         type=int,
         default=6,
     )
+    parser.add_argument(
+        "--save-fig",
+        action="store_true",
+        help="Save .pdf of the figures included in the report.",
+    )
 
     return parser
 
 
 def check_args(args):
     if args.output_prefix is None:
-        args.output_prefix = os.path.splitext(args.bdata_path)[0]
+        sample_id = os.path.splitext(os.path.basename(args.bdata_path))[0]
+        args.output_prefix = (
+            f"{os.path.dirname(args.bdata_path)}/bean_profile.{sample_id}/{sample_id}"
+        )
+        os.makedirs(args.output_prefix, exist_ok=True)
     if args.window_length < 1:
         raise ValueError(f"window_length {args.window_length} is too small.")
     if args.window_length > 20:

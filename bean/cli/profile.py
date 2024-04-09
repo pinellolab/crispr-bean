@@ -32,9 +32,8 @@ def main(args):
             control_condition=args.control_condition,
             max_editing_window_length=args.window_length,
             pam_col=args.pam_col,
+            save_fig=args.save_fig,
         ),
         kernel_name="bean_python3",
     )
-    os.system(
-        f"jupyter nbconvert --to html {args.output_prefix}_editing_preference.ipynb"
-    )
+    os.system(f"jupyter nbconvert --to html {args.output_prefix}.ipynb")

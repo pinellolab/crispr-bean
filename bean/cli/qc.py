@@ -53,4 +53,4 @@ def main(args):
         ),
         kernel_name="bean_python3",
     )
-    os.system(f"jupyter nbconvert --to html {args.out_report_prefix}.ipynb")
+    os.system(f"jupyter nbconvert --to=html {args.out_report_prefix}.ipynb")

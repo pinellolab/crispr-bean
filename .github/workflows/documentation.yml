@@ -1,9 +1,6 @@
 name: "Sphinx: Render docs"
 
-on: 
-  push:
-    branches:
-      -main
+on: push
 
 jobs:
   build:
@@ -31,6 +28,7 @@ jobs:
 
   deploy:
     needs: build
+    if: github.ref == 'refs/heads/main'
     permissions:
       id-token: write
       pages: write

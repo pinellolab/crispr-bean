@@ -4,7 +4,7 @@ File should contain following columns.
 * `name`: gRNA ID column
 * `sequence`: gRNA sequence
 * `barcode`: R2 barcode to help match reporter to gRNA, written in the sense direction (as in R1)
-* In order to use accessibility in the [variant effect quantification](#bean-run-quantify-variant-effects), provide accessibility information in one of two options. (For non-targeting guides, provide NA values (empty cell).)   
+* In order to use accessibility in the variant effect quantification downstream (in [`bean run`](https://pinellolab.github.io/crispr-bean/run.html)), provide accessibility information in one of two options. (For non-targeting guides, provide NA values (empty cell).)   
   * Option 1: `chrom` & `genomic_pos`: Chromosome (ex. `chr19`) and genomic position of guide sequence. You will have to provide the path to the bigwig file with matching reference version in `bean run`. 
   * Option 2: `accessibility_signal`: ATAC-seq signal value of the target loci of each guide.  
 * For variant library (gRNAs are designed to target specific variants and ignores bystander edits)
@@ -16,7 +16,7 @@ File should contain following columns.
   * `chrom`: Chromosome of gRNA targeted locus.
   * `start_pos`: gRNA starting position in the genome. Required when you provide `strand` column. Should specify the smaller coordinate value among start and end position regardless of gRNA strandedness.
 
-Also see examples for [variant library](tests/data/test_guide_info.csv) and [tiling library](tests/data/test_guide_info_tiling.csv).
+Also see examples for [variant library](https://github.com/pinellolab/crispr-bean/blob/main/tests/data/test_guide_info.csv) and [tiling library](https://github.com/pinellolab/crispr-bean/blob/main/tests/data/test_guide_info_tiling_chrom.csv).
 
 ## sample_list.csv
 File should contain following columns with header.
@@ -34,4 +34,4 @@ For proliferation / survival screens:
 * `time`: Numeric time following the base editing of each sample.
 
 
-Also see examples for [FACS sorting screen](tests/data/sample_list.csv) and [proliferation / survival screen](tests/data/sample_list_survival.csv).
+Also see examples for [FACS sorting screen](https://github.com/pinellolab/crispr-bean/blob/main/tests/data/sample_list.csv) and [proliferation / survival screen](https://github.com/pinellolab/crispr-bean/blob/main/tests/data/sample_list_survival.csv).

@@ -1,3 +1,5 @@
+.. _prolif_gwas:
+
 Proliferation screen with GWAS library
 **********************************************
 .. mdinclude:: _prolif_gwas.md

@@ -3,7 +3,7 @@
 
 
 
-```python
+```bash
 bean count-samples \
   --input sample_list.csv   `# sample with lines 'R1_filepath,R2_filepath,sample_name\n'` \
   -b A                      `# base that is being edited (A/G)` \
@@ -13,7 +13,7 @@ bean count-samples \
   -t 12                     `# number of threads` \
   --name my_sorting_screen  `# name of this sample run` \
 ```
-```python
+```bash
 bean count --R1 R1.fq --R2 R2.fq -b A -f sgRNA_info_table.csv -r
 ```
 By default, `bean count[-samples]` assume R1 and R2 are trimmed off of the adapter sequence. You may need to adjust the command arguments according to your read structure. 

@@ -119,7 +119,7 @@ def _get_input_parser(parser=None):
     parser.add_argument(
         "--guide-start-seq",
         type=str,
-        help="Guide starts after this sequence in R1",
+        help="Guide starts after this sequence in R1. The start sequence is located by allowing the base transition from `edited_base` (If A to G and if C to T).",
         default="",
     )
     parser.add_argument(
@@ -131,7 +131,7 @@ def _get_input_parser(parser=None):
     parser.add_argument(
         "--barcode-start-seq",
         type=str,
-        help="Barcode + reporter starts after this sequence in R2, denoted as the sense direction (the same sequence direction as R1).",
+        help="Barcode + reporter starts after this sequence in R2, denoted as the sense direction (the same sequence direction as R1). The start sequence is located by allowing the base transition from `edited_base` (If A to G and if C to T).",
         default="",
     )
     parser.add_argument(

@@ -26,13 +26,10 @@ jobs:
     - name: Extract tag name
       id: tag
       run: echo ::set-output name=TAG_NAME::$(echo $GITHUB_REF | cut -d / -f 3)
-    - name: Update version in setup.py
-      run: >-
-        sed -i "s/{{VERSION_PLACEHOLDER}}/${{ steps.tag.outputs.TAG_NAME }}/g" setup.py
     - name: Build a binary wheel
       run: |
         python setup.py sdist bdist_wheel
-        auditwheel repair dist/bean-{{VERSION_PLACEHOLDER}}-cp38-cp38-linux_x86_64.whl --plat manylinux_2_24_x86_64
+        auditwheel repair dist/bean-${{ steps.tag.outputs.TAG_NAME }}-cp38-cp38-linux_x86_64.whl --plat manylinux_2_24_x86_64
         mv wheelhouse/* dist
         rm dist/*-cp38-cp38-linux_x86_64.whl
     - name: Publish distribution to PyPI

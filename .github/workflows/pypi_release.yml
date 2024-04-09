@@ -35,6 +35,8 @@ jobs:
     - name: Test build
       run: |
         pip install dist/*.whl
+        git clone https://github.com/pinellolab/crispr-bean.git
+        mv cripspr-bean/tests/ .
         pytest
     - name: Publish
       env:

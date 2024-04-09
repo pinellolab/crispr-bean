@@ -45,7 +45,7 @@ setup(
         "nbconvert",
         "logomaker",
     ],
-    extras_require={"model": ["pyBigWig", "pyro-ppl<=1.8.1", "statsmodels", "torch<2"]},
+    extras_require={"model": ["pyBigWig", "pyro-ppl<=1.8.1", "statsmodels", "torch"]},
     include_package_data=True,
     package_data={
         "": [

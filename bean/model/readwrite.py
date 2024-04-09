@@ -55,11 +55,11 @@ def write_result_table(
     negctrl_params=None,
     write_fitted_eff: bool = True,
     adjust_confidence_by_negative_control: bool = True,
-    adjust_confidence_negatives: np.ndarray = None,
+    adjust_confidence_negatives: Optional[np.ndarray] = None,
     guide_index: Optional[Sequence[str]] = None,
     guide_acc: Optional[Sequence] = None,
     sd_is_fitted: bool = True,
-    sample_covariates: List[str] = None,
+    sample_covariates: Optional[List[str]] = None,
     return_result: bool = False,
 ) -> Union[pd.DataFrame, None]:
     """Combine target information and scores to write result table to a csv file or return it."""

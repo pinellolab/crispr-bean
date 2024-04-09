@@ -999,6 +999,16 @@ class SurvivalScreenData(ScreenData):
         self.timepoints = torch.as_tensor(
             self.screen_selected.samples[self.time_column].unique()
         )
+        control_timepoint = self.screen_control.samples[self.time_column].unique()
+        if len(control_timepoint) != 1:
+            info(self.screen_control)
+            info(self.screen_control.samples)
+            info(control_timepoint)
+            raise ValueError(
+                "All samples with --control-condition should have the same --time-col column in ReporterScreen.samples[time_col]. Check your input ReporterScreen object."
+            )
+        else:
+            self.control_timepoint = control_timepoint[0]
         self.n_timepoints = self.n_condits
         timepoints = self.screen_selected.samples.sort_values(self.time_column)[
             self.time_column

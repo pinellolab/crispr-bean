@@ -229,7 +229,6 @@ def MixtureNormalModel(
             "initial_guide_abundance",
             dist.Dirichlet(torch.ones((data.n_reps, data.n_guides))),
         )
-    # The pi should be Dirichlet distributed instead of independent betas
     alpha_pi = pyro.param(
         "alpha_pi",
         torch.ones(
@@ -248,6 +247,7 @@ def MixtureNormalModel(
     ), alpha_pi.shape
     with replicate_plate:
         with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
+            time_pi = data.control_timepoint
             # Accounting for sample specific overall edit rate across all guides.
             # P(allele | guide, bin=bulk)
             pi = pyro.sample(
@@ -262,9 +262,11 @@ def MixtureNormalModel(
                 data.n_guides,
                 2,
             ), pi.shape
+            # If pi is sampled in later timepoint, account for the selection.
+            expanded_allele_p = pi * r.expand(data.n_reps, 1, -1, -1) ** time_pi
             pyro.sample(
                 "bulk_allele_count",
-                dist.Multinomial(probs=pi, validate_args=False),
+                dist.Multinomial(probs=expanded_allele_p, validate_args=False),
                 obs=data.allele_counts_control,
             )
     if scale_by_accessibility:
@@ -277,7 +279,6 @@ def MixtureNormalModel(
             time = data.timepoints[t]
             assert time.shape == (data.n_condits,)
 
-            # with guide_plate, poutine.mask(mask=(data.allele_counts.sum(axis=-1) == 0)):
             with guide_plate:
                 alleles_p_time = r.unsqueeze(0).expand(
                     (data.n_condits, -1, -1)
@@ -502,15 +503,18 @@ def MultiMixtureNormalModel(
         print(torch.where(alpha_pi < 0))
     with replicate_plate:
         with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
+            time_pi = data.control_timepoint
             pi = pyro.sample(
                 "pi",
                 dist.Dirichlet(
                     pi_a_scaled.unsqueeze(0).unsqueeze(0).expand(data.n_reps, 1, -1, -1)
                 ),
             )
+            # If pi is sampled in later timepoint, account for the selection.
+            expanded_allele_p = pi * r.expand(data.n_reps, 1, -1, -1) ** time_pi
             pyro.sample(
                 "bulk_allele_count",
-                dist.Multinomial(probs=pi, validate_args=False),
+                dist.Multinomial(probs=expanded_allele_p, validate_args=False),
                 obs=data.allele_counts_control,
             )
     if scale_by_accessibility:

@@ -90,6 +90,8 @@ def main(args):
 
     model_label, model, guide = identify_model_guide(args)
     info("Done loading data. Preprocessing...")
+
+    # Format bdata into data structure compatible with Pyro model
     bdata = prepare_bdata(bdata, args, warn, prefix)
     guide_index = bdata.guides.index.copy()
     ndata = DATACLASS_DICT[args.selection][model_label](
@@ -103,7 +105,7 @@ def main(args):
         condition_column=args.condition_col,
         time_column=args.time_col,
         control_condition=args.control_condition,
-        control_can_be_selected=args.include_control_condition_for_inference,
+        control_can_be_selected=~args.exclude_control_condition_for_inference,
         allele_df_key=args.allele_df_key,
         control_guide_tag=args.control_guide_tag,
         target_col=args.target_col,
@@ -112,6 +114,8 @@ def main(args):
         replicate_col=args.replicate_col,
         use_bcmatch=(not args.ignore_bcmatch),
     )
+
+    # Build variant dataframe
     adj_negctrl_idx = None
     if args.library_design == "variant":
         if not args.uniform_edit:
@@ -151,8 +155,8 @@ def main(args):
 
     guide_info_df = ndata.screen.guides
 
+    # Run the inference steps
     info(f"Running inference for {model_label}...")
-
     if args.load_existing:
         with open(f"{prefix}/{model_label}.result.pkl", "rb") as handle:
             param_history_dict = pkl.load(handle)
@@ -187,11 +191,8 @@ def main(args):
     if not os.path.exists(prefix):
         os.makedirs(prefix)
     with open(f"{prefix}/{model_label}.result{args.result_suffix}.pkl", "wb") as handle:
-        # try:
         pkl.dump(save_dict, handle)
-        # except TypeError as exc:
-        #     print(exc.message)
-        # print(param_history_dict)
+
     write_result_table(
         target_info_df,
         param_history_dict,

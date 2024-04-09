@@ -83,14 +83,14 @@ def parse_args(parser=None):
         "--control-condition",
         default="bulk",
         type=str,
-        help="Value in `bdata.samples[condition_col]` that indicates control experimental condition.",
+        help="Value in `bdata.samples[condition_col]` that indicates control experimental condition whose editing patterns will be used.",
     )
     parser.add_argument(
-        "--include-control-condition-for-inference",
-        "-ic",
+        "--exclude-control-condition-for-inference",
+        "-ec",
         default=False,
         action="store_true",
-        help="Include control conditions for inference. Currently only supported for survival screens.",
+        help="Exclude control conditions for inference. Currently only supported for survival screens.",
     )
     parser.add_argument(
         "--replicate-col",

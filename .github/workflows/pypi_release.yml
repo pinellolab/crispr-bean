@@ -27,12 +27,18 @@ jobs:
       id: tag
       run: echo ::set-output name=TAG_NAME::$(echo $GITHUB_REF | cut -d / -f 3)
     - name: Build and publish
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
       run: |
         python setup.py sdist bdist_wheel
         auditwheel repair dist/crispr_bean-${{ steps.tag.outputs.TAG_NAME }}-cp*-cp*-linux_x86_64.whl --plat manylinux_2_24_x86_64
         mv wheelhouse/* dist
         rm dist/*-cp*-cp*-linux_x86_64.whl
+    - name: Test build
+      run: |
+        pip install dist/*.whl
+        pytest
+    - name: Publish
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run:
         twine upload dist/*

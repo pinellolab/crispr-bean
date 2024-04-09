@@ -47,7 +47,7 @@ def main(args):
             comp_cond2=args.lfc_cond2,
             ctrl_cond=args.control_condition,
             exp_id=args.out_report_prefix,
-            recalculate_edits=~args.dont_recalculate_edits,
+            recalculate_edits=(not args.dont_recalculate_edits),
             base_edit_data=args.base_edit_data,
             remove_bad_replicates=args.remove_bad_replicates,
         ),

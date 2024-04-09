@@ -5,8 +5,8 @@ import pandas as pd
 import gzip
 from Bio import SeqIO
 from Bio.Seq import Seq
-from .CRISPResso2Align import read_matrix, global_align_base_editor
-from ..framework.Edit import Allele, Edit
+from bean.mapping.CRISPResso2Align import read_matrix, global_align_base_editor
+from bean.framework.Edit import Allele, Edit
 
 
 class InputFileError(Exception):

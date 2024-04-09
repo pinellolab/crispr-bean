@@ -14,6 +14,21 @@ GWAS variant screen with per-variant gRNA tiling design, selected based on FACS 
 
 <br></br>
 
+For this tutorial, we will consider the following experimental design where the editing rate is measured from the earliest timepoint `D7`, while we do want to use the initial gRNA abundance from plasmid library.
+
+Example `sample_list.csv`:
+
+| R1_filepath         | R2_filepath         | sample_id    | replicate | condition | time |
+| ------------------- | ------------------- | ------------ | --------- | --------- | -----|
+| rep1_plasmid_R1.fq  | rep1_plasmid_R2.fq  | rep1_plasmid | rep1      | plasmid   | 0    |
+| rep1_D7     _R1.fq  | rep1_D7     _R2.fq  | rep1_D7      | rep1      | D7        | 7    |
+| rep1_D14    _R1.fq  | rep1_D14    _R2.fq  | rep1_D14     | rep1      | D14       | 14   |
+| rep2_plasmid_R1.fq  | rep2_plasmid_R2.fq  | rep2_plasmid | rep2      | plasmid   | 0    |
+| rep2_D7     _R1.fq  | rep2_D7     _R2.fq  | rep2_D7      | rep2      | D7        | 7    |
+| rep2_D14    _R1.fq  | rep2_D14    _R2.fq  | rep2_D14     | rep2      | D14       | 14   |
+
+Note that `time` column should be numeric, and `condition` and `time` should match one to one.
+
 ## Example workflow
 ```bash
 screen_id=my_sorting_tiling_screen
@@ -81,17 +96,21 @@ If the data does not include reporter editing data, you can provide `--no-editin
 1. From **reporter + accessibility**  
   If your gRNA metadata table (`${working_dir}/test_guide_info.csv` above) included per-gRNA accessibility score, 
     ```bash
-    bean run sorting variant \
+    bean run survival variant \
     ${working_dir}/bean_count_${screen_id}_masked.h5ad \
+    --control-condition D7 \    # This allows taking editing pattern from D7 (time=7) to infer unbiased editing pattern in time=0.
     -o $working_dir \
     --fit-negctrl \
     --scale-by-acc \
     --accessibility-col accessibility
     ```
+
   If your gRNA metadata table (`${working_dir}/test_guide_info.csv` above) included per-gRNA chromosome & position and you have bigWig file with accessibility signal, 
+
     ```bash
-    bean run sorting variant \
+    bean run survival variant \
     ${working_dir}/bean_count_${screen_id}_masked.h5ad \
+    --control-condition D7 \
     -o $working_dir \
     --fit-negctrl \
     --scale-by-acc \
@@ -101,18 +120,22 @@ If the data does not include reporter editing data, you can provide `--no-editin
 2. From **reporter**, without accessibility
 
   This assumes the all target sites have the uniform chromatin accessibility.
+
     ```bash
-    bean run sorting variant \
+    bean run survival variant \
     ${working_dir}/bean_count_${screen_id}_masked.h5ad \
+    --control-condition D7 \
     -o $working_dir \
     --fit-negctrl 
     ```
+
 3. No reporter information, assume the same editing efficiency of all gRNAs.  
   Use this option if your data don't have editing outcome information.
   
     ```bash
-    bean run sorting variant \
+    bean run survival variant \
     ${working_dir}/bean_count_${screen_id}_masked.h5ad \
+    --control-condition D7 \
     -o $working_dir \
     --fit-negctrl \
     --uniform-edit

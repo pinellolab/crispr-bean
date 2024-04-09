@@ -1,4 +1,5 @@
 import argparse
+import os
 
 
 def parse_args(parser=None):
@@ -23,7 +24,7 @@ def parse_args(parser=None):
         "--condition-col",
         help="Column name in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.)",
         type=str,
-        default="bin",
+        default="condition",
     )
     parser.add_argument(
         "--pam-col",
@@ -49,6 +50,8 @@ def parse_args(parser=None):
 
 
 def check_args(args):
+    if args.output_prefix is None:
+        args.output_prefix = os.path.splitext(args.bdata_path)[0]
     if args.window_length < 1:
         raise ValueError(f"window_length {args.window_length} is too small.")
     if args.window_length > 20:

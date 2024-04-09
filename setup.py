@@ -1,5 +1,5 @@
 import numpy as np
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 from Cython.Build import cythonize
 
 with open("README.md", "r") as fh:
@@ -16,7 +16,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/pinellolab/crispr-bean",
-    packages=find_packages(),
+    packages=find_namespace_packages(),
     ext_modules=cythonize(["bean/mapping/CRISPResso2Align.pyx"]),
     include_dirs=np.get_include(),
     setup_requires=[
@@ -45,14 +45,14 @@ setup(
         "nbconvert",
         "logomaker",
     ],
-    extras_require={"model": ["pyBigWig", "pyro-ppl<=1.8.1", "statsmodels", "torch"]},
+    extras_require={"model": ["pyBigWig", "pyro-ppl", "statsmodels", "torch"]},
     include_package_data=True,
     package_data={
-        "": [
-            "bean/annotate/ldlr_exons.fa",
-            "notebooks/sample_quality_report.ipynb",
-            "notebooks/profile_editing_preference.ipynb",
-        ]
+        "bean.annotate": ["ldlr_exons.fa"],
+        "bean.notebooks": [
+            "sample_quality_report.ipynb",
+            "profile_editing_preference.ipynb",
+        ],
     },
     classifiers=[
         "Programming Language :: Python :: 3",

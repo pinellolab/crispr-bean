@@ -1,2 +1,4 @@
 global-include *.pyx
 global-include *.pxd
+graft notebooks
+include annotate/ldlr_exons.fa

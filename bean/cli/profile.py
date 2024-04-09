@@ -22,7 +22,7 @@ def main(args):
         "python -m ipykernel install --user --name bean_python3 --display-name bean_python3"
     )
     pm.execute_notebook(
-        f"{os.path.dirname(be.__file__)}/../notebooks/profile_editing_preference.ipynb",
+        f"{os.path.dirname(be.__file__)}/notebooks/profile_editing_preference.ipynb",
         f"{args.output_prefix}.ipynb",
         parameters=dict(
             bdata_path=args.bdata_path,

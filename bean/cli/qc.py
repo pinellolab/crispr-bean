@@ -26,7 +26,7 @@ def main(args):
         "python -m ipykernel install --user --name bean_python3 --display-name bean_python3"
     )
     pm.execute_notebook(
-        f"{os.path.dirname(be.__file__)}/../notebooks/sample_quality_report.ipynb",
+        f"{os.path.dirname(be.__file__)}/notebooks/sample_quality_report.ipynb",
         f"{args.out_report_prefix}.ipynb",
         parameters=dict(
             bdata_path=args.bdata_path,

@@ -29,9 +29,9 @@ jobs:
     - name: Build a binary wheel
       run: |
         python setup.py sdist bdist_wheel
-        auditwheel repair dist/bean-${{ steps.tag.outputs.TAG_NAME }}-cp38-cp38-linux_x86_64.whl --plat manylinux_2_24_x86_64
+        auditwheel repair dist/crispr_bean-${{ steps.tag.outputs.TAG_NAME }}-cp*-cp*-linux_x86_64.whl --plat manylinux_2_24_x86_64
         mv wheelhouse/* dist
-        rm dist/*-cp38-cp38-linux_x86_64.whl
+        rm dist/*-cp*-cp*-linux_x86_64.whl
     - name: Publish distribution to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:

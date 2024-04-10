@@ -1,5 +1,4 @@
-#with help from friends at https://github.com/brentp/align for cython implementation (no thanks for bug-ridden algorithm)
-# https://github.com/dnase/affine-gap-sequence-alignment/blob/master/alignment.py for affine gap algorithm
+# Copied & modified from CRISPResso2 https://github.com/pinellolab/CRISPResso2/blob/master/CRISPResso2/CRISPResso2Align.pyx
 
 from cython.view cimport array as cvarray
 import numpy as np

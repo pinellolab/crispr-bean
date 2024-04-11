@@ -28,15 +28,21 @@ BEAN stores mapped gRNA and allele counts in `ReporterScreen` object which is co
 ## Installation 
 First install [PyTorch](https://pytorch.org/get-started/).
 Then download from PyPI:
-```
+```bash
 pip install crispr-bean[model]
 ```
 
 Following installation without PyTorch dependency wouldn't have variant effect size quantification (`bean run`) functionality. 
-```
+```bash
 pip install crispr-bean
 ```
 
+For the latest version of `bean`, install from Github:
+```bash
+git clone https://github.com/pinellolab/crispr-bean.git
+cd crispr-bean
+pip install -e .
+```
 
 ## Documentaton
 See the [documentation](https://pinellolab.github.io/crispr-bean/) for tutorials and API references.
@@ -54,9 +60,16 @@ See the [documentation](https://pinellolab.github.io/crispr-bean/) for tutorials
 The `bean filter` and `bean run` steps depend on the type of gRNA library design, where BEAN supports two modes of running.
 <img src="docs/assets/library_design.png" alt="variant library design" width="700"/>  
 
-1. `variant` library: Several gRNAs tile each of the targeted variants. Only the editing rate of the target variant is considered and the bystander effects are ignored. 
+1. `variant` library: Several gRNAs tile each of the targeted variants. Only the editing rate of the target variant is considered and the bystander effects are ignored.  
+    * :heavy_plus_sign: Increase power for your target variant, as the signal is not distributed across likely no-effect bystanders.
+    * :heavy_minus_sign: Ignores potential bystander effect
+    * :heavy_check_mark: Suitable for noncoding GWAS variant screens.
+
 
 2. `tiling` library: gRNA densely tiles a long region (e.g. gene(s), exon(s), coding sequence(s)). Bystander edits are considered to obtain alleles with significant fractions. Edited alleles can be "translated" to output coding variants.
+    * :heavy_plus_sign: Considers bystander effect
+    * :heavy_minus_sign: If the library results in alleles that are not diverse enough across gRNAs, signal will likely be diluted to all variants in that alleles. (ex. Allele "GGGGG" with a single gRNA score will distribute scores across 5 G's.)
+    * :heavy_check_mark: Suitable for coding variant screens with tiling design.
 
 ## Using BEAN as Python module
 ```

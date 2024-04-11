@@ -3,7 +3,7 @@ import subprocess
 from bean.annotate.translate_allele import CDS
 
 
-@pytest.mark.order(11)
+@pytest.mark.order(311)
 def test_filter_varscreen():
     cmd = "bean filter tests/data/var_mini_screen_masked.h5ad -o tests/data/var_mini_screen_annotated -s 0 -e 19 -w -b -t -ap 0.1 -sp 0.3"
     try:
@@ -16,7 +16,7 @@ def test_filter_varscreen():
         raise exc
 
 
-@pytest.mark.order(12)
+@pytest.mark.order(312)
 def test_filter_tiling_screen():
     cmd = "bean filter tests/data/tiling_mini_screen_masked.h5ad -o tests/data/tiling_mini_screen_annotated -s 0 -e 19 -w -b -t -ap 0.1 -sp 0.3"
     try:
@@ -29,7 +29,7 @@ def test_filter_tiling_screen():
         raise exc
 
 
-@pytest.mark.order(13)
+@pytest.mark.order(313)
 def test_filter_tiling_screen_translate_genename():
     cmd = "bean filter tests/data/tiling_mini_screen_masked.h5ad -o tests/data/tiling_mini_screen_annotated_wrong -s 0 -e 19 -w -b -ap 0.1 -sp 0.3 --translate --translate-gene LDLR"
     try:
@@ -42,7 +42,7 @@ def test_filter_tiling_screen_translate_genename():
         raise exc
 
 
-@pytest.mark.order(14)
+@pytest.mark.order(314)
 def test_filter_tiling_screen_translate_fasta():
     cmd = "bean filter tests/data/tiling_mini_screen_masked.h5ad -o tests/data/tiling_mini_screen_annotated_wrong -s 0 -e 19 -w -b -ap 0.1 -sp 0.3 --translate --translate-fasta tests/data/ldlr_exons.fa"
     try:
@@ -55,7 +55,7 @@ def test_filter_tiling_screen_translate_fasta():
         raise exc
 
 
-@pytest.mark.order(15)
+@pytest.mark.order(315)
 def test_filter_tiling_screen_translate_genenames():
     cmd = "bean filter tests/data/tiling_mini_screen_masked.h5ad -o tests/data/tiling_mini_screen_alleleFiltered -s 0 -e 19 -w -b -t -ap 0.1 -sp 0.3 --translate --translate-genes-list tests/data/gene_symbols.txt"
     try:

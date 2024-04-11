@@ -83,7 +83,6 @@ def test_barcode_start_idx():
 
 
 @pytest.mark.order(106)
-@pytest.mark.order(6)
 def test_count_samples_tiling():
     cmd = "bean count-samples -i tests/data/sample_list_tiling.csv -b A -f tests/data/test_guide_info_tiling_chrom.csv -o tests/test_res/ -r"
     try:
@@ -97,7 +96,6 @@ def test_count_samples_tiling():
 
 
 @pytest.mark.order(107)
-@pytest.mark.order(7)
 def test_count_chroms():
     cmd = "bean count --R1 tests/data/test_tiling_R1.fastq --R2 tests/data/test_tiling_R2.fastq -b A -f tests/data/test_guide_info_tiling_chrom.csv -o tests/test_res/ -r"
     try:

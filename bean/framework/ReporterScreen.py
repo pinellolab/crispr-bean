@@ -483,6 +483,7 @@ class ReporterScreen(Screen):
         return_result=False,
         count_layer="X_bcmatch",
         edit_layer="edits",
+        condition_col = "condition",
         unsorted_condition_label=None,
     ):
         """
@@ -506,10 +507,12 @@ class ReporterScreen(Screen):
             )
         if unsorted_condition_label is not None:
             bulk_idx = np.where(
-                self.samples.index.astype(str).map(
+                self.samples[condition_col].astype(str).map(
                     lambda s: unsorted_condition_label in s
                 )
             )[0]
+            if len(bulk_idx) == 0:
+                raise ValueError(f"{unsorted_condition_label} is not found in ReporterScreen.samples['{condition_col}]. Check your input.")
         else:
             bulk_idx = np.arange(0, len(self.samples)).astype(int)
 

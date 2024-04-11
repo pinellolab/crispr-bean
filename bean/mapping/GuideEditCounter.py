@@ -280,11 +280,11 @@ class GuideEditCounter:
         )
 
         if "guide" in self.screen.uns["guide_reporter_allele_counts"].columns:
-            self.screen.uns[
-                "guide_reporter_allele_counts"
-            ].guide = self.screen.guides.index[
-                self.screen.uns["guide_reporter_allele_counts"].guide
-            ]
+            self.screen.uns["guide_reporter_allele_counts"].guide = (
+                self.screen.guides.index[
+                    self.screen.uns["guide_reporter_allele_counts"].guide
+                ]
+            )
 
     def _write_reporter_alleles(self):
         guides = []
@@ -828,7 +828,8 @@ class GuideEditCounter:
                 n_reads_after_filtering += 1
                 R1_filtered.write(R1_record.format("fastq"))
                 R2_filtered.write(R2_record.format("fastq"))
-
+        R1_filtered.close()
+        R2_filtered.close()
         return n_reads_after_filtering
 
     def _write_start_log(self):

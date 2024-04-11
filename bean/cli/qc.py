@@ -36,7 +36,7 @@ def main(args):
             edit_quantification_end_pos=args.edit_end_pos,
             target_pos_col=args.target_pos_col,
             rel_pos_is_reporter=args.rel_pos_is_reporter,
-            corr_X_thres=args.count_correlation_thres,
+            count_correlation_thres=args.count_correlation_thres,
             edit_rate_thres=args.edit_rate_thres,
             posctrl_col=args.posctrl_col,
             posctrl_val=args.posctrl_val,

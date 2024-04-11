@@ -384,8 +384,8 @@ class GuideEditCounter:
                 guide_strand = strand_str_to_int[strand]
                 offset = _get_stranded_guide_offset(
                     strand=guide_strand,
-                    start_pos=self.screen.guides.start_pos.iloc[guide_idx],
-                    guide_len=self.screen.guides.guide_len.iloc[guide_idx],
+                    start_pos=self.screen.guides.iloc[guide_idx].start_pos,
+                    guide_len=self.screen.guides.iloc[guide_idx].guide_len,
                 )
             else:
                 guide_strand = 1
@@ -394,7 +394,7 @@ class GuideEditCounter:
         else:
             guide_strand = 1
             if self.target_pos_col in self.screen.guides.columns:
-                offset = -(self.screen.guides[self.target_pos_col][guide_idx] - 1)
+                offset = -(self.screen.guides.iloc[guide_idx][self.target_pos_col] - 1)
             else:
                 offset = 0
         return (guide_strand, offset)

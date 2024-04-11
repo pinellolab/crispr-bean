@@ -901,14 +901,17 @@ def _convert_obj_column_to_str(df, obj_column):
     return df
 
 
-def concat(screens: Collection[ReporterScreen], *args, axis=1, **kwargs):
+def concat(screens: Sequence[ReporterScreen], *args, axis: Literal[0, 1] = 1, **kwargs):
     """Concatenate multiple Screen objects."""
     # TODO: var/obs info not concated if doesn't overlap
     # TODO: concat 2 times: allele_counts merging doesn't work?
-    if axis == 1 and not all(
-        screen.guides.index.equals(screens[0].guides.index) for screen in screens
-    ):
-        raise ValueError("Guide index doesn't match.")
+    same_index_as_0 = np.array(
+        [screen.guides.index.equals(screens[0].guides.index) for screen in screens]
+    )
+    if axis == 1 and not all(same_index_as_0):
+        raise ValueError(
+            f"Guide index doesn't match: {[screens[0].guides.index] + [screens[i].guides.index for i in  np.where(~same_index_as_0)[0]]}"
+        )
 
     adata = ad.concat(screens, *args, axis=axis, **kwargs)
     if axis == 1:

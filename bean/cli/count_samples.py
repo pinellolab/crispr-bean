@@ -42,8 +42,11 @@ def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
     args_dict["output_folder"] = os.path.join(args.output_folder, sample_id)
 
     base_editing_map = {"A": "G", "C": "T"}
-    edited_from = args_dict["edited_base"]
-    edited_to = base_editing_map[edited_from]
+    try:
+        target_base_edits = {k: base_editing_map[k] for k in args_dict["edited_base"]}
+    except KeyError as e:
+        raise KeyError(args_dict["edited_base"]) from e
+
     match_target_pos = args_dict["match_target_pos"]
     if (
         "guide_start_seqs_tbl" in args_dict
@@ -75,7 +78,7 @@ def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
                 raise ValueError(
                     f"File {counter.output_dir}.h5ad doesn't have alllele information stored."
                 ) from exc
-            screen.get_edit_mat_from_uns(edited_from, edited_to, match_target_pos)
+            screen.get_edit_mat_from_uns(target_base_edits, match_target_pos)
         info(
             f"Reading already existing data for {sample_id} from \n\
             {counter.output_dir}.h5ad"

@@ -108,7 +108,7 @@ def test_run_tiling_with_wo_negctrl_noacc():
 
 @pytest.mark.order(423)
 def test_run_tiling_with_wo_negctrl_uniform():
-    cmd = "bean run sorting tiling tests/data/tiling_mini_screen_annotated.h5ad -o tests/test_res/tiling/ --uniform-edit --allele-df-key allele_counts_spacer_0_19_noindels_A.G_translated_prop0.1_0.3 --control-guide-tag None --repguide-mask None --n-iter 10"
+    cmd = "bean run sorting tiling tests/data/tiling_mini_screen_annotated.h5ad -o tests/test_res/tiling/ --uniform-edit --control-guide-tag None --repguide-mask None --n-iter 10"
     try:
         subprocess.check_output(
             cmd,
@@ -134,7 +134,7 @@ def test_run_tiling_negctrl_allelekey():
 
 @pytest.mark.order(425)
 def test_run_tiling_with_negctrl_noacc():
-    cmd = "bean run sorting tiling tests/data/tiling_mini_screen_annotated.h5ad -o tests/test_res/tiling/ --allele-df-key allele_counts_spacer_0_19_noindels_A.G_translated_prop0.1_0.3 --fit-negctrl --negctrl-col strand --negctrl-col-value neg --control-guide-tag neg --repguide-mask None --n-iter 10"
+    cmd = "bean run sorting tiling tests/data/tiling_mini_screen_annotated.h5ad -o tests/test_res/tiling/ --fit-negctrl --negctrl-col strand --negctrl-col-value neg --control-guide-tag neg --repguide-mask None --n-iter 10"
     try:
         subprocess.check_output(
             cmd,
@@ -147,7 +147,7 @@ def test_run_tiling_with_negctrl_noacc():
 
 @pytest.mark.order(426)
 def test_run_tiling_with_negctrl_uniform():
-    cmd = "bean run sorting tiling tests/data/tiling_mini_screen_annotated.h5ad -o tests/test_res/tiling/ --uniform-edit --allele-df-key allele_counts_spacer_0_19_noindels_A.G_translated_prop0.1_0.3 --fit-negctrl --negctrl-col strand --negctrl-col-value neg --control-guide-tag neg --repguide-mask None --n-iter 10"
+    cmd = "bean run sorting tiling tests/data/tiling_mini_screen_annotated.h5ad -o tests/test_res/tiling/ --uniform-edit --fit-negctrl --negctrl-col strand --negctrl-col-value neg --control-guide-tag neg --repguide-mask None --n-iter 10"
     try:
         subprocess.check_output(
             cmd,

@@ -1,10 +1,10 @@
-from typing import Tuple
+from typing import Tuple, Optional, Sequence, Union
 import gzip
 import logging
 from copy import deepcopy
 import os
 import sys
-from os import path
+import random
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,6 @@ from tqdm import tqdm
 
 from ._supporting_fn import (
     _base_edit_to_from,
-    _check_readname_match,
     _get_edited_allele_crispresso,
     _get_fastq_handle,
     _read_count_match,
@@ -62,8 +61,9 @@ class GuideEditCounter:
     def __init__(self, **kwargs):
         self.R1_filename = kwargs["R1"]
         self.R2_filename = kwargs["R2"]
-        self.base_edited_from = kwargs["edited_base"]
-        self.base_edited_to = _base_edit_to_from(self.base_edited_from)
+        self.target_base_edits = {
+            k: _base_edit_to_from(k) for k in kwargs["edited_base"]
+        }
         self.min_average_read_quality = kwargs["min_average_read_quality"]
         self.min_single_bp_quality = kwargs["min_single_bp_quality"]
 
@@ -103,7 +103,12 @@ class GuideEditCounter:
             X_bcmatch=np.zeros((len(self.guides_info_df), 1)),
             guides=self.guides_info_df,
             samples=pd.DataFrame(index=[self.database_id]),
-            target_base_change=f"{self.base_edited_from}>{self.base_edited_to}",
+            target_base_changes=",".join(
+                [
+                    f"{base_edited_from}>{base_edited_to}"
+                    for base_edited_from, base_edited_to in self.target_base_edits.items()
+                ]
+            ),
             tiling=kwargs["tiling"],
         )
         self.screen.guides["guide_len"] = self.screen.guides.sequence.map(len)
@@ -147,17 +152,25 @@ class GuideEditCounter:
         if not self.objectify_allele:
             info(f"{self.name}: Storing allele as strings.")
         self.keep_intermediate = kwargs["keep_intermediate"]
+        self.id_number = random.randint(0, int(1e6))
         self.semimatch = 0
         self.bcmatch = 0
         self.nomatch = 0
         self.duplicate_match = 0
         self.duplicate_match_wo_barcode = 0
 
+    def mask_sequence(self, seq, revcomp=False):
+        seq_masked = seq
+        for base_edited_from, base_edited_to in self.target_base_edits.items():
+            if revcomp:
+                base_edited_from = base_revcomp[base_edited_from]
+                base_edited_to = base_revcomp[base_edited_to]
+            seq_masked = seq_masked.replace(base_edited_from, base_edited_to)
+        return seq_masked
+
     def masked_equal(self, seq1, seq2):
         """Tests if two sequences are equal, ignoring the allowed base transition."""
-        return seq1.replace(self.base_edited_from, self.base_edited_to) == seq2.replace(
-            self.base_edited_from, self.base_edited_to
-        )
+        return self.mask_sequence(seq1) == self.mask_sequence(seq2)
 
     def _set_sgRNA_df(self):
         """set gRNA info dataframe"""
@@ -174,10 +187,10 @@ class GuideEditCounter:
             sgRNA_df = sgRNA_df.set_index("name")
         self.guides_info_df = sgRNA_df
         self.guides_info_df["masked_sequence"] = self.guides_info_df.sequence.map(
-            lambda s: s.replace(self.base_edited_from, self.base_edited_to)
+            self.mask_sequence
         )
         self.guides_info_df["masked_barcode"] = self.guides_info_df.barcode.map(
-            lambda s: s.replace(self.base_edited_from, self.base_edited_to)
+            self.mask_sequence
         )
         self.guide_lengths = sgRNA_df.sequence.map(lambda s: len(s)).unique()
 
@@ -213,14 +226,13 @@ class GuideEditCounter:
         )
         if self.count_reporter_edits or self.count_guide_edits:
             _write_alignment_matrix(
-                self.base_edited_from,
-                self.base_edited_to,
+                self.target_base_edits,
                 self.output_dir + "/.aln_mat.txt",
             )
 
         if self.count_only_bcmatched:
             # count X
-            self._get_guide_counts_bcmatch()
+            raise NotImplementedError
         else:  # count both bc matched & unmatched guide counts
             self._get_guide_counts_bcmatch_semimatch()
 
@@ -359,8 +371,7 @@ class GuideEditCounter:
         guide_edit_allele, score = _get_edited_allele_crispresso(
             ref_seq=ref_guide_seq,
             query_seq=read_guide_seq,
-            ref_base=self.base_edited_from,
-            alt_base=self.base_edited_to,
+            target_base_edits=self.target_base_edits,
             aln_mat_path=self.output_dir + "/.aln_mat.txt",
             offset=0,
             strand=guide_strand,
@@ -399,7 +410,9 @@ class GuideEditCounter:
                 offset = 0
         return (guide_strand, offset)
 
-    def _update_counted_allele(self, guide_idx: int, allele: Allele) -> None:
+    def _update_counted_allele(
+        self, guide_idx: int, allele: Union[Allele, str]
+    ) -> None:
         """Add allele count to self.guide_to_allele dictionary."""
         if guide_idx in self.guide_to_allele.keys():
             if allele in self.guide_to_allele[guide_idx].keys():
@@ -409,7 +422,9 @@ class GuideEditCounter:
         else:
             self.guide_to_allele[guide_idx] = {allele: 1}
 
-    def _update_counted_guide_allele(self, guide_idx: int, allele: Allele) -> None:
+    def _update_counted_guide_allele(
+        self, guide_idx: int, allele: Union[Allele, str]
+    ) -> None:
         """Add allele count to self.guide_to_allele dictionary."""
         if guide_idx in self.screen.uns["guide_edit_counts"].keys():
             if allele in self.screen.uns["guide_edit_counts"][guide_idx].keys():
@@ -420,7 +435,10 @@ class GuideEditCounter:
             self.screen.uns["guide_edit_counts"][guide_idx] = {allele: 1}
 
     def _update_counted_allele_and_guideAllele(
-        self, guide_idx: int, allele: Allele, guide_allele: Allele
+        self,
+        guide_idx: int,
+        allele: Union[Allele, str],
+        guide_allele: Union[str, Allele],
     ) -> None:
         """Add count of (guide allele, reporter allele) combination to self.guide_reporter_allele dictionary."""
         if guide_idx in self.guide_to_guide_reporter_allele.keys():
@@ -443,8 +461,8 @@ class GuideEditCounter:
         R1_seq: str,
         R2_record: SeqIO.SeqRecord,
         R2_start: int = 0,
-        single_base_qual_cutoff: str = 30,
-        guide_allele: Allele = None,
+        single_base_qual_cutoff: int = 30,
+        guide_allele: Optional[Union[str, Allele]] = None,
     ):
         """
         Count edits in a single read to save as allele.
@@ -472,8 +490,7 @@ class GuideEditCounter:
         allele, score = _get_edited_allele_crispresso(
             ref_seq=ref_reporter_seq,
             query_seq=read_reporter_seq,
-            ref_base=self.base_edited_from,
-            alt_base=self.base_edited_to,
+            target_base_edits=self.target_base_edits,
             aln_mat_path=self.output_dir + "/.aln_mat.txt",
             offset=offset,
             strand=guide_strand,
@@ -499,7 +516,7 @@ class GuideEditCounter:
     def _get_guide_counts_bcmatch_semimatch(
         self, bcmatch_layer="X_bcmatch", semimatch_layer="X_semimatch"
     ):
-        self.screen.layers[semimatch_layer] = np.zeros_like((self.screen.X))
+        self.screen.layers[semimatch_layer] = np.zeros_like(self.screen.X)
         R1_iter, R2_iter = self._get_fastq_iterators(
             self.filtered_R1_filename, self.filtered_R2_filename
         )
@@ -614,12 +631,9 @@ class GuideEditCounter:
 
     def get_guide_seq(self, R1_seq, R2_seq, guide_length):
         """This can be edited by user based on the read construct."""
-        # _seq_match = np.where(seq.replace(self.base_edited_from, self.base_edited_to) == self.screen.guides.masked_sequence)[0]
         if self.guide_end_seq == "":
-            guide_start_idx = R1_seq.replace(
-                self.base_edited_from, self.base_edited_to
-            ).find(
-                self.guide_start_seq.replace(self.base_edited_from, self.base_edited_to)
+            guide_start_idx = self.mask_sequence(R1_seq).find(
+                self.mask_sequence(self.guide_start_seq)
             )
             if guide_start_idx == -1:
                 return None
@@ -628,10 +642,8 @@ class GuideEditCounter:
             guide_start_idx = guide_start_idx + len(self.guide_start_seq)
             gRNA_seq = R1_seq[guide_start_idx : (guide_start_idx + guide_length)]
         else:
-            guide_end_idx = R1_seq.replace(
-                self.base_edited_from, self.base_edited_to
-            ).find(
-                self.guide_end_seq.replace(self.base_edited_from, self.base_edited_to)
+            guide_end_idx = self.mask_sequence(R1_seq).find(
+                self.mask_sequence(self.guide_end_seq)
             )
             if guide_end_idx == -1:
                 return None
@@ -641,15 +653,13 @@ class GuideEditCounter:
 
         return None if len(gRNA_seq) != guide_length else gRNA_seq
 
-    def get_guide_seq_qual(self, R1_record: SeqIO.SeqRecord, guide_length):
+    def get_guide_seq_qual(
+        self, R1_record: SeqIO.SeqRecord, guide_length: int
+    ) -> Tuple[str, Sequence]:
         R1_seq = R1_record.seq
-        guide_start_idx = R1_seq.replace(
-            self.base_edited_from, self.base_edited_to
-        ).find(self.guide_start_seq.replace(self.base_edited_from, self.base_edited_to))
-        if guide_start_idx == -1:
-            return None, None
-        if guide_start_idx + guide_length >= len(R1_seq):
-            return None, None
+        guide_start_idx = self.mask_sequence(R1_seq).find(
+            self.mask_sequence(self.guide_start_seq)
+        )
         guide_start_idx = guide_start_idx + len(self.guide_start_seq)
         seq = R1_record[guide_start_idx : (guide_start_idx + guide_length)]
         return (str(seq.seq), seq.letter_annotations["phred_quality"])
@@ -670,13 +680,8 @@ class GuideEditCounter:
 
     def get_barcode(self, R1_seq, R2_seq):
         if self.barcode_start_seq != "":
-            barcode_start_idx = R2_seq.replace(
-                base_revcomp[self.base_edited_from], base_revcomp[self.base_edited_to]
-            ).find(
-                revcomp(self.barcode_start_seq).replace(
-                    base_revcomp[self.base_edited_from],
-                    base_revcomp[self.base_edited_to],
-                )
+            barcode_start_idx = self.mask_sequence(R2_seq, revcomp=True).find(
+                self.mask_sequence(revcomp(self.barcode_start_seq), revcomp=True)
             )
             if barcode_start_idx == -1:
                 return -1, ""
@@ -698,12 +703,10 @@ class GuideEditCounter:
                 continue
 
             _seq_match = np.where(
-                seq.replace(self.base_edited_from, self.base_edited_to)
-                == self.screen.guides.masked_sequence
+                self.mask_sequence(seq) == self.screen.guides.masked_sequence
             )[0]
             _bc_match = np.where(
-                guide_barcode.replace(self.base_edited_from, self.base_edited_to)
-                == self.screen.guides.masked_barcode
+                self.mask_sequence(guide_barcode) == self.screen.guides.masked_barcode
             )[0]
 
             bc_match_idx = np.append(
@@ -733,7 +736,7 @@ class GuideEditCounter:
 
     def _get_fastq_handle(
         self,
-        out_type: str = None,
+        out_type: Optional[str] = None,
     ):
         assert out_type in {
             "semimatch",
@@ -794,7 +797,7 @@ class GuideEditCounter:
 
     def _check_readname_match_and_filter_quality(
         self, R1_iter, R2_iter, filter_by_qual=False
-    ) -> Tuple[int, int]:
+    ) -> int:
         R1_filtered = gzip.open(self.filtered_R1_filename, "wt+")
         R2_filtered = gzip.open(self.filtered_R2_filename, "wt+")
 

@@ -3,6 +3,7 @@
 import sys
 
 import logging
+from itertools import product
 import pandas as pd
 import bean as be
 import bean.annotate.filter_alleles as filter_alleles
@@ -109,10 +110,9 @@ def main(args):
 
     if len(bdata.uns[allele_df_keys[-1]]) > 0 and not args.keep_indels:
         filtered_key = f"{allele_df_keys[-1]}_noindels"
-        info(f"Filtering out indels...")
+        info("Filtering out indels...")
         bdata.uns[filtered_key] = bdata.filter_allele_counts_by_base(
-            ["A", "T", "G", "C"],
-            ["A", "T", "G", "C"],
+            {k: v for k, v in product(["A", "C", "T", "G"], ["A", "C", "T", "G"])},
             map_to_filtered=False,
             allele_uns_key=allele_df_keys[-1],
         ).reset_index(drop=True)
@@ -120,13 +120,12 @@ def main(args):
         allele_df_keys.append(filtered_key)
 
     if len(bdata.uns[allele_df_keys[-1]]) > 0 and args.filter_target_basechange:
-        filtered_key = (
-            f"{allele_df_keys[-1]}_{bdata.base_edited_from}.{bdata.base_edited_to}"
-        )
-        info(f"Filtering out non-{bdata.uns['target_base_change']} edits...")
+        if "target_base_changes" not in bdata.uns and "target_base_change" in bdata.uns:
+            bdata.uns["target_base_changes"] = bdata.uns["target_base_change"]
+        filtered_key = f"{allele_df_keys[-1]}_{bdata.uns['target_base_changes']}"
+        info(f"Filtering out non-{bdata.uns['target_base_changes']} edits...")
         bdata.uns[filtered_key] = bdata.filter_allele_counts_by_base(
-            bdata.base_edited_from,
-            bdata.base_edited_to,
+            bdata.target_base_changes,
             map_to_filtered=False,
             allele_uns_key=allele_df_keys[-1],
         ).reset_index(drop=True)

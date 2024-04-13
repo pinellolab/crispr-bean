@@ -1,7 +1,8 @@
 from copy import deepcopy
-from typing import List, Tuple, Union
+from typing import List, Union, Dict, Optional
 from tqdm.auto import tqdm
-from ..framework.Edit import Edit, Allele
+import numpy as np
+from ..framework.Edit import Allele
 from ..framework.AminoAcidEdit import CodingNoncodingAllele
 import pandas as pd
 from ..annotate.translate_allele import CDS, RefBaseMismatchException
@@ -9,8 +10,8 @@ from ..annotate.translate_allele import CDS, RefBaseMismatchException
 
 def filter_allele_by_pos(
     allele: Allele,
-    pos_start: int = None,
-    pos_end: int = None,
+    pos_start: Optional[Union[float, int]] = None,
+    pos_end: Optional[Union[float, int]] = None,
     filter_rel_pos=True,
 ):
     """
@@ -24,6 +25,10 @@ def filter_allele_by_pos(
     filtered_edits = 0
     allele_filtered = deepcopy(allele)
     if not (pos_start is None and pos_end is None):
+        if pos_start is None:
+            pos_start = -np.inf
+        if pos_end is None:
+            pos_end = np.inf
         if filter_rel_pos:
             for edit in allele.edits:
                 if not (edit.rel_pos >= pos_start and edit.rel_pos < pos_end):
@@ -34,7 +39,6 @@ def filter_allele_by_pos(
                 if not (edit.pos >= pos_start and edit.pos < pos_end):
                     filtered_edits += 1
                     allele_filtered.edits.remove(edit)
-
     else:
         print("No threshold specified")  # TODO: warn
     return (allele_filtered, filtered_edits)
@@ -42,9 +46,9 @@ def filter_allele_by_pos(
 
 def filter_allele_by_base(
     allele: Allele,
-    allowed_base_changes: List[Tuple] = None,
-    allowed_ref_base: Union[List, str] = None,
-    allowed_alt_base: Union[List, str] = None,
+    allowed_base_changes: Optional[Dict[str, str]] = None,
+    allowed_ref_base: Optional[Union[List, str]] = None,
+    allowed_alt_base: Optional[Union[List, str]] = None,
 ):
     """
     Filter alleles based on position and return the filtered allele and
@@ -55,28 +59,29 @@ def filter_allele_by_base(
         allowed_ref_base = [allowed_ref_base]
     if isinstance(allowed_alt_base, str):
         allowed_alt_base = [allowed_alt_base]
-    if (
-        not (allowed_ref_base is None and allowed_alt_base is None)
-        + (allowed_base_changes is None)
-        == 1
-    ):
+    if (allowed_ref_base is None and allowed_alt_base is None) + (
+        allowed_base_changes is None
+    ) != 1:
         print("No filters specified or misspecified filters.")
-    elif not allowed_base_changes is None:
+    elif allowed_base_changes is not None:
         for edit in allele.edits.copy():
-            if not (edit.ref_base, edit.alt_base) in allowed_base_changes:
+            if (
+                edit.ref_base not in allowed_base_changes
+                or allowed_base_changes[edit.ref_base] != edit.alt_base
+            ):
                 filtered_edits += 1
                 allele.edits.remove(edit)
-    elif not allowed_ref_base is None:
+    elif allowed_ref_base is not None:
         for edit in allele.edits.copy():
             if edit.ref_base not in allowed_ref_base:
                 filtered_edits += 1
                 allele.edits.remove(edit)
-            elif not allowed_alt_base is None and edit.alt_base not in allowed_alt_base:
+            elif allowed_alt_base is not None and edit.alt_base not in allowed_alt_base:
                 filtered_edits += 1
                 allele.edits.remove(edit)
     else:
         for edit in allele.edits.copy():
-            if edit.alt_base not in allowed_alt_base:
+            if edit.alt_base not in allowed_alt_base:  # type: ignore
                 filtered_edits += 1
                 allele.edits.remove(edit)
     return (allele, filtered_edits)
@@ -105,7 +110,9 @@ def map_alleles_to_filtered(
     ):
         guide_filtered_allele_counts = filtered_allele_counts.loc[
             filtered_allele_counts.guide == guide, :
-        ].set_index("allele")
+        ].set_index(
+            "allele"
+        )  # type: ignore
         guide_filtered_alleles = guide_filtered_allele_counts.index.tolist()
         if len(guide_filtered_alleles) == 0:
             pass

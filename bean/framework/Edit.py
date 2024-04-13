@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Iterable
+from typing import Iterable, Optional
 import numpy as np
 import re
 from ..utils.arithmetric import jaccard
@@ -12,10 +12,10 @@ class Edit:
     def __init__(
         self,
         rel_pos: int,
-        ref_base: chr,
-        alt_base: chr,
-        chrom: str = None,
-        offset: int = None,
+        ref_base: str,
+        alt_base: str,
+        chrom: Optional[str] = None,
+        offset: Optional[int] = None,
         strand: int = 1,
         unique_identifier=None,
     ):

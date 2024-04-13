@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Collection, Iterable, List, Optional, Union, Sequence, Literal
+from typing import Collection, Iterable, List, Optional, Union, Sequence, Literal, Dict
 import re
 import anndata as ad
 import numpy as np
@@ -42,7 +42,7 @@ def _get_counts(
             res.columns = res.columns.map(lambda x: "{rep}_{spl}")
             guides = guides.join(res, how="left")
         guides = guides.fillna(0)
-        return guides
+    return guides
 
 
 def _get_edits(
@@ -76,7 +76,7 @@ def _get_edits(
             this_edit.name = "{r}_{c}".format(r=rep, c=spl)
             edits = edits.join(this_edit, how="left")
         edits = edits.fillna(0)
-        return edits
+    return edits
 
 
 class ReporterScreen(Screen):
@@ -85,7 +85,7 @@ class ReporterScreen(Screen):
         X=None,
         X_edit=None,
         X_bcmatch=None,
-        target_base_change: Optional[str] = None,
+        target_base_changes: Optional[str] = None,
         replicate_label: str = "rep",
         condition_label: str = "bin",
         tiling: Optional[bool] = None,
@@ -132,12 +132,14 @@ class ReporterScreen(Screen):
                     self.uns[k].loc[:, "aa_allele"] = self.uns[k].aa_allele.map(
                         lambda s: CodingNoncodingAllele.from_str(s)
                     )
-        if target_base_change is not None:
-            if not re.fullmatch(r"[ACTG]>[ACTG]", target_base_change):
+        if target_base_changes is not None:
+            if not re.fullmatch(
+                r"([ACTG]>[ACTG])(,[ACTG]>[ACTG])*", target_base_changes
+            ):
                 raise ValueError(
-                    f"target_base_change {target_base_change} doesn't match the allowed base change. Feed in valid base change string ex) 'A>G', 'C>T'"
+                    f"target_base_changes {target_base_changes} doesn't match the allowed base change. Feed in valid base change string ex) 'A>G', 'C>T'"
                 )
-            self.uns["target_base_change"] = target_base_change
+            self.uns["target_base_changes"] = target_base_changes
         if tiling is not None:
             self.uns["tiling"] = tiling
 
@@ -157,54 +159,25 @@ class ReporterScreen(Screen):
     def allele_tables(self):
         return {k: self.uns[k] for k in self.uns.keys() if "allele" in k}
 
-    @property
-    def base_edited_from(self):
-        return self.uns["target_base_change"][0]
+    # @property
+    # def base_edited_from(self):
+    #     return self.uns["target_base_change"][0]
+
+    # @property
+    # def base_edited_to(self):
+    #     return self.uns["target_base_change"][-1]
 
     @property
-    def base_edited_to(self):
-        return self.uns["target_base_change"][-1]
-
-    @property
-    def target_base_change(self):
-        return self.uns["target_base_change"]
+    def target_base_changes(self):
+        try:
+            basechanges = self.uns["target_base_changes"]
+        except KeyError:
+            basechanges = self.uns["target_base_change"]
+        return {basechange[0]: basechange[-1] for basechange in basechanges.split(",")}
 
     @property
     def tiling(self):
         return self.uns["tiling"]
-
-    @classmethod
-    def from_file_paths(
-        cls,
-        reps: List[str] = None,
-        samples: List[str] = None,
-        guide_info_file_name: str = None,
-        guide_count_filenames: str = None,
-        guide_bcmatched_count_filenames: str = None,
-        edit_count_filenames: str = None,
-    ):
-        guide_info = pd.read_csv(guide_info_file_name).set_index("name")
-        guides = pd.DataFrame(index=(pd.read_csv(guide_info_file_name)["name"]))
-        guides_lenient = _get_counts(guide_count_filenames, guides, reps, samples)
-        edits_ag = _get_edits(
-            edit_count_filenames, guide_info, reps, samples, count_exact=False
-        )
-        edits_exact = _get_edits(edit_count_filenames, guide_info, reps, samples)
-        if guide_bcmatched_count_filenames is not None:
-            guides_bcmatch = _get_counts(
-                guide_bcmatched_count_filenames, guides, reps, samples
-            )
-            repscreen = cls(
-                guides_lenient, edits_exact, X_bcmatch=guides_bcmatch, guides=guide_info
-            )
-        else:
-            repscreen = cls(guides_lenient, edits_exact, guides=guide_info)
-        repscreen.layers["edits_ag"] = edits_ag
-        repscreen.samples["replicate"] = np.repeat(reps, len(samples))
-        repscreen.samples["sort"] = np.tile(samples, len(reps))
-        repscreen.uns["replicates"] = reps
-        repscreen.uns["samples"] = samples
-        return repscreen
 
     @classmethod
     def from_adata(cls, adata):
@@ -384,8 +357,7 @@ class ReporterScreen(Screen):
 
     def get_edit_mat_from_uns(
         self,
-        ref_base: Optional[str] = None,
-        alt_base: Optional[str] = None,
+        target_base_edit: Optional[Dict[str, str]] = None,
         match_target_position: Optional[bool] = None,
         rel_pos_start=0,
         rel_pos_end=np.Inf,
@@ -399,20 +371,15 @@ class ReporterScreen(Screen):
 
         Args
         --
-        ref_base: reference base of editing event to count. If not provided, default value in `.base_edited_from` is used.
-        alt_base: alternate base of editing event to count. If not provided, default value in `.base_edited_to` is used.
-        match_target_position: If `True`, edits with `.rel_pos` that matches `.guides[target_pos_col]` are counted.
-        If `False`, edits with `.rel_pos` in range [rel_pos_start, rel_pos_end) is counted.
+        target_base_edit: Dictionary of base edited from, base edited to.
         rel_pos_start: Position from which edits will be counted when `match_target_position` is `False`.
         rel_pos_end: Position until where edits will be counted when `match_target_position` is `False`.
         rel_pos_is_reporter: `rel_pos_start` and `rel_pos_end` is relative to the reporter position. If `False`, those are treated to be relative of spacer position.
         target_pos_col: Column name in `.guides` DataFrame that has target position information when `match_target_position` is `True`.
         edit_count_key: Key of the edit counts DataFrame to be used to count the edits (`.uns[edit_count_key]`).
         """
-        if ref_base is None:
-            ref_base = self.base_edited_from
-        if alt_base is None:
-            alt_base = self.base_edited_to
+        if target_base_edit is None:
+            target_base_edit = self.target_base_changes
         if match_target_position is None:
             match_target_position = not self.tiling
         if edit_count_key not in self.uns or len(self.uns[edit_count_key]) == 0:
@@ -431,7 +398,9 @@ class ReporterScreen(Screen):
         edits["ref_base"] = edits.edit.map(lambda e: e.ref_base)
         edits["alt_base"] = edits.edit.map(lambda e: e.alt_base)
         edits = edits.loc[
-            (edits.ref_base == ref_base) & (edits.alt_base == alt_base), :
+            (edits.ref_base.map(lambda r: r in target_base_edit))
+            & (edits.ref_base.map(target_base_edit) == edits.alt_base),
+            :,
         ].reset_index()
         guide_len = self.guides.sequence.map(len)
         guide_name_to_idx = self.guides.reset_index().reset_index().set_index("name")
@@ -475,11 +444,11 @@ class ReporterScreen(Screen):
     def get_guide_edit_rate(
         self,
         normalize_by_editable_base: Optional[bool] = None,
-        edited_base: Optional[str] = None,
+        edited_bases: Optional[Union[List[str], str]] = None,
         editable_base_start=3,
         editable_base_end=8,
         bcmatch_thres=1,
-        prior_weight: float = None,
+        prior_weight: Optional[float] = None,
         return_result=False,
         count_layer="X_bcmatch",
         edit_layer="edits",
@@ -492,18 +461,30 @@ class ReporterScreen(Screen):
         prior weight to use when calculating posterior edit rate.
         unsorted_condition_label: Editing rate is calculated only for the samples that have this string in the sample index.
         """
-        if edited_base is None:
-            edited_base = self.base_edited_from
+        if edited_bases is None:
+            edited_bases = list(self.target_base_changes.keys())
+        if isinstance(edited_bases, str):
+            edited_bases = [edited_bases]
+
         if normalize_by_editable_base is None:
             normalize_by_editable_base = self.tiling
         if self.layers[count_layer] is None or self.layers[edit_layer] is None:
             raise ValueError("edits or barcode matched guide counts not available.")
         num_targetable_sites = 1.0
         if normalize_by_editable_base:
-            if edited_base not in ["A", "C", "T", "G"]:
-                raise ValueError("Specify the correct edited_base")
-            num_targetable_sites = self.guides.sequence.map(
-                lambda s: s[editable_base_start:editable_base_end].count(edited_base)
+            num_targetable_sites_all = []
+            for edited_base in edited_bases:
+                if edited_base not in ["A", "C", "T", "G"]:
+                    raise ValueError("Specify the correct edited_base")
+                num_targetable_sites_all.append(
+                    self.guides.sequence.map(
+                        lambda s: s[editable_base_start:editable_base_end].count(
+                            edited_base
+                        )
+                    )
+                )
+            num_targetable_sites = pd.concat(num_targetable_sites_all, axis=1).sum(
+                axis=1
             )
         if unsorted_condition_label is not None:
             bulk_idx = np.where(
@@ -538,11 +519,11 @@ class ReporterScreen(Screen):
     def get_edit_rate(
         self,
         normalize_by_editable_base=None,
-        edited_base=None,
+        edited_base: Optional[Union[str, List[str]]] = None,
         editable_base_start=3,
         editable_base_end=8,
         bcmatch_thres=1,
-        prior_weight: float = None,
+        prior_weight: Optional[float] = None,
         return_result=False,
         count_layer="X_bcmatch",
         edit_layer="edits",
@@ -554,17 +535,38 @@ class ReporterScreen(Screen):
         """
         if normalize_by_editable_base is None:
             normalize_by_editable_base = self.tiling
-        if edited_base is None:
-            edited_base = self.base_edited_from
         if self.layers[count_layer] is None or self.layers[edit_layer] is None:
             raise ValueError("edits or barcode matched guide counts not available.")
         num_targetable_sites = 1.0
         if normalize_by_editable_base:
-            if edited_base not in ["A", "C", "T", "G"]:
-                raise ValueError("Specify the correct edited_base")
-            num_targetable_sites = self.guides.sequence.map(
-                lambda s: s[editable_base_start:editable_base_end].count(edited_base)
-            )
+            if edited_base is None:
+                edited_base = [
+                    basechange[0] for basechange in self.target_base_changes.split(",")
+                ]
+                for eb in edited_base:
+                    if eb not in ["A", "C", "T", "G"]:
+                        raise ValueError(
+                            f"ReporterScreen target base change ({self.target_base_changes}) is invalid: {eb} as edited base."
+                        )
+
+            if isinstance(edited_base, str):
+                num_targetable_sites = self.guides.sequence.map(
+                    lambda s: s[editable_base_start:editable_base_end].count(
+                        edited_base
+                    )
+                )
+            else:
+                num_targetable_sites_bases = []
+                for eb in edited_base:
+                    num_targetable_sites_bases.append(
+                        self.guides.sequence.map(
+                            lambda s: s[editable_base_start:editable_base_end].count(eb)
+                        )
+                    )
+                num_targetable_sites = pd.concat(
+                    num_targetable_sites_bases, axis=1
+                ).sum(axis=1)
+
         if prior_weight is None:
             prior_weight = 1
         n_edits = self.layers[edit_layer]
@@ -714,8 +716,7 @@ class ReporterScreen(Screen):
 
     def filter_allele_counts_by_base(
         self,
-        ref_base: Union[List, str] = "A",
-        alt_base: Union[List, str] = "G",
+        target_base_edits: Dict[str, str],
         allele_uns_key="allele_counts",
         map_to_filtered=True,
         jaccard_threshold: float = 0.5,
@@ -730,7 +731,7 @@ class ReporterScreen(Screen):
         filtered_allele, filtered_edits = zip(
             *allele_count_df.allele.map(
                 lambda a: filter_allele_by_base(
-                    a, allowed_ref_base=ref_base, allowed_alt_base=alt_base
+                    a, allowed_base_changes=target_base_edits
                 )
             )
         )
@@ -926,7 +927,7 @@ def concat(screens: Sequence[ReporterScreen], *args, axis: Literal[0, 1] = 1, **
 
     if axis == 0:
         for k in keys:
-            if k in ["target_base_change", "tiling", "sample_covariates"]:
+            if k in ["target_base_changes", "tiling", "sample_covariates"]:
                 adata.uns[k] = screens[0].uns[k]
                 continue
             elif "edit" not in k and "allele" not in k:
@@ -936,7 +937,7 @@ def concat(screens: Sequence[ReporterScreen], *args, axis: Literal[0, 1] = 1, **
     if axis == 1:
         # If combining multiple samples, edit/allele tables should be merged.
         for k in keys:
-            if k in ["target_base_change", "tiling", "sample_covariates"]:
+            if k in ["target_base_changes", "tiling", "sample_covariates"]:
                 adata.uns[k] = screens[0].uns[k]
                 continue
             elif "edit" not in k and "allele" not in k:

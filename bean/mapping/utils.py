@@ -200,7 +200,7 @@ def _get_input_parser(parser=None):
     parser.add_argument(
         "--guide-bc-len",
         help="Guide barcode sequence length at the beginning of the R2",
-        type=str,
+        type=int,
         default=4,
     )
     parser.add_argument(

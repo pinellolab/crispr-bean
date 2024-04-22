@@ -163,7 +163,7 @@ def _get_input_parser(parser=None):
     )
     parser.add_argument(
         "--skip-filtering",
-        help="Keep the read filtering",
+        help="Skip the read filtering",
         action="store_true",
     )
     parser.add_argument(

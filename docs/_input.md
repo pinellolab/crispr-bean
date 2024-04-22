@@ -10,7 +10,7 @@ File should contain following columns.
 * For variant library (gRNAs are designed to target specific variants and ignores bystander edits)
   * `target`: This column denotes which target variant/element of each gRNA. This is not used in `bean count[-samples]` but required to run `bean run` in later steps.
   * `target_group`: If negative/positive control gRNA will be considered in `bean qc` and/or `bean run`, specify as "NegCtrl"/"PosCtrl" in this column. 
-  * `target_pos`: If `--match_target_pos` flag is used, input file needs `target_pos` which specifies 0-based relative position of targeted base within Reporter sequence.
+  * `target_pos`: If `--match-target-pos` flag is used, input file needs `target_pos` which specifies 0-based relative position of targeted base within Reporter sequence.
 * For tiling library (gRNAs tile coding / noncoding sequences)
   * `strand`: Specifies gRNA strand information relative to the reference genome.
   * `chrom`: Chromosome of gRNA targeted locus.

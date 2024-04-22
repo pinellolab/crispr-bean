@@ -2,7 +2,7 @@ import pytest
 import subprocess
 
 
-@pytest.mark.order(7)
+@pytest.mark.order(207)
 def test_qc():
     cmd = "bean qc tests/data/var_mini_screen.h5ad -o tests/data/var_mini_screen_masked.h5ad -r tests/test_res/qc_report_var_mini_screen --count-correlation-thres 0.6"
     try:
@@ -15,7 +15,7 @@ def test_qc():
         raise exc
 
 
-@pytest.mark.order(8)
+@pytest.mark.order(208)
 def test_qc_tiling():
     cmd = "bean qc tests/data/tiling_mini_screen.h5ad -o tests/data/tiling_mini_screen_masked.h5ad -r tests/test_res/qc_report_tiling_mini_screen --count-correlation-thres 0.6  "
     try:
@@ -28,9 +28,9 @@ def test_qc_tiling():
         raise exc
 
 
-@pytest.mark.order(7)
+@pytest.mark.order(209)
 def test_qc_survival():
-    cmd = "bean qc tests/data/survival_var_mini_screen.h5ad -o tests/data/survival_var_mini_screen_masked.h5ad -r tests/test_res/qc_report_survival_var_mini_screen --count-correlation-thres 0.6 --lfc-conds D0,D14"
+    cmd = "bean qc tests/data/survival_var_mini_screen.h5ad -o tests/data/survival_var_mini_screen_masked.h5ad -r tests/test_res/qc_report_survival_var_mini_screen --count-correlation-thres 0.6 --lfc-conds D0,D14 --control-cond D7"
     try:
         subprocess.check_output(
             cmd,
@@ -41,7 +41,7 @@ def test_qc_survival():
         raise exc
 
 
-@pytest.mark.order(9)
+@pytest.mark.order(210)
 def test_dummy_insertion_varscreen():
     cmd = "bean qc tests/data/var_mini_screen_missing.h5ad -o tests/data/var_mini_screen_missing_masked.h5ad -r tests/test_res/qc_report_var_mini_screen_missing --count-correlation-thres 0.6 -b"
     try:
@@ -54,7 +54,7 @@ def test_dummy_insertion_varscreen():
             raise exc
 
 
-@pytest.mark.order(10)
+@pytest.mark.order(211)
 def test_dummy_insertion_tilingscreen():
     cmd = "bean qc tests/data/tiling_mini_screen_missing.h5ad -o tests/data/tiling_mini_screen_missing_masked.h5ad -r tests/test_res/qc_report_tiling_mini_screen_missing --count-correlation-thres 0.6  -b"
     try:

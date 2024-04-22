@@ -200,7 +200,7 @@ def _get_input_parser(parser=None):
     parser.add_argument(
         "--guide-bc-len",
         help="Guide barcode sequence length at the beginning of the R2",
-        type=str,
+        type=int,
         default=4,
     )
     parser.add_argument(
@@ -276,13 +276,25 @@ def _check_arguments(args, info_logger, warn_logger, error_logger):
         _check_file(args.sgRNA_filename)
 
     # Edited base should be one of A/C/T/G
+    edited_bases = []
     if args.edited_base.upper() not in ["A", "C", "T", "G"]:
-        raise ValueError(
-            f"The edited base should be one of A/C/T/G, {args.edited_base} provided."
-        )
-
-    edited_base = args.edited_base.upper()
-    info_logger(f"Using specified edited base: {edited_base}")
+        if "," in args.edited_base:
+            bases = args.edited_base.split(",")
+            for base in bases:
+                if base not in ["A", "C", "T", "G"]:
+                    raise ValueError(
+                        f"The edited base should be one of A/C/T/G, {args.edited_base} provided."
+                    )
+                edited_bases.append(base.upper())
+        else:
+            raise ValueError(
+                f"The edited base should be one of A/C/T/G, {args.edited_base} provided."
+            )
+    if len(edited_bases) == 0:
+        args.edited_base = [args.edited_base.upper()]
+    else:
+        args.edited_base = edited_bases
+    info_logger(f"Using specified edited base: {args.edited_base}")
     info_logger(
         f"Using guide barcode length {args.guide_bc_len}, guide start '{args.guide_start_seq}'"
     )

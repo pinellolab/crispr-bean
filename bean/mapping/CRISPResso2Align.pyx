@@ -1,5 +1,4 @@
-#with help from friends at https://github.com/brentp/align for cython implementation (no thanks for bug-ridden algorithm)
-# https://github.com/dnase/affine-gap-sequence-alignment/blob/master/alignment.py for affine gap algorithm
+# Copied & modified from CRISPResso2 https://github.com/pinellolab/CRISPResso2/blob/master/CRISPResso2/CRISPResso2Align.pyx
 
 from cython.view cimport array as cvarray
 import numpy as np
@@ -64,7 +63,7 @@ def read_matrix(path):
 
 @cython.boundscheck(False)
 @cython.nonecheck(False)
-def global_align_base_editor(str pystr_seqj, str pystr_seqi, str ref_base, str alt_base,
+def global_align_base_editor(str pystr_seqj, str pystr_seqi, dict target_base_edits,
           np.ndarray[DTYPE_INT, ndim=2] matrix,
           np.ndarray[DTYPE_INT,ndim=1] gap_incentive, int gap_open=-1,
           int gap_extend=-1, ):
@@ -378,8 +377,14 @@ def global_align_base_editor(str pystr_seqj, str pystr_seqi, str ref_base, str a
             print('seqj: ' + str(seqj) + ' seqi: ' + str(seqi))
             raise Exception('wtf4!:pointer: %i', i)
 #          print('at end, currMatrix is ' + str(currMatrix))
-        if not (ci == ref_base and cj == alt_base): 
+        is_target_edit = False
+        for ref_base, alt_base in target_base_edits.items():
+            if ci == ref_base and cj == alt_base:
+                is_target_edit = True
+        if not is_target_edit:
             align_counter += 1
+            #if not (ci == ref_base and cj == alt_base): 
+            #    align_counter += 1
     try:
         align_j = tmp_align_j[:align_counter].decode('UTF-8', 'strict')
     finally:

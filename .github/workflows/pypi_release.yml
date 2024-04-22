@@ -21,7 +21,7 @@ jobs:
         python-version: '3.x'
     - name: Install pypa/setuptools
       run: >-
-        python -m
+        python -m pip install --upgrade pip
         pip install wheel numpy setuptools Cython auditwheel twine
     - name: Extract tag name
       id: tag

@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Dict, List, Union
 import re
 from ..framework.Edit import Edit
 import numpy as np
@@ -17,13 +17,10 @@ def _add_absent_edits(
     bdata,
     guide: str,
     edit_tbl: pd.DataFrame,
-    edited_base: str = "A",
-    target_alt: str = "G",
+    target_base_edits: Dict[str, str],
 ):
     """If edit is not observed in editable position, add into the edit rate table."""
-    editable_positions = np.where(
-        (np.array(list(bdata.guides.loc[guide, "reporter"])) == edited_base)
-    )[0]
+
     if guide not in edit_tbl.guide.tolist():
         observed_rel_pos = []
     else:
@@ -31,16 +28,20 @@ def _add_absent_edits(
         observed_rel_pos = edited_db.rel_pos.tolist()
     edits = []
     positions = []
-    for editable_pos in editable_positions:
-        if editable_pos not in observed_rel_pos:
-            edits.append(
-                Edit(
-                    editable_pos,
-                    edited_base,
-                    target_alt,
+    for edited_base, target_alt in target_base_edits.items():
+        editable_positions = np.where(
+            (np.array(list(bdata.guides.loc[guide, "reporter"])) == edited_base)
+        )[0]
+        for editable_pos in editable_positions:
+            if editable_pos not in observed_rel_pos:
+                edits.append(
+                    Edit(
+                        editable_pos,
+                        edited_base,
+                        target_alt,
+                    )
                 )
-            )
-            positions.append(editable_pos)
+                positions.append(editable_pos)
     edit_tbl = pd.concat(
         [
             edit_tbl,
@@ -88,8 +89,7 @@ def get_edit_rates(
             bdata,
             guide,
             edit_rates_agg,
-            edited_base=bdata.base_edited_from,
-            target_alt=bdata.base_edited_to,
+            target_base_edits=bdata.target_base_changes,
         )
 
     if adjust_spacer_pos:
@@ -180,7 +180,7 @@ def _get_norm_rates_df(
     bdata,
     edit_rates_df=None,
     edit_count_key="edit_counts",
-    base_changes: Sequence[str] = None,
+    base_changes: Optional[Sequence[str]] = None,
 ):
     change_by_pos = pd.pivot(
         edit_rates_df[["base_change", "spacer_pos", "rep_mean"]]
@@ -211,7 +211,7 @@ def _get_norm_rates_df(
     return norm_rate.astype(float)[base_changes]  # _reduced
 
 
-def _get_possible_changes_from_target_base(target_basechange: str):
+def _get_possible_changes_from_target_base(target_basechange: str) -> List[str]:
     """Return base changes strings (ex. A>C) for given the same reference base to edit from to the input target_basechange. ex) returns ['A>C', 'A>T'] given input 'A>G'."""
     if not re.fullmatch(r"[ATCG]>[ATCG]", target_basechange):
         raise ValueError(
@@ -226,8 +226,7 @@ def plot_by_pos_behive(
     norm_rates_df: Optional[pd.DataFrame] = None,
     bdata=None,
     edit_count_key: str = "edit_counts",
-    target_basechange="A>G",
-    nonref_base_changes: Sequence[str] = None,
+    target_basechanges: Optional[Dict[str, str]] = None,
     normalize=False,
 ):
     """Plot position-wise editing pattern as in BE-Hive.
@@ -239,11 +238,21 @@ def plot_by_pos_behive(
     normalize: Normalize the editing rate relative to the max editing rate by position (as 100).
 
     """
-    if not re.fullmatch(r"[ATCG]>[ATCG]", target_basechange):
-        raise ValueError(
-            f"Input argument {target_basechange} doesn't conform to the valid format ex. 'A>G'"
-        )
-    if nonref_base_changes is None:
+    if target_basechanges is None:
+        if bdata is None:
+            raise ValueError("Target base change not provided.")
+        target_basechange = bdata.target_base_changes
+    fig, axes = plt.subplots(
+        1,
+        len(target_basechanges.keys()),
+        figsize=(3 * len(target_basechanges.keys()), 7),
+    )
+    if not isinstance(axes, np.ndarray):
+        axes = np.ndarray([axes])
+    dfs = []
+    for i, (edited_base, alt_base) in enumerate(target_basechanges.items()):  # type: ignore
+        target_basechange = f"{edited_base}>{alt_base}"
+        print(target_basechange)
         if target_basechange == "A>G":
             nonref_base_changes = ["C>T", "C>G"]
         elif target_basechange == "C>T":
@@ -251,71 +260,74 @@ def plot_by_pos_behive(
         else:
             print("No non-ref base changes specified. not drawing them")
             nonref_base_changes = []
-    ref_other_changes = _get_possible_changes_from_target_base(target_basechange)
 
-    df_to_draw = _get_norm_rates_df(
-        bdata,
-        norm_rates_df,
-        edit_count_key,
-        base_changes=ref_other_changes
-        + [
-            target_basechange,
-        ]
-        + nonref_base_changes,
-    )
-    fig, ax = plt.subplots(figsize=(3, 7))
+        ref_other_changes = _get_possible_changes_from_target_base(target_basechange)
 
-    vmax = df_to_draw.max().max()
-    if normalize:
-        df_to_draw = df_to_draw / vmax * 100
-        vmax = 100
+        df_to_draw = _get_norm_rates_df(
+            bdata,
+            norm_rates_df,
+            edit_count_key,
+            base_changes=ref_other_changes
+            + [
+                target_basechange,
+            ]
+            + nonref_base_changes,
+        )
 
-    target_data = df_to_draw.copy()
-    target_data.loc[:, target_data.columns != target_basechange] = np.nan
-    sns.heatmap(
-        target_data,
-        ax=ax,
-        annot=True,
-        cmap="Reds",
-        vmax=vmax,
-        cbar=False,
-        vmin=-0.03,
-        fmt=".0f" if normalize else ".2g",
-        annot_kws={"fontsize": 8},
-    )
+        vmax = df_to_draw.max().max()
+        if normalize:
+            df_to_draw = df_to_draw / vmax * 100
+            vmax = 100
 
-    ref_data = df_to_draw.copy()
-    ref_data.loc[
-        :,
-        ~ref_data.columns.isin(ref_other_changes),
-    ] = np.nan
-    sns.heatmap(
-        ref_data,
-        ax=ax,
-        annot=True,
-        cmap="Blues",
-        vmax=vmax,
-        cbar=False,
-        fmt=".1g",
-        vmin=-0.03,
-        annot_kws={"fontsize": 8},
-    )
+        target_data = df_to_draw.copy()
+        target_data.loc[:, target_data.columns != target_basechange] = np.nan
+        sns.heatmap(
+            target_data,
+            ax=axes[i],
+            annot=True,
+            cmap="Reds",
+            vmax=vmax,
+            cbar=False,
+            vmin=-0.03,
+            fmt=".0f" if normalize else ".2g",
+            annot_kws={"fontsize": 8},
+        )
 
-    nonref_data = df_to_draw.copy()
-    nonref_data.loc[:, ~nonref_data.columns.isin(nonref_base_changes)] = np.nan
-    sns.heatmap(
-        nonref_data,
-        ax=ax,
-        annot=True,
-        cmap="Greys",
-        vmax=vmax,
-        cbar=False,
-        fmt=".1g",
-        vmin=-0.03,
-        annot_kws={"fontsize": 8},
-    )
-    ax.set_ylabel("Protospacer position")
-    return ax, df_to_draw
+        ref_data = df_to_draw.copy()
+        ref_data.loc[
+            :,
+            ~ref_data.columns.isin(ref_other_changes),
+        ] = np.nan
+        sns.heatmap(
+            ref_data,
+            ax=axes[i],
+            annot=True,
+            cmap="Blues",
+            vmax=vmax,
+            cbar=False,
+            fmt=".1g",
+            vmin=-0.03,
+            annot_kws={"fontsize": 8},
+        )
+
+        nonref_data = df_to_draw.copy()
+        nonref_data.loc[:, ~nonref_data.columns.isin(nonref_base_changes)] = np.nan
+        sns.heatmap(
+            nonref_data,
+            ax=axes[i],
+            annot=True,
+            cmap="Greys",
+            vmax=vmax,
+            cbar=False,
+            fmt=".1g",
+            vmin=-0.03,
+            annot_kws={"fontsize": 8},
+        )
+        axes[i].set_ylabel("Protospacer position")
+        dfs.append(df_to_draw)
+    df = pd.concat(dfs, axis=1)
+    df = df.loc[:, ~df.columns.duplicated()].copy()
+    return axes, df
 
 
 def get_position_by_pam_rates(bdata, edit_rates_df: pd.DataFrame, pam_col="5-nt PAM"):

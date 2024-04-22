@@ -279,7 +279,7 @@ def parse_args(parser=None):
     parser.add_argument(
         "--filter-target-basechange",
         "-b",
-        help="Only consider target edit (stored in bdata.uns['target_base_change'])",
+        help="Only consider target edit (stored in bdata.uns['target_base_changes'])",
         action="store_true",
     )
     parser.add_argument(

@@ -1,19 +1,19 @@
-from typing import List, Union
+from typing import List, Union, Dict, Optional, Tuple
 import subprocess as sb
 import numpy as np
 import pandas as pd
 import gzip
 from Bio import SeqIO
 from Bio.Seq import Seq
-from bean.mapping.CRISPResso2Align import read_matrix, global_align_base_editor
 from bean.framework.Edit import Allele, Edit
+from bean.mapping.CRISPResso2Align import read_matrix, global_align_base_editor
 
 
 class InputFileError(Exception):
     pass
 
 
-def _base_edit_to_from(start_base: chr = "A"):
+def _base_edit_to_from(start_base: str = "A"):
     try:
         base_map = {"A": "G", "C": "T"}
     except KeyError:
@@ -138,32 +138,32 @@ def _get_edited_allele(
         if ref_nt == sample_nt:
             continue
         else:
-            edit = Edit(i - start_pos, ref_nt, sample_nt, offset, strand=strand)
+            edit = Edit(i - start_pos, ref_nt, sample_nt, offset=offset, strand=strand)
             allele.add(edit)
 
     return allele
 
 
 def _write_alignment_matrix(
-    ref_base: str, alt_base: str, path, allow_complementary=False
+    target_base_edits: Dict[str, str], path, allow_complementary=False
 ):
     """
     Writes base substitution matrix
     """
     bases = ["A", "C", "T", "G"]
-    if not (ref_base in bases and alt_base in bases):
-        raise ValueError(
-            "Specified ref base '{}' or alt base '{}' isn't valid".format(
-                ref_base, alt_base
+    for ref_base, alt_base in target_base_edits.items():
+        if ref_base not in bases or alt_base not in bases:
+            raise ValueError(
+                f"Specified ref base '{ref_base}' or alt base '{alt_base}' isn't valid"
             )
-        )
     mat = np.ones((4, 4), dtype=int) * -4
     np.fill_diagonal(mat, 5)
     aln_df = pd.DataFrame(mat, index=bases, columns=bases)
-    aln_df.loc[ref_base, alt_base] = 0
-    if allow_complementary:
-        comp_map = {"A": "T", "C": "G", "T": "A", "G": "C"}
-        aln_df.loc[comp_map[ref_base], comp_map[alt_base]] = 0
+    for ref_base, alt_base in target_base_edits.items():
+        aln_df.loc[ref_base, alt_base] = 0
+        if allow_complementary:
+            comp_map = {"A": "T", "C": "G", "T": "A", "G": "C"}
+            aln_df.loc[comp_map[ref_base], comp_map[alt_base]] = 0
     aln_df.to_csv(path, sep=" ")
 
 
@@ -174,8 +174,8 @@ def _get_allele_from_alignment(
     strand: int,
     start_pos: int,
     end_pos: int,
-    chrom: str = None,
-    positionwise_quality: np.ndarray = None,
+    chrom: Optional[str] = None,
+    positionwise_quality: Optional[np.ndarray] = None,
     quality_thres: float = -1,
 ):
     assert len(ref_aligned) == len(query_aligned)
@@ -222,26 +222,24 @@ def _get_allele_from_alignment(
 def _get_edited_allele_crispresso(
     ref_seq: str,
     query_seq: str,
-    ref_base: str,
-    alt_base: str,
+    target_base_edits: Dict[str, str],
     aln_mat_path: str,
     offset: int,
     strand: int = 1,
-    chrom: str = None,
+    chrom: Optional[str] = None,
     start_pos: int = 0,
     end_pos: int = 100,
-    positionwise_quality: np.ndarray = None,
+    positionwise_quality: Optional[np.ndarray] = None,
     quality_thres: float = 30,
     objectify_allele=True,
-):
+) -> Tuple[Union[Allele, str], float]:
     aln_matrix = read_matrix(aln_mat_path)
     assert strand in [-1, +1]
     gap_incentive = np.zeros(len(ref_seq) + 1, dtype=int)
     query_aligned, ref_aligned, score = global_align_base_editor(
         query_seq,
         ref_seq,
-        ref_base,
-        alt_base,
+        target_base_edits,
         aln_matrix,
         gap_incentive,
         gap_open=-20,

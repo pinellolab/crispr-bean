@@ -162,6 +162,11 @@ def _get_input_parser(parser=None):
         action="store_true",
     )
     parser.add_argument(
+        "--skip-filtering",
+        help="Keep the read filtering",
+        action="store_true",
+    )
+    parser.add_argument(
         "--qstart-R1",
         help="Start position of the read when filtering for quality score of the read 1",
         type=int,

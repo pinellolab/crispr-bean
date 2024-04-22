@@ -45,6 +45,19 @@ def test_count_samples():
 
 
 @pytest.mark.order(105)
+def test_count_samples_nofilter():
+    cmd = "bean count-samples -i tests/data/sample_list.csv -b A -f tests/data/test_guide_info.csv -o tests/test_res/var/ -r --guide-start-seq=GGAAAGGACGAAACACCG --skip-filtering"
+    try:
+        subprocess.check_output(
+            cmd,
+            shell=True,
+            universal_newlines=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise exc
+
+
+@pytest.mark.order(106)
 def test_count_samples_dual():
     cmd = "bean count-samples -i tests/data/sample_list.csv -b A,C -f tests/data/test_guide_info.csv -o tests/test_res/var/ -r --guide-start-seq=GGAAAGGACGAAACACCG"
     try:
@@ -57,7 +70,7 @@ def test_count_samples_dual():
         raise exc
 
 
-@pytest.mark.order(106)
+@pytest.mark.order(107)
 def test_count_samples_bcstart():
     cmd = "bean count-samples -i tests/data/sample_list.csv -b A -f tests/data/test_guide_info.csv -o tests/test_res/var2/ -r --barcode-start-seq=GGAA"
     try:
@@ -95,7 +108,7 @@ def test_barcode_start_idx():
     assert bc == "AGAA"
 
 
-@pytest.mark.order(106)
+@pytest.mark.order(108)
 def test_count_samples_tiling():
     cmd = "bean count-samples -i tests/data/sample_list_tiling.csv -b A -f tests/data/test_guide_info_tiling_chrom.csv -o tests/test_res/tiling/ -r"
     try:
@@ -108,7 +121,7 @@ def test_count_samples_tiling():
         raise exc
 
 
-@pytest.mark.order(107)
+@pytest.mark.order(109)
 def test_count_chroms():
     cmd = "bean count --R1 tests/data/test_tiling_R1.fastq --R2 tests/data/test_tiling_R2.fastq -b A -f tests/data/test_guide_info_tiling_chrom.csv -o tests/test_res/tiling_chrom/ -r"
     try:

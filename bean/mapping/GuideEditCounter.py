@@ -152,6 +152,7 @@ class GuideEditCounter:
         if not self.objectify_allele:
             info(f"{self.name}: Storing allele as strings.")
         self.keep_intermediate = kwargs["keep_intermediate"]
+        self.skip_filtering = kwargs["skip_filtering"]
         self.id_number = random.randint(0, int(1e6))
         self.semimatch = 0
         self.bcmatch = 0
@@ -197,15 +198,24 @@ class GuideEditCounter:
     def check_filter_fastq(self):
         """Checks if the quality filtered fastq files already exists,
         and use them if the do."""
-        self.filtered_R1_filename = self._jp(
-            os.path.basename(self.R1_filename).replace(".fastq", "").replace(".gz", "")
-            + "_filtered.fastq.gz"
-        )
-        self.filtered_R2_filename = self._jp(
-            os.path.basename(self.R2_filename).replace(".fastq", "").replace(".gz", "")
-            + "_filtered.fastq.gz"
-        )
-        self._check_names_filter_fastq()
+        if self.skip_filtering:
+            self.filtered_R1_filename = self.R1_filename
+            self.filtered_R2_filename = self.R2_filename
+            self.n_reads_after_filtering = self.n_total_reads
+        else:
+            self.filtered_R1_filename = self._jp(
+                os.path.basename(self.R1_filename)
+                .replace(".fastq", "")
+                .replace(".gz", "")
+                + "_filtered.fastq.gz"
+            )
+            self.filtered_R2_filename = self._jp(
+                os.path.basename(self.R2_filename)
+                .replace(".fastq", "")
+                .replace(".gz", "")
+                + "_filtered.fastq.gz"
+            )
+            self._check_names_filter_fastq()
         # if (
         #     path.exists(self.filtered_R1_filename)
         #     and path.exists(self.filtered_R2_filename)

@@ -97,7 +97,7 @@ def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
                 screen.uns["allele_counts"].allele.map(str) != "", :
             ]
             screen.get_edit_from_allele("allele_counts", "allele")
-            screen.get_edit_mat_from_uns(edited_from, edited_to, match_target_pos)
+            screen.get_edit_mat_from_uns(target_base_edits, match_target_pos)
         info(
             f"Done for {sample_id}. \n\
             Output written at {counter.output_dir}.h5ad"

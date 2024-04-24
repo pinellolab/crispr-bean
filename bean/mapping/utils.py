@@ -163,7 +163,7 @@ def _get_input_parser(parser=None):
     )
     parser.add_argument(
         "--skip-filtering",
-        help="Skip the read filtering",
+        help="Skip the read filtering based on quality filters",
         action="store_true",
     )
     parser.add_argument(
@@ -329,7 +329,7 @@ def _check_arguments(args, info_logger, warn_logger, error_logger):
                 raise InputFileError(
                     f"Specified target position column '{args.target_pos_col}' not in the input file {args.sgRNA_filename}."
                 )
-            if args.target_pos_col.isnull().any():
+            if sgRNA_info_tbl[args.target_pos_col].isnull().any():
                 raise InputFileError(
                     f"Guides {sgRNA_info_tbl.loc[sgRNA_info_tbl[args.target_pos_col].isnull(),:].index} have no `target_pos` columns specified."
                 )

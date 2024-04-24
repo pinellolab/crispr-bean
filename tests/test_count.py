@@ -32,8 +32,8 @@ def test_guide_count():
 
 
 @pytest.mark.order(104)
-def test_count_samples():
-    cmd = "bean count-samples -i tests/data/sample_list.csv -b A -f tests/data/test_guide_info.csv -o tests/test_res/var/ -r --guide-start-seq=GGAAAGGACGAAACACCG"
+def test_count_samples_match():
+    cmd = "bean count-samples -i tests/data/sample_list.csv -b A -f tests/data/test_guide_info.csv -o tests/test_res/var/ -r --guide-start-seq=GGAAAGGACGAAACACCG --match-target-pos --rerun"
     try:
         subprocess.check_output(
             cmd,

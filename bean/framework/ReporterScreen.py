@@ -159,14 +159,6 @@ class ReporterScreen(Screen):
     def allele_tables(self):
         return {k: self.uns[k] for k in self.uns.keys() if "allele" in k}
 
-    # @property
-    # def base_edited_from(self):
-    #     return self.uns["target_base_change"][0]
-
-    # @property
-    # def base_edited_to(self):
-    #     return self.uns["target_base_change"][-1]
-
     @property
     def target_base_changes(self):
         try:
@@ -951,7 +943,7 @@ def concat(screens: Sequence[ReporterScreen], *args, axis: Literal[0, 1] = 1, **
             else:
                 merge_on = screen[0].uns[k].columns[:2].tolist()
             try:
-                edit_cls = type(screens[0].uns[k][merge_on[1]][0])
+                edit_cls = type(screens[0].uns[k][merge_on[1]].iloc[0])
             except IndexError:
                 print(merge_on)
                 print(screen[0].uns[k])

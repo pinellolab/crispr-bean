@@ -30,9 +30,6 @@ info = logging.info
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 
 
-
-
-
 def check_arguments(args, info_logger, warn_logger, error_logger):
     args = _check_arguments(
         args, info_logger=info, warn_logger=warn, error_logger=error
@@ -58,7 +55,11 @@ def main(args):
     args = check_arguments(args, info_logger=info, warn_logger=warn, error_logger=error)
     args_dict = vars(args)
 
-    edited_from = args_dict["edited_base"]
+    base_editing_map = {"A": "G", "C": "T"}
+    try:
+        target_base_edits = {k: base_editing_map[k] for k in args_dict["edited_base"]}
+    except KeyError as e:
+        raise KeyError(args_dict["edited_base"]) from e
     match_target_pos = args_dict["match_target_pos"]
 
     counter = bean.mp.GuideEditCounter(**args_dict)
@@ -70,11 +71,7 @@ def main(args):
             counter.screen.uns["allele_counts"].allele.map(str) != "", :
         ]
         if match_target_pos:
-            base_editing_map = {"A": "G", "C": "T"}
-            edited_to = base_editing_map[edited_from]
-            counter.screen.get_edit_mat_from_uns(
-                edited_from, edited_to, match_target_pos
-            )
+            counter.screen.get_edit_mat_from_uns(target_base_edits, match_target_pos)
     counter.screen.write(f"{counter.output_dir}.h5ad")
     counter.screen.to_Excel(f"{counter.output_dir}.xlsx")
     info(f"Output written at:\n {counter.output_dir}.h5ad,\n {counter.output_dir}.xlsx")

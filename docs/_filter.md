@@ -36,8 +36,3 @@ bean filter my_sorting_screen.h5ad \
   2. Feed `--translate-fastas-csv gene_exon_fas.csv` where `gene_exon_fas.csv` is the csv file with lines `gene_id,gene_exon_fasta_path` without header. Each FASTA file in `gene_exon_fasta_path` is formatted [as the single-gene FASTA file](https://github.com/pinellolab/crispr-bean/blob/main/docs/exon_fa_format.md).
 * Translation will keep the variants outside the coding sequence as nucleotide-level variants, while aggregating variants leading to the same coding sequence variants.
 
-# Getting splice sites
-We provide the utility script to obtain the splice sites if you use the MANE transcript with gene symbol (`--translate-gene-name GENE_SYMBOL` or `--translate-genes-list path_to_gene_names_file.txt`).
-```bash
-bean get-splice-sites LDLR A LDLR_splice_sites.csv --gene-name
-```

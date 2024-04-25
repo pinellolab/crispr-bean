@@ -6,7 +6,7 @@ from bean.qc.parser import parse_args as get_qc_parser
 from bean.annotate.utils import parse_args as get_filter_parser
 from bean.model.parser import parse_args as get_run_parser
 from bean.framework.parser import get_input_parser as get_create_screen_parser
-from bean.cli.get_splice_sites import get_parser as get_splice_site_parser
+from bean.annotate.utils import get_splice_parser as get_splice_site_parser
 from bean.cli.count import main as count
 from bean.cli.count_samples import main as count_samples
 from bean.cli.profile import main as profile

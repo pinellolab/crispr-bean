@@ -6,27 +6,6 @@ import pandas as pd
 from bean.annotate.utils import get_splice_positions_from_gene_name
 
 
-def get_parser(parser=None):
-    if parser is None:
-        parser = argparse.ArgumentParser(
-            "Get splice site position",
-            usage="Get splice site position from exon fasta and target editing base.",
-        )
-
-    parser.add_argument(
-        "exon_fa_path", help="File path to fasta file with exon position information."
-    )
-    parser.add_argument(
-        "--gene-name",
-        action="store_true",
-        help="File path to fasta file with exon position information.",
-    )
-    parser.add_argument("edited_base", help="Edited base, either A or C.")
-    parser.add_argument("output_path", help="output path of the splice site csv file.")
-
-    return parser
-
-
 def get_splice_positions(exon_fa_path) -> Tuple[str, np.ndarray, np.ndarray]:
     splice_donor_pos = []
     splice_acceptor_pos = []

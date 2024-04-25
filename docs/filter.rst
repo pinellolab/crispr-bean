@@ -13,6 +13,7 @@ Full parameters
 
 
 `bean get-splice-sites`
+******************************
 .. mdinclude:: _get_splice_sites.md
 
 Parameters

@@ -1,9 +1,11 @@
+from typing import Tuple
 import os
 import sys
 from pathlib import Path
 import requests
 from typing import Optional, List
 import argparse
+import numpy as np
 import pandas as pd
 from itertools import chain
 import logging
@@ -216,6 +218,29 @@ def get_cds_seq_pos_from_gene_name(gene_name: str, ref_version: str = "GRCh38"):
         cds_seq.extend(_cds_seq)
         cds_pos.extend(_cds_pos)
     return cds_chrom, cds_seq, cds_pos, strand
+
+
+def get_splice_positions_from_gene_name(
+    gene_name: str, ref_version: str = "GRCh38"
+) -> Tuple[str, np.ndarray, np.ndarray]:
+    transcript_id, id_version = get_mane_transcript_id(gene_name)
+    print(f"MANE transcript ID {transcript_id} for {gene_name} will be used.")
+    exons_list, cds_start, cds_end, strand = get_exons_from_transcript_id(
+        transcript_id, id_version, ref_version
+    )
+    if strand == -1:
+        exons_list = exons_list[::-1]
+    splice_donor_pos = []
+    splice_acceptor_pos = []
+    for i, exon_dict in enumerate(exons_list):
+        cds_chrom, _cds_seq, _cds_pos = get_exon_pos_seq(
+            exon_dict["stable_id"], exon_dict["stable_id_version"], cds_start, cds_end
+        )
+        if i > 0:
+            splice_acceptor_pos.append(_cds_pos[0])
+        if i < len(exons_list):
+            splice_donor_pos.append(_cds_pos[-1])
+    return cds_chrom, np.array(splice_donor_pos), np.array(splice_acceptor_pos)
 
 
 def parse_args(parser=None):

@@ -18,6 +18,6 @@ Full parameters
 Parameters
 ==================
 .. argparse::
-   :filename: ../bean/cli/get_splice_sites.py
-   :func: get_parser
+   :filename: ../bean/annotate/utils.py
+   :func: get_splice_parser
    :prog: bean get-splice-sites  

@@ -6,6 +6,7 @@ from bean.qc.parser import parse_args as get_qc_parser
 from bean.annotate.utils import parse_args as get_filter_parser
 from bean.model.parser import parse_args as get_run_parser
 from bean.framework.parser import get_input_parser as get_create_screen_parser
+from bean.cli.get_splice_sites import get_parser as get_splice_site_parser
 from bean.cli.count import main as count
 from bean.cli.count_samples import main as count_samples
 from bean.cli.profile import main as profile
@@ -13,6 +14,7 @@ from bean.cli.qc import main as qc
 from bean.cli.filter import main as filter
 from bean.cli.run import main as run
 from bean.cli.create_screen import main as create_screen
+from bean.cli.get_splice_sites import main as get_splice_sites
 
 
 def get_parser():
@@ -30,8 +32,14 @@ def get_parser():
     filter_parser = get_filter_parser(filter_parser)
     run_parser = subparsers.add_parser("run", help="run")
     run_parser = get_run_parser(run_parser)
-    create_screen_parser = subparsers.add_parser("create-screen", help="create")
+    create_screen_parser = subparsers.add_parser(
+        "create-screen", help="create ReporterScreen object"
+    )
     create_screen_parser = get_create_screen_parser(create_screen_parser)
+    splice_site_parser = subparsers.add_parser(
+        "get-splice-sites", help="get splice sites"
+    )
+    splice_site_parser = get_splice_site_parser(splice_site_parser)
     return parser
 
 
@@ -55,5 +63,7 @@ def main() -> None:
         run(args)
     elif args.subcommand == "create-screen":
         create_screen(args)
+    elif args.subcommand == "get-splice-sites":
+        get_splice_sites(args)
     else:
         parser.print_help()

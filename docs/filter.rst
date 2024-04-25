@@ -10,3 +10,14 @@ Full parameters
    :filename: ../bean/annotate/utils.py
    :func: parse_args
    :prog: bean filter
+
+
+`bean get-splice-sites`
+.. mdinclude:: _get_splice_sites.md
+
+Parameters
+==================
+.. argparse::
+   :filename: ../bean/cli/get_splice_sites.py
+   :func: get_parser
+   :prog: bean get-splice-sites  

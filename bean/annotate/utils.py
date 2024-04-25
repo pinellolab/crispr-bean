@@ -94,6 +94,7 @@ def get_mane_transcript_id(gene_name: str):
         print(
             f"Cannot find {gene_name} from MANE database: check http://tark.ensembl.org/api/transcript/manelist/ or use custom fasta."
         )
+        print(gene_name)
         print(e)
         exit(1)
     return mane_transcript_id, id_version
@@ -232,10 +233,14 @@ def get_splice_positions_from_gene_name(
         exons_list = exons_list[::-1]
     splice_donor_pos = []
     splice_acceptor_pos = []
-    for i, exon_dict in enumerate(exons_list):
+    cds_positions = []
+    for exon_dict in exons_list:
         cds_chrom, _cds_seq, _cds_pos = get_exon_pos_seq(
             exon_dict["stable_id"], exon_dict["stable_id_version"], cds_start, cds_end
         )
+        if len(_cds_pos) > 0:
+            cds_positions.append(_cds_pos)
+    for i, _cds_pos in enumerate(cds_positions):
         if i > 0:
             splice_acceptor_pos.append(_cds_pos[0])
         if i < len(exons_list):

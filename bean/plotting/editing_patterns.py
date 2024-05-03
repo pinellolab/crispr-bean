@@ -248,7 +248,7 @@ def plot_by_pos_behive(
         figsize=(3 * len(target_basechanges.keys()), 7),
     )
     if not isinstance(axes, np.ndarray):
-        axes = np.ndarray([axes])
+        axes = np.array([axes])
     dfs = []
     for i, (edited_base, alt_base) in enumerate(target_basechanges.items()):  # type: ignore
         target_basechange = f"{edited_base}>{alt_base}"

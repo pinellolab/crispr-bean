@@ -28,7 +28,7 @@ setup(
         "numpy",
         "pandas",
         "scipy",
-        "perturb-tools>=0.3.0",
+        "perturb-tools>=0.3.3",
         "matplotlib",
         "seaborn>=0.13.0",
         "tqdm",

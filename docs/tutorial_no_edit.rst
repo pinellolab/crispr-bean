@@ -1,7 +1,7 @@
-.. _prolif_gwas:
+.. _tutorial_no_edit:
 
-Proliferation screen with GWAS library
+Screen analysis without reporter edits
 **********************************************
-.. mdinclude:: _prolif_gwas.md
+.. mdinclude:: _tutorial_no_edit.md
 
 See :ref:`subcommands` for the full details.

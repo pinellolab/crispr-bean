@@ -209,7 +209,7 @@ def parse_args(parser=None):
         action="store_true",
     )
     parser.add_argument(
-        "--no-negative-control",
+        "--dont-adjust-confidence-by-negative-control",
         action="store_true",
         help="Do not adjust confidence by negative controls. Without this flag, variant mode will use negative control variants, and tiling mode will use the synonymous variants to adjust confidence of the result.",
     )

@@ -37,7 +37,7 @@ Following installation without PyTorch dependency wouldn't have variant effect s
 pip install crispr-bean
 ```
 
-For the latest version of `bean`, install from Github:
+For the latest version of `bean` (and for the test files in `tests/data`), install from Github:
 ```bash
 git clone https://github.com/pinellolab/crispr-bean.git
 cd crispr-bean

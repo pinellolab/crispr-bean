@@ -17,7 +17,7 @@ def test_qc():
 
 @pytest.mark.order(208)
 def test_qc_tiling():
-    cmd = "bean qc tests/data/tiling_mini_screen.h5ad -o tests/data/tiling_mini_screen_masked.h5ad -r tests/test_res/qc_report_tiling_mini_screen --count-correlation-thres 0.6  "
+    cmd = "bean qc tests/data/tiling_mini_screen.h5ad -o tests/data/tiling_mini_screen_masked.h5ad -r tests/test_res/qc_report_tiling_mini_screen --count-correlation-thres 0.6 --posctrl-col='' "
     try:
         subprocess.check_output(
             cmd,
@@ -56,7 +56,7 @@ def test_dummy_insertion_varscreen():
 
 @pytest.mark.order(211)
 def test_dummy_insertion_tilingscreen():
-    cmd = "bean qc tests/data/tiling_mini_screen_missing.h5ad -o tests/data/tiling_mini_screen_missing_masked.h5ad -r tests/test_res/qc_report_tiling_mini_screen_missing --count-correlation-thres 0.6  -b"
+    cmd = "bean qc tests/data/tiling_mini_screen_missing.h5ad -o tests/data/tiling_mini_screen_missing_masked.h5ad -r tests/test_res/qc_report_tiling_mini_screen_missing --count-correlation-thres 0.6 -b --posctrl-col=''"
     try:
         subprocess.check_output(
             cmd, shell=True, universal_newlines=True, stderr=subprocess.STDOUT

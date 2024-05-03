@@ -1,4 +1,4 @@
-## Sorting screen tutorial without reporter edits
+# Sorting screen tutorial without reporter edits
 Screens without editing outcome, where each gRNA is assigned to a target.  
 
 <table>

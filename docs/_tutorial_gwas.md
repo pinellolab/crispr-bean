@@ -1,4 +1,4 @@
-## Variant sorting screen tutorial
+# Variant sorting screen tutorial
 GWAS variant screen with per-variant gRNA tiling design, selected based on FACS signal quantiles.  
 
 <table>

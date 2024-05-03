@@ -209,9 +209,9 @@ def parse_args(parser=None):
         action="store_true",
     )
     parser.add_argument(
-        "--dont-adjust-confidence-by-negative-control",
+        "--no-negative-control",
         action="store_true",
-        help="Adjust confidence by negative controls. For variant library_design, this uses negative control variants. For tiling library_design, adjusts confidence by synonymous edits.",
+        help="Do not adjust confidence by negative controls. Without this flag, variant mode will use negative control variants, and tiling mode will use the synonymous variants to adjust confidence of the result.",
     )
     parser.add_argument(
         "--n-iter",  # TODO: add check args

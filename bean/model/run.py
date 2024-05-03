@@ -28,7 +28,7 @@ pyro.set_rng_seed(101)
 
 def check_args(args, bdata):
     args.adjust_confidence_by_negative_control = (
-        not args.dont_adjust_confidence_by_negative_control
+        not args.no_negative_control
     )
     if args.scale_by_acc:
         if args.acc_col is None and args.acc_bw_path is None:
@@ -43,7 +43,8 @@ def check_args(args, bdata):
     if args.outdir is None:
         args.outdir = os.path.dirname(args.bdata_path)
     if args.library_design == "variant":
-        pass
+        if args.adjust_confidence_by_negative_control and (args.negctrl_col not in bdata.guides.columns):
+            raise ValueError(f"--negctrl-col argument '{args.negctrl_col}' not in ReporterScreen.guides.columns {bdata.guides.columns}. Please check the input or provide --no-negative-control flag if you don't have the negative controls.")
     elif args.library_design == "tiling":
         if args.allele_df_key is None:
             key_to_use = "allele_counts"

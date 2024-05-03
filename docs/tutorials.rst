@@ -7,5 +7,5 @@ Workflow tutorials
     :maxdepth: 2
 
     gwas
-    cds
-    prolif_gwas
+    tutorial_cds
+    tutorial_prolif_gwas

@@ -12,4 +12,5 @@ def create_screen(args: argparse.Namespace) -> Screen:
         args.gRNA_info_table_csv,
         args.samples_info_table_csv,
         layers_filenames_dict={"edits": args.edits} if args.edits else None,
+        matched_indices = False,
     )

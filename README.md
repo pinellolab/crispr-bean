@@ -89,4 +89,4 @@ If you have questions or feature request, please open an issue. Please feel free
 
 ## Citation
 If you have used BEAN for your analysis, please cite:  
-Ryu, J. et al. Joint genotypic and phenotypic outcome modeling improves base editing variant effect quantification. medRxiv (2023) doi:10.1101/2023.09.08.23295253
+Ryu, J., Barkal, S., Yu, T. et al. Joint genotypic and phenotypic outcome modeling improves base editing variant effect quantification. Nat Genet (2024). https://doi.org/10.1038/s41588-024-01726-6

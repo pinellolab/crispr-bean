@@ -83,7 +83,7 @@ def parse_args(parser=None):
         "--control-condition",
         default="bulk",
         type=str,
-        help="Value in `bdata.samples[condition_col]` that indicates control experimental condition whose editing patterns will be used.",
+        help="Value in `bdata.samples[condition_col]` that indicates control experimental condition whose editing patterns will be used. Select this as the condition with the least selection- For the sorting screen, use presort (bulk). For the survival screens, use the closest one with T=0.",
     )
     parser.add_argument(
         "--exclude-control-condition-for-inference",

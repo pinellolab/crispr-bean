@@ -621,6 +621,7 @@ class ReporterScreen(Screen):
         norm_counts = self._get_allele_norm(
             allele_count_df=allele_count_df, thres=norm_thres
         )
+        alleles_norm.loc[:, count_columns] = alleles_norm.loc[:, count_columns].astype(float)
         alleles_norm.loc[:, count_columns] = (
             alleles_norm.loc[:, count_columns] / norm_counts
         )

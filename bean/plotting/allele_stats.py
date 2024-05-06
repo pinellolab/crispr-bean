@@ -39,7 +39,8 @@ def plot_n_guides_per_edit(
     n_guides = edits_df.groupby("edits")["guide"].count()
     if ax is None:
         fig, ax = plt.subplots()
-    ax.hist(n_guides, bins=np.arange(min(n_guides) - 0.5, max(n_guides) + 0.5))
+    if len(n_guides) > 0:
+        ax.hist(n_guides, bins=np.arange(min(n_guides) - 0.5, max(n_guides) + 0.5))
     ax.set_xlabel("# guides per variant")
     ax.set_title(f"n_variants={len(edits_df)}")
     ax.set_ylabel("# edits")

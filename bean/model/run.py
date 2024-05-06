@@ -99,7 +99,7 @@ def check_args(args, bdata):
         )
     if args.control_condition not in bdata.samples[args.condition_col].tolist():
         raise ValueError(
-            f"No sample has control label `{args.control_condition}` (set by `--control-condition`)  in ReporterScreen.samples[{args.condition_col}]: {bdata.samples[args.condition_col]}. Check your input."
+            f"No sample has control label `{args.control_condition}` (set by `--control-condition`)  in ReporterScreen.samples[{args.condition_col}]: {bdata.samples[args.condition_col]}. Check your input.  For the selection of this argument, see more in `--condition-col` under `bean run --help`."
         )
     if args.replicate_col not in bdata.samples.columns:
         raise ValueError(

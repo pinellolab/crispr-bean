@@ -40,11 +40,17 @@ def check_args(args, bdata):
     if args.outdir is None:
         args.outdir = os.path.dirname(args.bdata_path)
     if args.fit_negctrl and (args.negctrl_col not in bdata.guides.columns):
-        raise ValueError(f"--negctrl-col argument '{args.negctrl_col}' not in ReporterScreen.guides.columns {bdata.guides.columns}. Please check the input or do not provide --fit-negctrl flag if you don't have the negative controls.")
+        raise ValueError(
+            f"--negctrl-col argument '{args.negctrl_col}' not in ReporterScreen.guides.columns {bdata.guides.columns}. Please check the input or do not provide --fit-negctrl flag if you don't have the negative controls."
+        )
     if args.library_design == "variant":
-        args.adjust_confidence_by_negative_control = args.fit_negctrl and (not args.dont_adjust_confidence_by_negative_control)
+        args.adjust_confidence_by_negative_control = args.fit_negctrl and (
+            not args.dont_adjust_confidence_by_negative_control
+        )
     elif args.library_design == "tiling":
-        args.adjust_confidence_by_negative_control = (not args.dont_adjust_confidence_by_negative_control)
+        args.adjust_confidence_by_negative_control = (
+            not args.dont_adjust_confidence_by_negative_control
+        )
         if args.allele_df_key is None:
             key_to_use = "allele_counts"
             n_alleles = len(bdata.uns[key_to_use])
@@ -55,12 +61,12 @@ def check_args(args, bdata):
                     key_to_use = key
                     n_alleles = len(df)
             warn(
-                f"--allele-df-key not provided for tiling screen. Using the most filtered allele counts with {n_alleles} alleles stored in {key_to_use}."
+                f"--allele-df-key not provided for tiling screen. Using the most filtered allele counts with {n_alleles} alleles stored in '{key_to_use}'."
             )
             args.allele_df_key = key_to_use
         elif args.allele_df_key not in bdata.uns:
             raise ValueError(
-                f"--allele-df-key {args.allele_df_key} not in ReporterScreen.uns. Check your input."
+                f"--allele-df-key '{args.allele_df_key}' not in ReporterScreen.uns. Check your input."
             )
     else:
         raise ValueError(
@@ -85,15 +91,15 @@ def check_args(args, bdata):
     if args.sample_mask_col is not None:
         if args.sample_mask_col not in bdata.samples.columns.tolist():
             raise ValueError(
-                f"{args.bdata_path} does not have specified sample mask column {args.sample_mask_col} in .samples"
+                f"{args.bdata_path} does not have specified sample mask column `{args.sample_mask_col}` in .samples"
             )
     if args.condition_col not in bdata.samples.columns:
         raise ValueError(
-            f"Condition column set by `--condition-col` {args.condition_col} not in ReporterScreen.samples.columns:{bdata.samples.columns}. Check your input."
+            f"Condition column `{args.condition_col}` set by `--condition-col` not in ReporterScreen.samples.columns:{bdata.samples.columns}. Check your input."
         )
     if args.control_condition not in bdata.samples[args.condition_col].tolist():
         raise ValueError(
-            f"No sample has control label (set by `--control-condition`) {args.control_condition} in ReporterScreen.samples[{args.condition_col}]: {bdata.samples[args.condition_col]}. Check your input."
+            f"No sample has control label `{args.control_condition}` (set by `--control-condition`)  in ReporterScreen.samples[{args.condition_col}]: {bdata.samples[args.condition_col]}. Check your input."
         )
     if args.replicate_col not in bdata.samples.columns:
         raise ValueError(
@@ -106,7 +112,7 @@ def check_args(args, bdata):
             )
         elif not bdata.guides.index.map(lambda s: args.control_guide_tag in s).any():
             raise ValueError(
-                f"Negative control guide label {args.control_guide_tag} provided by `--control-guide-tag` doesn't appear in any of the guide names. Check your input."
+                f"Negative control guide label `{args.control_guide_tag}` provided by `--control-guide-tag` doesn't appear in any of the guide names. Check your input."
             )
     if args.alpha_if_overdispersion_fitting_fails is not None:
         try:
@@ -114,7 +120,7 @@ def check_args(args, bdata):
             args.popt = (float(b0), float(b1))
         except TypeError as e:
             raise ValueError(
-                f"Input --alpha-if-overdispersion-fitting-fails {args.alpha_if_overdispersion_fitting_fails} is malformatted! Provide [float].[float] format."
+                f"Input --alpha-if-overdispersion-fitting-fails `{args.alpha_if_overdispersion_fitting_fails}` is malformatted! Provide [float].[float] format."
             )
     else:
         args.popt = None

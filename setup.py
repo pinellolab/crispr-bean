@@ -12,7 +12,7 @@ setup(
     python_requires=">=3.8.0",
     author="Jayoung Ryu",
     author_email="jayoung_ryu@g.harvard.edu",
-    description="Base Editor screen analysis [Bayesian Estimation of variant effect] with guide Activity Normalization",
+    description="Base Editor screen analysis with guide Activity Normalization",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/pinellolab/crispr-bean",

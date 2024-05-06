@@ -1,5 +1,6 @@
 import argparse
 
+
 def parse_args(parser=None):
     if parser is None:
         parser = argparse.ArgumentParser()
@@ -48,5 +49,16 @@ def parse_args(parser=None):
         action="store_true",
         help="Save .pdf of the figures included in the report.",
     )
-
+    parser.add_argument(
+        "--reporter-length",
+        type=int,
+        default=32,
+        help="Length of reporter sequence in the construct.",
+    )
+    parser.add_argument(
+        "--reporter-right-flank-length",
+        type=int,
+        default=6,
+        help="Length of the right-flanking nucleotides of protospacer in the reporter.",
+    )
     return parser

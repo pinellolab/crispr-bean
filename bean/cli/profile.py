@@ -33,6 +33,8 @@ def main(args):
             max_editing_window_length=args.window_length,
             pam_col=args.pam_col,
             save_fig=args.save_fig,
+            reporter_length=args.reporter_length,
+            reporter_right_flank_length=args.reporter_right_flank_length,
         ),
         kernel_name="bean_python3",
     )

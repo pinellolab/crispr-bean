@@ -67,6 +67,8 @@ def get_edit_rates(
     edit_count_key="edit_counts",
     adjust_spacer_pos: bool = True,
     reporter_column: str = "reporter",
+    reporter_length=32,
+    reporter_right_flank_length=6,
 ):
     """
     Obtain position- and context-wise editing rate (context: base preceding the target base position).
@@ -98,7 +100,9 @@ def get_edit_rates(
         if "guide_len" not in bdata.guides.columns:
             bdata.guides["guide_len"] = bdata.guides.sequence.map(len)
         start_pad = (
-            32 - 6 - bdata.guides.guide_len[edit_rates_agg.guide].reset_index(drop=True)
+            reporter_length
+            - reporter_right_flank_length
+            - bdata.guides.guide_len[edit_rates_agg.guide].reset_index(drop=True)
         )
         edit_rates_agg["spacer_pos"] = (edit_rates_agg.rel_pos - start_pad).astype(int)
         edit_rates_agg = edit_rates_agg[
@@ -529,7 +533,7 @@ def plot_context_specificity(
         save_tbl["base_change"] = target_base_change
         save_tbls.append(save_tbl)
         ic_tbl.index = [-1, 0, 1]
-        logomaker.Logo(ic_tbl.astype(float), ax=axes[j])
+        logomaker.Logo(ic_tbl.astype(float).fillna(0), ax=axes[j])
         axes[j].set_ylabel("Relative frequency")
         axes[j].set_title(target_base_change)
     if save_fig:

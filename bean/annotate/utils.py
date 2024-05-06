@@ -295,6 +295,18 @@ def parse_args(parser=None):
         help="Plasmid ReporterScreen object path. If provided, alleles are filtered based on if a nucleotide edit is more significantly enriched in sample compared to the plasmid data. Negative control data where no edit is expected can be fed in instead of plasmid library.",
     )
     parser.add_argument(
+        "--reporter-length",
+        type=int,
+        default=32,
+        help="Length of reporter sequence in the construct.",
+    )
+    parser.add_argument(
+        "--reporter-right-flank-length",
+        type=int,
+        default=6,
+        help="Length of the right-flanking nucleotides of protospacer in the reporter.",
+    )
+    parser.add_argument(
         "--edit-start-pos",
         "-s",
         type=int,
@@ -314,6 +326,11 @@ def parse_args(parser=None):
         type=float,
         help="Jaccard Index threshold when the alleles are mapped to the most similar alleles. In each filtering step, allele counts of filtered out alleles will be mapped to the most similar allele only if they have Jaccard Index of shared edit higher than this threshold.",
         default=0.3,
+    )
+    parser.add_argument(
+        "--filter-spacer",
+        help="Only consider edit within protospacer positions of reporter.",
+        action="store_true",
     )
     parser.add_argument(
         "--filter-window",

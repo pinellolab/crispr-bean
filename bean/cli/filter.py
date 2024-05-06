@@ -67,7 +67,7 @@ def main(args):
             info(f"Filtered down to {len(bdata.uns['sig_allele_counts'])} alleles.")
 
         print(len(bdata.uns[allele_df_keys[-1]]))
-        if len(bdata.uns[allele_df_keys[-1]]) >= 1:
+        if len(bdata.uns[allele_df_keys[-1]]) >= 1 and args.filter_spacer:
             info("Filtering out edits outside spacer position...")
             bdata.uns[f"{allele_df_keys[-1]}_spacer"] = (
                 bdata.filter_allele_counts_by_pos(
@@ -77,6 +77,8 @@ def main(args):
                     map_to_filtered=True,
                     allele_uns_key=allele_df_keys[-1],
                     jaccard_threshold=0.2,
+                    reporter_length=args.reporter_length,
+                    reporter_right_flank_length=args.reporter_right_flank_length,
                 ).reset_index(drop=True)
             )
             info(

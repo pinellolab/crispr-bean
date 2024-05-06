@@ -34,8 +34,12 @@ bean qc \
 bean run sorting variant \
     ${working_dir}/bean_count_${screen_id}_masked.h5ad \
     -o ${working_dir}/ \
-    --uniform-edit             `# As we have no edit information.` \
-    [--no-negative-control]    `# If you don't have the negative control gRNAs.`
+    --uniform-edit --ignore-bcmatch            `# As we have no edit/reporter information.` \
+    [--fit-negctrl [--negctrl-col target_group --negctrl-col-value NegCtrl]]    `# If you have the negative control gRNAs.`
 ```
+
+## Input file spec
+* gRNA_info.csv: Should have `name`, `target` columns. You can also specify `target_group` column whose value indicate `PosCtrl`/`NegCtrl` for control gRNAs.
+* sample_list.csv: Same requirement for the full run. See examples for [`sorting` screens](https://github.com/pinellolab/crispr-bean/blob/main/tests/data/var_mini_samples.csv) and [`survival` screens](https://github.com/pinellolab/crispr-bean/blob/main/tests/data/sample_list_survival.csv).
 
 See the example input files [here](https://pinellolab.github.io/crispr-bean/create_screen.html).

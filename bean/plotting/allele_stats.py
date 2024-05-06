@@ -1,4 +1,5 @@
 """Plotting functions to describe allele/guide/edit stats for allele count information stored in ReporterScreen.uns[allele_df_key]."""
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -32,7 +33,9 @@ def plot_n_guides_per_edit(
             + list(map(lambda e: e.get_abs_edit(), a.nt_allele.edits))
         )
     elif allele_col == "allele":
-        a["edits"] = a[allele_col].map(lambda a: list(a.edits))
+        a["edits"] = a[allele_col].map(
+            lambda a: list(map(lambda e: e.get_abs_edit(), a.edits))
+        )
     edits_df = a.explode("edits")[["guide", "edits"]]
     edits_df["edits"] = edits_df.edits.map(str)
     edits_df = edits_df.loc[~edits_df.edits.str.startswith("-"), :].drop_duplicates()
@@ -61,5 +64,5 @@ def plot_allele_stats(bdata, allele_df_keys, plot_save_path):
         plot_n_alleles_per_guide(bdata, key, bdata.uns[key].columns[1], ax[0])
         plot_n_guides_per_edit(bdata, key, bdata.uns[key].columns[1], ax[1])
 
-    #plt.tight_layout()
+    # plt.tight_layout()
     fig.savefig(plot_save_path, bbox_inches="tight")

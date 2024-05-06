@@ -32,6 +32,11 @@ def prepare_bdata(bdata: be.ReporterScreen, args, warn, prefix: str):
                 f"Some target column (bdata.guides[{args.target_col}]) value is null. Check your input file."
             )
         bdata = bdata[bdata.guides[args.target_col].argsort(), :]
+        if any(bdata.X.sum(axis=1) > 0):
+            warn(
+                f"Filtering out {sum(bdata.X.sum(axis=1) > 0)} gRNAs without any counts over all samples."
+            )
+            bdata = bdata[bdata.X.sum(axis=1) > 0, :]
         n_no_support_targets, bdata = filter_no_info_target(
             bdata,
             condit_col=args.condition_col,

@@ -621,7 +621,9 @@ class ReporterScreen(Screen):
         norm_counts = self._get_allele_norm(
             allele_count_df=allele_count_df, thres=norm_thres
         )
-        alleles_norm.loc[:, count_columns] = alleles_norm.loc[:, count_columns].astype(float)
+        alleles_norm.loc[:, count_columns] = alleles_norm.loc[:, count_columns].astype(
+            float
+        )
         alleles_norm.loc[:, count_columns] = (
             alleles_norm.loc[:, count_columns] / norm_counts
         )
@@ -637,6 +639,8 @@ class ReporterScreen(Screen):
         map_to_filtered: bool = True,
         distribute: bool = False,
         jaccard_threshold: float = 0.1,
+        reporter_length: int = 32,
+        reporter_right_flank_length: int = 6,
     ):
         """
         Filter alleles based on barcode matched counts, allele counts,
@@ -649,6 +653,8 @@ class ReporterScreen(Screen):
         rel_pos_end: rel_pos to end including (exclusive)
         rel_pos_is_reporter: rel_pos_start and rel_pos_end is 0-based relative to reporter sequence start.
         jaccard_threshold (float) --
+        reporter_length: Length of reporter sequence
+        reporter_right_flank_length: Length of right-flanking nucleotides following protospacer sequence in reporter.
         """
         allele_count_df = self.uns[allele_uns_key].copy()
         if rel_pos_is_reporter:
@@ -663,7 +669,10 @@ class ReporterScreen(Screen):
             if "guide_len" not in self.guides.columns.tolist():
                 self.guides["guide_len"] = self.guides.sequence.map(len)
             guide_start_pos = (
-                32 - 6 - self.guides.loc[allele_count_df.guide, "guide_len"].values
+                reporter_length
+                - 1
+                - reporter_right_flank_length
+                - self.guides.loc[allele_count_df.guide, "guide_len"].values
             )
             filtered_allele, filtered_edits = zip(
                 *[

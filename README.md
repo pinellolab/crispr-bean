@@ -54,6 +54,7 @@ See the [documentation](https://pinellolab.github.io/crispr-bean/) for tutorials
 | Coding sequence tiling libarary | FACS sorting | Yes/No | [Coding sequence tiling screen](https://pinellolab.github.io/crispr-bean/cds) 
 | GWAS variant library | Survival / Proliferation | Yes/No |  [GWAS variant screen](https://pinellolab.github.io/crispr-bean/prolif_gwas)
 | Coding sequence tiling libarary | Survival / Proliferation | Yes/No | Coming soon!
+| Perturbation library without reporter | FACS sorting | Yes/No | [No reporter screen](https://pinellolab.github.io/crispr-bean/tutorial_no_edit.html)
 
 
 ### Library design: variant or tiling?

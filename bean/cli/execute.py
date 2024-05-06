@@ -1,7 +1,7 @@
 import argparse
 from bean.mapping.utils import get_input_parser_count as get_count_parser
 from bean.mapping.utils import get_input_parser as get_count_samples_parser
-from bean.plotting.utils import parse_args as get_profile_parser
+from bean.plotting.parser import parse_args as get_profile_parser
 from bean.qc.parser import parse_args as get_qc_parser
 from bean.annotate.utils import parse_args as get_filter_parser
 from bean.model.parser import parse_args as get_run_parser

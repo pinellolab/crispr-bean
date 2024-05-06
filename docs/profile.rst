@@ -7,6 +7,6 @@
 Full parameters
 ==================
 .. argparse::
-   :filename: ../bean/plotting/utils.py
+   :filename: ../bean/plotting/parser.py
    :func: parse_args
    :prog: bean profile

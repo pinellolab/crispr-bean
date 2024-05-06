@@ -1,58 +1,6 @@
 import argparse
 import os
-
-
-def parse_args(parser=None):
-    if parser is None:
-        parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "bdata_path", help="Path to the ReporterScreen object to run QC on", type=str
-    )
-    parser.add_argument(
-        "-o",
-        "--output-prefix",
-        help="Output prefix of editing pattern report (prefix.html, prefix.ipynb). If not provided, base name of `bdata_path` is used.",
-        type=str,
-    )
-    parser.add_argument(
-        "--replicate-col",
-        help="Column name in `bdata.samples` that describes replicate ID.",
-        type=str,
-        default="replicate",
-    )
-    parser.add_argument(
-        "--condition-col",
-        help="Column name in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.)",
-        type=str,
-        default="condition",
-    )
-    parser.add_argument(
-        "--pam-col",
-        help="Column name describing PAM of each gRNA in `bdata.guides`.",
-        type=str,
-        default=None,
-    )
-    parser.add_argument(
-        "--control-condition",
-        help="Control condition where editing preference would be profiled at. Pre-filters data where `bdata.samples[condition_col] == control_condition`.",
-        type=str,
-        default="bulk",
-    )
-    parser.add_argument(
-        "-w",
-        "--window-length",
-        help="Window length of editing window of maximal editing efficiency to be identified. This window is used to quantify context specificity within the window.",
-        type=int,
-        default=6,
-    )
-    parser.add_argument(
-        "--save-fig",
-        action="store_true",
-        help="Save .pdf of the figures included in the report.",
-    )
-
-    return parser
-
+import bean as be
 
 def check_args(args):
     if args.output_prefix is None:
@@ -63,6 +11,15 @@ def check_args(args):
         os.makedirs(args.output_prefix, exist_ok=True)
     if args.window_length < 1:
         raise ValueError(f"window_length {args.window_length} is too small.")
-    if args.window_length > 20:
-        raise ValueError(f"window_length {args.window_length} is too large.")
+    cdata = be.read_h5ad(args.bdata_path)
+    cdata.samples["replicate"] = cdata.samples[args.replicate_col]
+    cdata_bulk = cdata[:,cdata.samples[args.condition_col] == args.control_condition]
+    if len(cdata_bulk) == 0:
+        raise ValueError(
+            f"No samples with bdata.samples['{args.condition_col}'] == {args.control_condition}. Please check your input arguments --condition-col & --control-condition."
+        )
+    if args.pam_col is not None and args.pam_col not in cdata.guides.columns: 
+        raise ValueError(
+            f"Specified --pam-col `{args.pam_col}` does not exist in ReporterScreen.guides.columns ({cdata.guides.columns}). Please check your input. If you don't want PAM output, please do not provide --pam-col argument.s"
+        )
     return args

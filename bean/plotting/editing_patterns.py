@@ -1,11 +1,13 @@
 from copy import deepcopy
-from typing import Optional, Sequence, Dict, List, Union
+from typing import Optional, Sequence, Dict, List, Union, Tuple
 import re
-from ..framework.Edit import Edit
+from bean import ReporterScreen
+from bean.framework.Edit import Edit
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import logomaker
 from tqdm.auto import tqdm
 
 BASES = ["A", "T", "C", "G"]
@@ -330,14 +332,16 @@ def plot_by_pos_behive(
     return axes, df
 
 
-def get_position_by_pam_rates(bdata, edit_rates_df: pd.DataFrame, pam_col="5-nt PAM"):
+def get_position_by_pam_rates(
+    bdata, edit_rates_df: pd.DataFrame, target_base_change: str, pam_col="5-nt PAM"
+):
     edit_rates_df["pam"] = bdata.guides.loc[edit_rates_df.guide, pam_col].reset_index(
         drop=True
     )
     edit_rates_df["pam23"] = edit_rates_df.pam.map(lambda s: s[1:3])
     return pd.pivot(
         edit_rates_df.loc[
-            (edit_rates_df.base_change == bdata.target_base_change),
+            (edit_rates_df.base_change == target_base_change),
             ["rep_mean", "pam23", "spacer_pos"],
         ]
         .groupby(["pam23", "spacer_pos"])
@@ -350,53 +354,42 @@ def get_position_by_pam_rates(bdata, edit_rates_df: pd.DataFrame, pam_col="5-nt 
 
 
 def plot_by_pos_pam(
-    bdata,
-    edit_rates_df,
-    pam_col="5-nt PAM",
-    ax=None,
-    figsize=(6, 4),
-):
-    """Plot position by PAM"""
-    pos_by_pam = get_position_by_pam_rates(bdata, edit_rates_df, pam_col)
-    if ax is None:
-        fig, ax = plt.subplots(figsize=figsize)
-    sns.heatmap(pos_by_pam, ax=ax, cmap="Blues")
-    ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
-    return pos_by_pam
-
-
-def plot_by_pos_pam_and_context(bdata, edit_rates_df, figsize=(6, 6)):
-    pos_by_pam = get_position_by_pam_rates(bdata, edit_rates_df)
-    fig, ax = plt.subplots(2, 1, figsize=figsize)
-    sns.scatterplot(
-        edit_rates_df.loc[(edit_rates_df.base_change == bdata.target_base_change)],
-        x="spacer_pos_ctxt",
-        y="rep_mean",
-        hue="context",
-        alpha=0.3,
-        ax=ax[0],
-        s=5,
-        rasterized=True,
-    )
-    ax[0].legend(bbox_to_anchor=(1.02, 0.5), loc="center left", title="Context")
-    ax[0].set_xlabel("Protospacer position")
-    ax[0].set_xticks(list(range(1, 21)))
-    ax[0].set_xticklabels(list(range(1, 21)))
-    ax[0].set_ylabel(f"{bdata.target_base_change} editing rate")
-    ax[0].set_ylim((0, 1))
-    ax[0].set_xlim((0.5, 20.5))
-
-    sns.heatmap(pos_by_pam, ax=ax[1], cmap="Blues", cbar=False)
-    ax[1].set_yticklabels(ax[1].get_yticklabels(), rotation=0)
-    cbax = fig.add_axes(
-        [0.85, 0.15, 0.02, 0.3],
-    )
-    ax[1].set_ylabel("PAM")
-    ax[1].set_yticklabels([f"N{t.get_text()}" for t in ax[1].get_yticklabels()])
-    ax[1].set_xlabel("Protospacer position")
-    fig.colorbar(ax[1].get_children()[0], cbax, label="editing rate")
-    plt.tight_layout()
-    return ax
+    bdata: ReporterScreen,
+    edit_rates_df: pd.DataFrame,
+    target_base_changes: List[str],
+    pam_col: str = "5-nt PAM",
+    axes=None,
+    figsize: Tuple[float, float] = (6, 4),
+    save_fig: bool = False,
+    save_path: Optional[str] = None,
+) -> pd.DataFrame:
+    """Plot editing efficiency for each position x PAM combination."""
+    if axes is None:
+        fig, axes = plt.subplots(
+            1,
+            len(target_base_changes),
+            figsize=(figsize[0] * len(target_base_changes), figsize[1]),
+        )
+    if len(target_base_changes) == 1:
+        axes = np.array([axes])
+    pos_by_pam_basechanges = []
+    for i, target_base_change in enumerate(target_base_changes):
+        edit_rates_df_base = edit_rates_df.loc[
+            edit_rates_df.base_change == target_base_change, :
+        ].reset_index(drop=True)
+        pos_by_pam = get_position_by_pam_rates(
+            bdata, edit_rates_df_base, target_base_change, pam_col
+        )
+        sns.heatmap(pos_by_pam, ax=axes[i], cmap="Blues")
+        axes[i].set_yticklabels(axes[i].get_yticklabels(), rotation=0)
+        axes[i].set_title(target_base_change)
+        pos_by_pam["base_change"] = target_base_change
+        pos_by_pam_basechanges.append(pos_by_pam)
+    if save_fig:
+        if save_path is None:
+            save_path = "bean_profile_pos_by_pam.pdf"
+        plt.savefig(save_path, bbox_inches="tight")
+    return pd.concat(pos_by_pam_basechanges, axis=0)
 
 
 def get_pam_preference(
@@ -461,3 +454,78 @@ def plot_pam_preference(
     ax.set(xlabel=None, ylabel=None)
     ax.set_title("PAM preference")
     return ax
+
+
+def plot_context_specificity(
+    bdata: ReporterScreen,
+    edit_rates_df: pd.DataFrame,
+    target_base_changes: List[str],
+    window: Tuple[int, int],
+    axes=None,
+    figsize: Tuple[float, float] = (3, 5),
+    save_fig: bool = False,
+    save_path: Optional[str] = None,
+) -> pd.DataFrame:
+    window_start, window_end = window
+    if axes is None:
+        fig, axes = plt.subplots(
+            1,
+            len(target_base_changes),
+            figsize=(figsize[0] * len(target_base_changes), figsize[1]),
+        )
+    if len(target_base_changes) == 1:
+        axes = np.array([axes])
+    save_tbls = []
+    for j, target_base_change in enumerate(target_base_changes):
+        edit_rates_df_base = edit_rates_df.loc[
+            edit_rates_df.base_change == target_base_change, :
+        ].reset_index(drop=True)
+        edit_rates_df_base_window = edit_rates_df_base.loc[
+            (edit_rates_df_base.spacer_pos >= window_start)
+            & (edit_rates_df_base.spacer_pos <= window_end)
+        ].copy()
+        edit_rates_df_base_window["context"] = edit_rates_df_base_window.apply(
+            lambda row: bdata.guides.loc[row.guide, "reporter"][
+                row.rel_pos - 1 : row.rel_pos + 2
+            ],
+            axis=1,
+        )
+        context_mean_edit_rate = {}
+        bases = ["A", "C", "G", "T"]
+
+        for i in range(3):
+            edit_rates_df_base_window[f"context_{i}"] = (
+                edit_rates_df_base_window.context.map(lambda s: s[i])
+            )
+            context_mean_edit_rate[i] = edit_rates_df_base_window.groupby(
+                f"context_{i}"
+            )["rep_mean"].mean()
+            context_mean_edit_rate[i] = (
+                context_mean_edit_rate[i].reindex(bases).fillna(0)
+            )
+
+        target_df = pd.DataFrame(
+            [int(b == target_base_change[0]) for b in bases], index=bases
+        )
+        ic_tbl = pd.concat(
+            [
+                context_mean_edit_rate[0] / context_mean_edit_rate[0].sum(),
+                target_df,
+                context_mean_edit_rate[2] / context_mean_edit_rate[2].sum(),
+            ],
+            axis=1,
+        ).T
+        save_tbl = ic_tbl.transpose()
+        save_tbl["base_change"] = target_base_change
+        save_tbls.append(save_tbl)
+        ic_tbl.index = [-1, 0, 1]
+        logomaker.Logo(ic_tbl.astype(float), ax=axes[j])
+        axes[j].set_ylabel("Relative frequency")
+        axes[j].set_title(target_base_change)
+    if save_fig:
+        if save_path is None:
+            save_path = (
+                f"bean_profile_context_preference_{window_start}_{window_end}.pdf"
+            )
+        fig.savefig(save_path, bbox_inches="tight")
+    return pd.concat(save_tbls, axis=0)

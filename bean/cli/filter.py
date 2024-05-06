@@ -115,7 +115,7 @@ def main(args):
         info("Filtering out indels...")
         bdata.uns[filtered_key] = bdata.filter_allele_counts_by_base(
             {k: v for k, v in product(["A", "C", "T", "G"], ["A", "C", "T", "G"])},
-            map_to_filtered=False,
+            map_to_filtered=True,
             allele_uns_key=allele_df_keys[-1],
         ).reset_index(drop=True)
         info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")
@@ -128,7 +128,7 @@ def main(args):
         info(f"Filtering out non-{bdata.uns['target_base_changes']} edits...")
         bdata.uns[filtered_key] = bdata.filter_allele_counts_by_base(
             bdata.target_base_changes,
-            map_to_filtered=False,
+            map_to_filtered=True,
             allele_uns_key=allele_df_keys[-1],
         ).reset_index(drop=True)
         info(f"Filtered down to {len(bdata.uns[filtered_key])} alleles.")

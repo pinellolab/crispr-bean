@@ -122,36 +122,45 @@ def get_edit_rates(
 
 def plot_by_pos_context(
     edit_rates_df: pd.DataFrame,
-    target_base="A",
+    target_bases: List[str] = ["A"],
+    save_fig: bool = False,
+    save_path: Optional[str] = None,
 ):
-    target_base_alt = {"A": "G", "C": "T"}[target_base]
-    context_to_offset_map = {
-        f"A{target_base}": -0.4,
-        f"G{target_base}": -0.2,
-        f"C{target_base}": 0,
-        f"T{target_base}": 0.2,
-    }
-    edit_rates_df["spacer_pos_ctxt"] = (
-        edit_rates_df.spacer_pos + edit_rates_df.context.map(context_to_offset_map)
-    )
-    fig, ax = plt.subplots(figsize=(6, 3))
-    sns.scatterplot(
-        edit_rates_df.loc[
-            (edit_rates_df.base_change == f"{target_base}>{target_base_alt}")
-        ],
-        x="spacer_pos_ctxt",
-        y="rep_mean",
-        hue="context",
-        alpha=0.3,
-        ax=ax,
-        s=5,
-        rasterized=True,
-    )
-    ax.legend(bbox_to_anchor=(1.02, 0.5), loc="center left", title="Context")
-    ax.set_xlabel("Protospacer position")
-    ax.set_ylabel(f"{target_base}>{target_base_alt} editing rate")
-    ax.set_ylim((0, 1))
-    return ax
+    fig, axes = plt.subplots(len(target_bases), 1, figsize=(6, 3 * len(target_bases)))
+    if len(target_bases) == 1:
+        axes = np.array([axes])
+    for i, target_base in enumerate(target_bases):
+        target_base_alt = {"A": "G", "C": "T"}[target_base]
+        context_to_offset_map = {
+            f"A{target_base}": -0.4,
+            f"G{target_base}": -0.2,
+            f"C{target_base}": 0,
+            f"T{target_base}": 0.2,
+        }
+        edit_rates_df["spacer_pos_ctxt"] = (
+            edit_rates_df.spacer_pos + edit_rates_df.context.map(context_to_offset_map)
+        )
+
+        sns.scatterplot(
+            edit_rates_df.loc[
+                (edit_rates_df.base_change == f"{target_base}>{target_base_alt}")
+            ],
+            x="spacer_pos_ctxt",
+            y="rep_mean",
+            hue="context",
+            alpha=0.3,
+            ax=axes[i],
+            s=5,
+            rasterized=True,
+        )
+        axes[i].legend(bbox_to_anchor=(1.02, 0.5), loc="center left", title="Context")
+        axes[i].set_xlabel("Protospacer position")
+        axes[i].set_ylabel(f"{target_base}>{target_base_alt} editing rate")
+        axes[i].set_ylim((0, 1))
+    if save_fig:
+        if save_path is None:
+            save_path = "bean_profile_pos_context.pdf"
+        fig.savefig(save_path, bbox_inches="tight")
 
 
 def _get_complementary_base_change(base_change_str: str):
@@ -329,6 +338,7 @@ def plot_by_pos_behive(
         dfs.append(df_to_draw)
     df = pd.concat(dfs, axis=1)
     df = df.loc[:, ~df.columns.duplicated()].copy()
+    plt.tight_layout()
     return axes, df
 
 
@@ -380,7 +390,7 @@ def plot_by_pos_pam(
         pos_by_pam = get_position_by_pam_rates(
             bdata, edit_rates_df_base, target_base_change, pam_col
         )
-        sns.heatmap(pos_by_pam, ax=axes[i], cmap="Blues")
+        sns.heatmap(pos_by_pam, ax=axes[i], cmap="Blues", square=True)
         axes[i].set_yticklabels(axes[i].get_yticklabels(), rotation=0)
         axes[i].set_title(target_base_change)
         pos_by_pam["base_change"] = target_base_change

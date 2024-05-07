@@ -16,9 +16,13 @@ def check_args(args):
         raise ValueError(
             f"Specified --condition-col `{args.condition_col}` does not exist in ReporterScreen.samples.columns ({bdata.samples.columns}). Please check your input."
         )
-    if not bdata.tiling and args.target_pos_col not in bdata.guides.columns:
+    print("ARGS.TILING", args.tiling)
+    if (
+        (args.tiling is not None and args.tiling == False)
+        or (args.tiling is None and not bdata.tiling)
+    ) and args.target_pos_col not in bdata.guides.columns:
         raise ValueError(
-            f"Specified --target-pos-col `{args.target_pos_col}` does not exist in ReporterScreen.guides.columns ({bdata.guides.columns}). Please check your input."
+            f"Specified --target-pos-col `{args.target_pos_col}` does not exist in ReporterScreen.guides.columns ({bdata.guides.columns}). Please check your input. (--tiling {args.tiling}, ReporterScreen.tiling: {bdata.tiling})"
         )
     if args.posctrl_col and args.posctrl_col not in bdata.guides.columns:
         raise ValueError(

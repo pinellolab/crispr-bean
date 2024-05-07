@@ -142,7 +142,7 @@ class ReporterScreen(Screen):
             self.uns["target_base_changes"] = target_base_changes
         if tiling is not None:
             self.uns["tiling"] = tiling
-        else:
+        elif "tiling" not in self.uns:
             self.uns["tiling"] = False
 
     @property

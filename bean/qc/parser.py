@@ -154,13 +154,13 @@ def parse_args(parser=None):
     parser.add_argument(
         "--reporter-length",
         type=int,
-        default=32,
+        default=None,
         help="Length of reporter sequence in the construct.",
     )
     parser.add_argument(
         "--reporter-right-flank-length",
         type=int,
-        default=6,
+        default=None,
         help="Length of the right-flanking nucleotides of protospacer in the reporter.",
     )
     return parser

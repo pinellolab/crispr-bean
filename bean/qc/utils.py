@@ -61,6 +61,16 @@ def check_args(args):
         args.base_edit_data = False
     else:
         args.base_edit_data = True
+    if args.reporter_length is None:
+        if "reporter_length" in bdata.uns:
+            args.reporter_length = bdata.uns["reporter_length"]
+        else:
+            args.reporter_length = 32
+    if args.reporter_right_flank_length is None:
+        if "reporter_right_flank_length" in bdata.uns:
+            args.reporter_right_flank_length = bdata.uns["reporter_right_flank_length"]
+        else:
+            args.reporter_right_flank_length = 6
     return args
 
 

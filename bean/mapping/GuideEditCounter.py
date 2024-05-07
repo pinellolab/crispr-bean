@@ -112,6 +112,8 @@ class GuideEditCounter:
             tiling=kwargs["tiling"],
         )
         self.screen.guides["guide_len"] = self.screen.guides.sequence.map(len)
+        self.screen.uns["reporter_length"] = kwargs["reporter_length"]
+        self.screen.uns["reporter_right_flank_length"] = kwargs["reporter_length"] - kwargs["gstart_reporter"] - self.screen.guides["guide_len"].max()
         self.count_guide_edits = kwargs["count_guide_edits"]
         if self.count_guide_edits:
             self.screen.uns["guide_edit_counts"] = {}

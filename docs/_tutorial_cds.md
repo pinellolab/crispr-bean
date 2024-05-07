@@ -17,7 +17,7 @@ Tiling screen that tiles gRNA densely across locus or multiple loci, selected ba
 ## Example workflow
 ```bash
 screen_id=tiling_mini_screen
-working_dir=tests/workdir
+working_dir=tests/data/
 
 # 1. Count gRNA & reporter
 bean count-samples \

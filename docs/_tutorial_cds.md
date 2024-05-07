@@ -16,28 +16,32 @@ Tiling screen that tiles gRNA densely across locus or multiple loci, selected ba
 
 ## Example workflow
 ```bash
-screen_id=my_sorting_tiling_screen
-working_dir=my_workdir
+screen_id=tiling_mini_screen
+working_dir=tests/workdir
 
 # 1. Count gRNA & reporter
 bean count-samples \
---input ${working_dir}/sample_list_tiling.csv          `# Contains fastq file path; see test file for example.`\
--b A                                               `# Base A is edited (into G)` \
--f ${working_dir}/test_guide_info_tiling_chrom.csv     `# Contains gRNA metadata; see test file for example.`\
--o $working_dir                                              `# Output directory` \
--r                                                 `# Quantify reporter edits` \
--n ${screen_id}                                       `# ID of the screen` \
+--input ${working_dir}/sample_list_tiling.csv           `# Contains fastq file path; see test file for example.`\
+-b A                                                    `# Base A is edited (into G)` \
+-f ${working_dir}/test_guide_info_tiling_chrom.csv      `# Contains gRNA metadata; see test file for example.`\
+-o $working_dir                                         `# Output directory` \
+-r                                                      `# Quantify reporter edits` \
+-n ${screen_id}                                         `# ID of the screen` \
 --tiling
+# count-samples output from above test run is too low in read depth. Downstream processes can be run with test file included in the Github repo.
+
+# (Optional) Profile editing patterns
+bean profile tests/data/${screen_id}.h5ad --pam-col '5-nt PAM'
 
 # 2. QC samples & guides
 bean qc \
-  ${working_dir}/bean_count_${screen_id}.h5ad           `# Input ReporterScreen .h5ad file path` \
-  -o ${working_dir}/bean_count_${screen_id}_masked.h5ad `# Output ReporterScreen .h5ad file path` \
+  ${working_dir}/${screen_id}.h5ad           `# Input ReporterScreen .h5ad file path` \
+  -o ${working_dir}/${screen_id}_masked.h5ad `# Output ReporterScreen .h5ad file path` \
   -r ${working_dir}/qc_report_${screen_id}              `# Prefix for QC report` \
 
 # 3. Filter & translate alleles
-bean filter ${working_dir}/bean_count_${screen_id}_masked.h5ad \
--o ${working_dir}/bean_count_${screen_id}_alleleFiltered \
+bean filter ${working_dir}/${screen_id}_masked.h5ad \
+-o ${working_dir}/${screen_id}_alleleFiltered \
 --filter-target-basechange                             `# Filter based on intended base changes. If -b A was provided in bean count, filters for A>G edit. If -b C was provided, filters for C>T edit.`\
 --filter-window --edit-start-pos 0 --edit-end-pos 19   `# Filter based on editing window in spacer position within reporter.`\
 --filter-allele-proportion 0.1 --filter-sample-proportion 0.3 `#Filter based on allele proportion larger than 0.1 in at least 0.3 (30%) of the control samples.` \
@@ -45,7 +49,7 @@ bean filter ${working_dir}/bean_count_${screen_id}_masked.h5ad \
 
 # 4. Quantify variant effect
 bean run sorting tiling \
-    ${working_dir}/bean_count_${screen_id}_alleleFiltered.h5ad \
+    ${working_dir}/${screen_id}_alleleFiltered.h5ad \
     -o $working_dir \
     --fit-negctrl \
     --scale-by-acc \
@@ -71,13 +75,21 @@ bean count-samples \
 
 Make sure you follow the [input file format](https://pinellolab.github.io/crispr-bean/input.html) for seamless downstream steps. This will produce `./bean_count_${screen_id}.h5ad`. 
 
+## (Optional) Profile editing pattern (:ref:`profile`)
+You can profile the pattern of base editing based on the allele counts. 
+```bash
+bean profile tests/data/${screen_id}.h5ad --pam-col '5-nt PAM'
+```
+Check the editing window, and consider feeding the start/end position of the editing window with the maximal editing rate into `bean qc` with `--edit-start-pos`, `--edit-end-pos` arguments.
+
+
 ## 2. QC (:ref:`qc`)
 Base editing data will include QC about editing efficiency. As QC uses predefined column names and values, beware to follow the [input file guideline](https://pinellolab.github.io/crispr-bean/input.html), but you can change the parameters with the full argument list of [bean qc](https://pinellolab.github.io/crispr-bean/qc.html). (Common factors you may want to tweak is `--ctrl-cond=bulk` and `--lfc-conds=top,bot` if you have different sample condition labels.)
 
 ```bash
 bean qc \
-  ${working_dir}/bean_count_${screen_id}.h5ad           `# Input ReporterScreen .h5ad file path` \
-  -o ${working_dir}/bean_count_${screen_id}_masked.h5ad `# Output ReporterScreen .h5ad file path` \
+  ${working_dir}/${screen_id}.h5ad           `# Input ReporterScreen .h5ad file path` \
+  -o ${working_dir}/${screen_id}_masked.h5ad `# Output ReporterScreen .h5ad file path` \
   -r ${working_dir}/qc_report_${screen_id}              `# Prefix for QC report` \
   [--tiling]                          `# Not required if you have passed --tiling in counting step`
 ```
@@ -103,8 +115,8 @@ where `path_to_gene_names_file.txt` has one gene symbol per line, and gene symbo
 Example allele filtering given we're translating based on MANE transcript exons of multiple gene symbols:
 
 ```bash
-bean filter ${working_dir}/bean_count_${screen_id}_masked.h5ad \
--o ${working_dir}/bean_count_${screen_id}_alleleFiltered \
+bean filter ${working_dir}/${screen_id}_masked.h5ad \
+-o ${working_dir}/${screen_id}_alleleFiltered \
 --filter-target-basechange                             `# Filter based on intended base changes. If -b A was provided in bean count, filters for A>G edit. If -b C was provided, filters for C>T edit.`\
 --filter-window --edit-start-pos 0 --edit-end-pos 19   `# Filter based on editing window in spacer position within reporter.`\
 --filter-allele-proportion 0.1 --filter-sample-proportion 0.3 `#Filter based on allele proportion larger than 0.1 in at least 0.3 (30%) of the control samples.` \
@@ -122,7 +134,7 @@ By default, `bean run [sorting,survival] tiling` uses most filtered allele count
   
     ```bash
     bean run sorting tiling \
-    ${working_dir}/bean_count_${screen_id}_alleleFiltered.h5ad \
+    ${working_dir}/${screen_id}_alleleFiltered.h5ad \
     -o $working_dir \
     --fit-negctrl \
     --scale-by-acc \
@@ -133,7 +145,7 @@ By default, `bean run [sorting,survival] tiling` uses most filtered allele count
 
     ```bash
     bean run sorting tiling \
-    ${working_dir}/bean_count_${screen_id}_alleleFiltered.h5ad \
+    ${working_dir}/${screen_id}_alleleFiltered.h5ad \
     -o $working_dir \
     --fit-negctrl \
     --scale-by-acc \
@@ -144,7 +156,7 @@ By default, `bean run [sorting,survival] tiling` uses most filtered allele count
 
     ```bash
     bean run sorting tiling \
-    ${working_dir}/bean_count_${screen_id}_alleleFiltered.h5ad \
+    ${working_dir}/${screen_id}_alleleFiltered.h5ad \
     -o $working_dir \
     --fit-negctrl 
     ```
@@ -154,7 +166,7 @@ By default, `bean run [sorting,survival] tiling` uses most filtered allele count
 
     ```bash
     bean run sorting tiling \
-    ${working_dir}/bean_count_${screen_id}_alleleFiltered.h5ad \
+    ${working_dir}/${screen_id}_alleleFiltered.h5ad \
     -o $working_dir \
     --fit-negctrl \
     --uniform-edit

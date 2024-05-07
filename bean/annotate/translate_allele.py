@@ -137,7 +137,7 @@ def _parse_range(chr_range: str) -> Tuple[str, int, int]:
     return (chrom, start, end)
 
 
-def _parse_description(desc_str: str):
+def _parse_description(desc_str: str) -> Tuple[Tuple[str, int, int], str]:
     """Parse description line of fasta file to get range."""
     sstr = desc_str.split(" ")
     strand = None
@@ -153,21 +153,38 @@ def _parse_description(desc_str: str):
     return genome_range, strand
 
 
-def get_cds_seq_pos_from_fasta(fasta_file_name: str) -> Tuple[List[str], List[int]]:
+def get_cds_seq_pos_from_fasta(
+    fasta_file_name: str,
+) -> Tuple[str, List[str], List[int], str]:
     """Obtain tuple of lists, first with nucleotide and second with genomic position of the nucleotide."""
     exons = list(SeqIO.parse(fasta_file_name, "fasta"))
     translated_seq = []
     genomic_pos = []
+    (exon_chrom, exon_start, exon_end), strand = _parse_description(
+        exons[0].description
+    )
+    if strand == "-":
+        exons = exons[::-1]
     for exon in exons:
         (exon_chrom, exon_start, exon_end), strand = _parse_description(
             exon.description
         )
+        exon_seq = []
+        exon_pos = []
         for i, nt in enumerate(str(exon.seq)):
             if nt.islower():
                 continue
-            translated_seq.append(nt)
-            genomic_pos.append(exon_start + i)
-    return (exon_chrom, translated_seq, genomic_pos, strand)
+            exon_seq.append(nt)
+            if strand == "+":
+                exon_pos.append(exon_start + i)
+            else:
+                exon_pos.append(exon_end - i)
+        if strand == "-":
+            exon_seq = revcomp(exon_seq)
+            exon_pos = exon_pos[::-1]
+        translated_seq.extend(exon_seq)
+        genomic_pos.extend(exon_pos)
+    return exon_chrom, translated_seq, genomic_pos, {"+": 1, "-": -1}[strand]
 
 
 def _translate_single_codon(
@@ -207,12 +224,10 @@ class CDS:
         self.genomic_pos: Sequence = []
 
     @classmethod
-    def from_fasta(cls, fasta_file_name, gene_name, suppressMessage=True):
+    def from_fasta(cls, fasta_file_name, gene_name=None, suppressMessage=True):
         cds = cls()
-        # if fasta_file_name is not None:
-        #     if not suppressMessage:
-        #         raise ValueError("No fasta file provided as reference: using LDLR")
-        #     fasta_file_name = os.path.dirname(be.__file__) + "/annotate/ldlr_exons.fa"
+        if gene_name is None:
+            gene_name = os.path.basename(fasta_file_name).upper().split(".FA")[0]
         if gene_name not in cls.gene_info_dict:
             chrom, translated_seq, genomic_pos, strand = get_cds_seq_pos_from_fasta(
                 fasta_file_name
@@ -252,17 +267,9 @@ class CDS:
         cds.translated_seq = deepcopy(cls.gene_info_dict[gene_name]["translated_seq"])
         cds.genomic_pos = cls.gene_info_dict[gene_name]["genomic_pos"]
         cds.nt = cds.gene_info_dict[gene_name]["translated_seq"]  # in sense strand
-        # print(cds.gene_name + ":" + "".join(cds.nt))
-        # if cds.strand == -1:
-        #     cds.nt = revcomp(cds.nt)
         cds.pos = np.array(cds.genomic_pos)
         cds.edited_nt = deepcopy(cds.nt)
         return cds
-
-    # def translate(self):
-    #     if self.strand == -1:
-    #         self.edited_nt = revcomp(self.edited_nt)
-    #     self.aa = _translate(self.edited_nt, codon_map)
 
     def _get_relative_nt_pos(self, absolute_pos):
         """0-based relative position"""
@@ -665,16 +672,16 @@ def annotate_edit(
         )
     edit_info["coding"] = ""
     edit_info.loc[edit_info.pos.map(lambda s: s.startswith("A")), "coding"] = "coding"
-    edit_info.loc[
-        edit_info.pos.map(lambda s: not s.startswith("A")), "coding"
-    ] = "noncoding"
+    edit_info.loc[edit_info.pos.map(lambda s: not s.startswith("A")), "coding"] = (
+        "noncoding"
+    )
     if control_tag is not None:
-        edit_info.loc[
-            edit_info.pos.map(lambda s: control_tag in s), "group"
-        ] = "negctrl"
-        edit_info.loc[
-            edit_info.pos.map(lambda s: control_tag in s), "coding"
-        ] = "negctrl"
+        edit_info.loc[edit_info.pos.map(lambda s: control_tag in s), "group"] = (
+            "negctrl"
+        )
+        edit_info.loc[edit_info.pos.map(lambda s: control_tag in s), "coding"] = (
+            "negctrl"
+        )
     edit_info.loc[
         (edit_info.coding == "noncoding") & (edit_info.group != "negctrl"), "int_pos"
     ] = edit_info.loc[
@@ -691,9 +698,9 @@ def annotate_edit(
         (edit_info.alt == edit_info.ref) & (edit_info.coding == "coding"), "group"
     ] = "syn"
     if splice_sites is not None:
-        edit_info.loc[
-            edit_info.pos.isin(splice_sites.astype(str)), "group"
-        ] = "splicing"
+        edit_info.loc[edit_info.pos.isin(splice_sites.astype(str)), "group"] = (
+            "splicing"
+        )
     edit_info.loc[edit_info.int_pos < -100, "group"] = "negctrl"
     edit_info.loc[edit_info.int_pos < -100, "coding"] = "negctrl"
     return edit_info

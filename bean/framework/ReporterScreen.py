@@ -356,6 +356,8 @@ class ReporterScreen(Screen):
         rel_pos_is_reporter=False,
         target_pos_col="target_pos",
         edit_count_key="edit_counts",
+        reporter_length: int = 32,
+        reporter_right_flank_length: int = 6,
     ):
         """
         Get the edit matrix from `.uns[edit_count_key]` to store the result in `.layers["edits"]`
@@ -374,6 +376,10 @@ class ReporterScreen(Screen):
             target_base_edit = self.target_base_changes
         if match_target_position is None:
             match_target_position = not self.tiling
+        if "reporter_length" in self.uns:
+            reporter_length = self.uns["reporter_length"]
+        if "reproter_right_flank_length" in self.uns:
+            reporter_right_flank_length = self.uns["reporter_right_flank_length"]
         if edit_count_key not in self.uns or len(self.uns[edit_count_key]) == 0:
             raise ValueError(
                 "Edit count isn't calculated. "
@@ -400,7 +406,9 @@ class ReporterScreen(Screen):
             drop=True
         )
         edits["guide_start_pos"] = (
-            32 - 6 - guide_len[edits.guide_idx].reset_index(drop=True)
+            reporter_length
+            - reporter_right_flank_length
+            - guide_len[edits.guide_idx].reset_index(drop=True)
         )
         if not match_target_position:
             edits["rel_pos"] = edits.edit.map(lambda e: e.rel_pos)

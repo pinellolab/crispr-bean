@@ -84,7 +84,7 @@ def parse_args(parser=None):
         help="Specify that the guide library is tiling library without 'n guides per target' design",
     )
     input_parser.add_argument(
-        "--replicate-label",
+        "--replicate-col",
         help="Label of column in `bdata.samples` that describes replicate ID.",
         type=str,
         default="replicate",
@@ -96,7 +96,7 @@ def parse_args(parser=None):
         default=None,
     )
     input_parser.add_argument(
-        "--condition-label",
+        "--condition-col",
         help="Label of column in `bdata.samples` that describes experimental condition. (sorting bin, time, etc.)",
         type=str,
         default="condition",
@@ -117,11 +117,13 @@ def parse_args(parser=None):
         "--edit-start-pos",
         help="Edit start position to quantify editing rate on, 0-based inclusive.",
         default=2,
+        type=int,
     )
     input_parser.add_argument(
         "--edit-end-pos",
         help="Edit end position to quantify editing rate on, 0-based exclusive.",
         default=7,
+        type=int,
     )
 
     input_parser.add_argument(
@@ -149,5 +151,16 @@ def parse_args(parser=None):
         type=str,
         default="bulk",
     )
-
+    parser.add_argument(
+        "--reporter-length",
+        type=int,
+        default=32,
+        help="Length of reporter sequence in the construct.",
+    )
+    parser.add_argument(
+        "--reporter-right-flank-length",
+        type=int,
+        default=6,
+        help="Length of the right-flanking nucleotides of protospacer in the reporter.",
+    )
     return parser

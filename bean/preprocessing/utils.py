@@ -26,17 +26,31 @@ def prepare_bdata(bdata: be.ReporterScreen, args, warn, prefix: str):
     bdata = bdata.copy()
     bdata.samples["replicate"] = bdata.samples[args.replicate_col].astype("category")
     bdata.guides = bdata.guides.loc[:, ~bdata.guides.columns.duplicated()].copy()
+
+    # filter out 0-count gRNAs & samples
+    if args.selection == "sorting" or args.exclude_control_condition_for_inference:
+        bdata_test = bdata[
+            :, bdata.samples[args.condition_col] != args.control_condition
+        ]
+    else:
+        bdata_test = bdata
+    if any(bdata_test.X.sum(axis=1) == 0):
+        warn(
+            f"Filtering out {sum(bdata_test.X.sum(axis=1) == 0)} gRNAs without any counts over all samples."
+        )
+        bdata = bdata[bdata_test.X.sum(axis=1) > 0, :]
+    if any(bdata[:, bdata.samples.mask == 1].X.sum(axis=0) == 0):
+        raise ValueError(
+            f"Sample {bdata.samples.index[(bdata.samples.mask == 1) & (bdata[:,bdata.samples.mask == 1].X.sum(axis=0) == 0)]} has 0 counts. Make sure you mask that sample."
+        )
+
     if args.library_design == "variant":
         if bdata.guides[args.target_col].isnull().any():
             raise ValueError(
                 f"Some target column (bdata.guides[{args.target_col}]) value is null. Check your input file."
             )
         bdata = bdata[bdata.guides[args.target_col].argsort(), :]
-        if any(bdata.X.sum(axis=1) > 0):
-            warn(
-                f"Filtering out {sum(bdata.X.sum(axis=1) > 0)} gRNAs without any counts over all samples."
-            )
-            bdata = bdata[bdata.X.sum(axis=1) > 0, :]
+
         n_no_support_targets, bdata = filter_no_info_target(
             bdata,
             condit_col=args.condition_col,

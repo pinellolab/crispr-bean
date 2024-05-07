@@ -3,9 +3,39 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from bean.framework.ReporterScreen import ReporterScreen, concat
+import bean as be
 
 
 def check_args(args):
+    bdata = be.read_h5ad(args.bdata_path)
+    if args.replicate_col not in bdata.samples.columns:
+        raise ValueError(
+            f"Specified --replicate-col `{args.replicate_col}` does not exist in ReporterScreen.samples.columns ({bdata.samples.columns}). Please check your input."
+        )
+    if args.condition_col not in bdata.samples.columns:
+        raise ValueError(
+            f"Specified --condition-col `{args.condition_col}` does not exist in ReporterScreen.samples.columns ({bdata.samples.columns}). Please check your input."
+        )
+    if not bdata.tiling and args.target_pos_col not in bdata.guides.columns:
+        raise ValueError(
+            f"Specified --target-pos-col `{args.target_pos_col}` does not exist in ReporterScreen.guides.columns ({bdata.guides.columns}). Please check your input."
+        )
+    if args.posctrl_col and args.posctrl_col not in bdata.guides.columns:
+        raise ValueError(
+            f"Specified --posctrl-col `{args.posctrl_col}` does not exist in ReporterScreen.guides.columns ({bdata.guides.columns}). Please check your input."
+        )
+    if (
+        args.posctrl_col
+        and args.posctrl_val not in bdata.guides[args.posctrl_col].tolist()
+    ):
+        raise ValueError(
+            f"Specified --control-condition `{args.posctrl_val}` does not exist in ReporterScreen.guides[{args.posctrl_col}] ({bdata.guides[args.posctrl_col]}). Please check your input."
+        )
+    if args.control_condition not in bdata.samples[args.condition_col].tolist():
+        raise ValueError(
+            f"Specified --control-condition `{args.control_condition}` does not exist in ReporterScreen.samples[{args.condition_col}] :\n{bdata.samples[args.condition_col]}.\n Please check your input. \nFeed the condition where the editing rate would be quantified as the --control-condition argument, usually the condition with the least selection. (Closest to T0 for survival, pre-sort or bulk for sorting screens)."
+        )
+
     lfc_conds = args.lfc_conds.split(",")
     if not len(lfc_conds) == 2:
         raise ValueError(
@@ -13,6 +43,14 @@ def check_args(args):
         )
     args.lfc_cond1 = lfc_conds[0]
     args.lfc_cond2 = lfc_conds[1]
+    if args.lfc_cond1 not in bdata.samples[args.condition_col].tolist():
+        raise ValueError(
+            f"Specified --lfc-conds `{args.lfc_cond1}` does not exist in ReporterScreen.samples[{args.condition_col}]:\n{bdata.samples[args.condition_col]}. Please check your input."
+        )
+    if args.lfc_cond2 not in bdata.samples[args.condition_col].tolist():
+        raise ValueError(
+            f"Specified --lfc-conds `{args.lfc_cond2}` does not exist in ReporterScreen.samples[{args.condition_col}]:\n{bdata.samples[args.condition_col]}. Please check your input."
+        )
     if args.sample_covariates is not None:
         if "," in args.sample_covariates:
             args.sample_covariates = args.sample_covariates.split(",")

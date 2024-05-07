@@ -100,11 +100,11 @@ def get_fitted_alpha0(
     a0 = ((n - 1) / (r - 1 + 1 / (1 - p)) - 1).mean(axis=0)
 
     x, y = get_valid_vals(n.log(), a0.log())
-    if len(y) < 10:
+    if len(y) < 5:
         if popt is None:
             popt = (-1.510, 0.7861)
         print(
-            f"Cannot fit log(a0) ~ log(q): data too sparse! Using pre-fitted values [b0, b1]={popt}"
+            f"Cannot fit log(a0) ~ log(q): data too sparse ({len(y)} valid values)! Using pre-fitted values [b0, b1]={popt}"
         )
     else:
         popt, pcov = curve_fit(linear, x, y)

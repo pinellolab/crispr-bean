@@ -1,5 +1,5 @@
 # Input .fa file format for `bean-filter`
-You can provide custom FASTA file with exon sequence entries. Currently only supports positive strand genes.
+You can provide custom FASTA file with exon sequence entries.
 
 * Exon FASTA files can be downloaded from UCSC Genomic sequences / Table Browser: [see the instruction video](https://www.youtube.com/watch?v=T4E0Ez5Vjz8)
 * You can manually format as: 

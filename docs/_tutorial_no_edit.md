@@ -17,25 +17,25 @@ Here, we consider an example where BEAN uses the **external count** without repo
 
 ## Example workflow
 ```bash
-screen_id=my_sorting_screen
-working_dir=my_workdir
+screen_id=var_mini_screen_noedit
+working_dir=tests/data/
 
 # 1. Given that we have gRNA count for each sample, generate ReporterScreen (.h5ad) object for downstream analysis.
-bean create-screen ${working_dir}/gRNA_info.csv ${working_dir}/sample_list.csv ${working_dir}/gRNA_counts.csv -o ${working_dir}/bean_count_${screen_id}
+bean create-screen ${working_dir}/gRNA_info.csv ${working_dir}/sample_list.csv ${working_dir}/var_mini_counts.csv -o ${working_dir}/${screen_id}
 
 # 2. QC samples & guides
 bean qc \
-  ${working_dir}/bean_count_${screen_id}.h5ad             `# Input ReporterScreen .h5ad file path` \
-  -o ${working_dir}/bean_count_${screen_id}_masked.h5ad   `# Output ReporterScreen .h5ad file path` \
-  -r ${working_dir}/qc_report_${screen_id}                `# Prefix for QC report` \
-  -b                                       ` # Remove replicates with no good samples.
+  ${working_dir}/${screen_id}.h5ad             `# Input ReporterScreen .h5ad file path` \
+  -o ${working_dir}/${screen_id}_masked.h5ad   `# Output ReporterScreen .h5ad file path` \
+  -r ${working_dir}/qc_report_${screen_id}     `# Prefix for QC report` \
+  -b                                           ` # Remove replicates with no good samples.
 
 # 3. Quantify variant effect
 bean run sorting variant \
-    ${working_dir}/bean_count_${screen_id}_masked.h5ad \
+    ${working_dir}/${screen_id}_masked.h5ad \
     -o ${working_dir}/ \
     --uniform-edit --ignore-bcmatch            `# As we have no edit/reporter information.` \
-    [--fit-negctrl [--negctrl-col target_group --negctrl-col-value NegCtrl]]    `# If you have the negative control gRNAs.`
+    [--fit-negctrl [--negctrl-col target_group --negctrl-col-value NegCtrl]]                                      `# If you have the negative control gRNAs.`
 ```
 
 ## Input file spec

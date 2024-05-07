@@ -85,7 +85,7 @@ Python package `bean` supports multiple data wrangling functionalities for `Repo
 * Full pipeline takes 90.1s in GitHub Action for toy dataset of 2 replicates and 30 guides.
 
 ## Contributing
-If you have questions or feature request, please open an issue. Please feel free to send a pull request.
+See [CHANGELOG](CHANGELOG.md) for recent updates. If you have questions or feature request, please open an issue. Please feel free to send a pull request.
 
 ## Citation
 If you have used BEAN for your analysis, please cite:  

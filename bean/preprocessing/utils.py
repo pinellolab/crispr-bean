@@ -153,9 +153,12 @@ def get_edit_to_index_dict(cnalleles: pd.Series) -> Dict[str, int]:
     Arguments
     cnalleles -- pd.Series object of CodingNoncodingAllele objects.
     """
-    edit_lists = cnalleles.map(
-        lambda a: list(a.aa_allele.edits) + list(a.nt_allele.edits)
-    )
+    try:
+        edit_lists = cnalleles.map(
+            lambda a: list(a.aa_allele.edits) + list(a.nt_allele.edits)
+        )
+    except AttributeError:
+        edit_lists = cnalleles.map(lambda a: list(a.edits))
     edits = pd.Series(
         pd.Series(
             [e.get_abs_edit() for l in edit_lists.tolist() for e in l], dtype="object"

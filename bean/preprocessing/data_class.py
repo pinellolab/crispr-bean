@@ -581,20 +581,20 @@ class TilingReporterScreenData(ReporterScreenData):
                 allele_counts_selected[allele_col].map(lambda a: "!" in str(a)).any()
             ), "uid not assinged."
         guide_to_allele, reindexed_df = self.reindex_allele_df(
-            allele_counts_selected
+            allele_counts_selected, allele_col
         )  # TODO: Fix this for combining different sorting scheme
         self.n_max_alleles = (
             reindexed_df.index.get_level_values("allele_id_for_guide").max() + 1
         )  # include no edit allele
 
         if edit_index is None:
-            self.edit_index = get_edit_to_index_dict(guide_to_allele.aa_allele)
+            self.edit_index = get_edit_to_index_dict(guide_to_allele[allele_col])
         else:
             self.edit_index = edit_index
         self.n_edits = len(self.edit_index.keys())
 
         self.allele_to_edit = self.get_allele_to_edit_tensor(
-            self.screen_control, self.edit_index, guide_to_allele
+            self.screen_control, self.edit_index, guide_to_allele, allele_col
         )
         assert self.allele_to_edit.shape == (
             self.n_guides,
@@ -627,6 +627,7 @@ class TilingReporterScreenData(ReporterScreenData):
         screen,
         edits_to_index: Dict[str, int],
         guide_allele_id_to_allele_df: pd.DataFrame,
+        allele_col="aa_allele",
     ) -> torch.Tensor:
         """
         Convert (guide, allele_id_for_guide) -> allele DataFrame into the tensor with shape (n_guides, n_max_alleles_per_guide, n_edits) tensor.
@@ -638,11 +639,14 @@ class TilingReporterScreenData(ReporterScreenData):
         Returns
             allele_edit_assignment: Binary tensor of shape (n_guides, n_max_alleles_per_guide, n_edits. allele_edit_assignment(i, j, k) is 1 if jth allele of ith guide has kth edit.
         """
-        guide_allele_id_to_allele_df["edits"] = (
-            guide_allele_id_to_allele_df.aa_allele.map(
-                lambda a: list(a.aa_allele.edits) + list(a.nt_allele.edits)
-            )
-        )
+        if allele_col == "aa_allele":
+            guide_allele_id_to_allele_df["edits"] = guide_allele_id_to_allele_df[
+                allele_col
+            ].map(lambda a: list(a.aa_allele.edits) + list(a.nt_allele.edits))
+        else:
+            guide_allele_id_to_allele_df["edits"] = guide_allele_id_to_allele_df[
+                allele_col
+            ].map(lambda a: list(a.edits))
         guide_allele_id_to_allele_df = guide_allele_id_to_allele_df.reset_index()
         guide_allele_id_to_allele_df["edit_idx"] = (
             guide_allele_id_to_allele_df.edits.map(
@@ -663,7 +667,7 @@ class TilingReporterScreenData(ReporterScreenData):
                 allele_edit_assignment[i, j, guide_allele_id_to_edit_df.iloc[i, j]] = 1
         return allele_edit_assignment
 
-    def reindex_allele_df(self, alleles_df):
+    def reindex_allele_df(self, alleles_df, allele_col):
         """
         Input: Dataframe of (guide, allele) -> (per sample count)
         Output:
@@ -676,7 +680,7 @@ class TilingReporterScreenData(ReporterScreenData):
             global_allele_id: global unique id for each (guide, allele) pair.
         """
         guide_to_allele = dict(
-            list(alleles_df[["guide", "aa_allele"]].groupby("guide").aa_allele)
+            list(alleles_df[["guide", allele_col]].groupby("guide")[allele_col])
         )
         dfs = []
         for k, s in guide_to_allele.items():
@@ -690,14 +694,12 @@ class TilingReporterScreenData(ReporterScreenData):
 
         guide_to_allele_tbl = pd.concat(dfs)
 
-        alleles_df = pd.merge(
-            alleles_df, guide_to_allele_tbl, on=["aa_allele", "guide"]
-        )
+        alleles_df = pd.merge(alleles_df, guide_to_allele_tbl, on=[allele_col, "guide"])
         reindexed_df = alleles_df.reset_index().set_index(
             ["guide", "allele_id_for_guide"]
         )
-        guide_allele_id_to_allele = reindexed_df[["index", "aa_allele"]]
-        reindexed_allele_df = reindexed_df.drop(["aa_allele", "index"], axis=1)
+        guide_allele_id_to_allele = reindexed_df[["index", allele_col]]
+        reindexed_allele_df = reindexed_df.drop([allele_col, "index"], axis=1)
         return (guide_allele_id_to_allele, reindexed_allele_df)
 
     def transform_allele(self, adata, reindexed_df):

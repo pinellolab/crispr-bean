@@ -89,7 +89,6 @@ def get_fitted_alpha0(
         sample_mask = torch.ones((n_reps, n_condits), device="cpu")
     elif (sample_mask.sum(axis=0) == 0).any():
         raise ValueError("Some bins have no data.")
-    print(sample_size_factors)
     w = get_w(X + 1, sample_size_factors, sample_mask=sample_mask)
     q = get_q(X + 1, sample_size_factors, sample_mask=sample_mask)
     n = (
@@ -107,8 +106,6 @@ def get_fitted_alpha0(
         print(
             f"Cannot fit log(a0) ~ log(q): data too sparse ({len(y)} valid values)! Using pre-fitted values [b0, b1]={popt}"
         )
-        print(n)
-        print(a0)
     else:
         popt, pcov = curve_fit(linear, x, y)
         print("Linear fit of log(a0) ~ log(q): [b0, b1]={}, cov={}".format(popt, pcov))

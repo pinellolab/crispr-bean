@@ -984,6 +984,10 @@ class SurvivalScreenData(ScreenData):
             self.screen.samples[time_column] = self.screen.samples[time_column].astype(
                 float
             )
+            self.screen.samples[time_column] = (
+                self.screen.samples[time_column]
+                / self.screen.samples[time_column].max()
+            )
         except ValueError as e:
             raise ValueError(
                 f"Invalid timepoint value({self.screen.samples[time_column]}) in screen.samples[{time_column}]: check input."

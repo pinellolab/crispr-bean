@@ -3,10 +3,7 @@ import pyro
 from pyro import poutine
 import pyro.distributions as dist
 import torch.distributions.constraints as constraints
-from .utils import (
-    get_alpha,
-    scale_pi_by_accessibility,
-)
+from .utils import get_alpha, scale_pi_by_accessibility, MAX_LOGPI
 from ..preprocessing.data_class import (
     VariantSurvivalScreenData,
     VariantSurvivalReporterScreenData,
@@ -245,6 +242,7 @@ def MixtureNormalModel(
         data.n_guides,
         2,
     ), alpha_pi.shape
+
     with replicate_plate:
         with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
             time_pi = data.control_timepoint
@@ -280,9 +278,11 @@ def MixtureNormalModel(
             assert time.shape == (data.n_condits,)
 
             with guide_plate:
-                alleles_p_time = r.unsqueeze(0).expand(
-                    (data.n_condits, -1, -1)
-                ) ** time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1))
+                alleles_p_time = torch.clamp(
+                    time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1))
+                    * torch.log(r).unsqueeze(0).expand((data.n_condits, -1, -1)),
+                    max=MAX_LOGPI,
+                ).exp()
                 assert alleles_p_time.shape == (data.n_condits, data.n_guides, 2)
 
             expected_allele_p = (
@@ -453,17 +453,7 @@ def MultiMixtureNormalModel(
     # Set the prior for phenotype means
     with pyro.plate("guide_plate1", data.n_edits):
         mu_edits = pyro.sample("mu_alleles", dist.Laplace(0, 1))
-        sd_edits = pyro.sample(
-            "sd_alleles",
-            dist.LogNormal(
-                torch.zeros((data.n_edits,)),
-                torch.ones(
-                    data.n_edits,
-                )
-                * sd_scale,
-            ),
-        )
-    assert mu_edits.shape == sd_edits.shape == (data.n_edits,)
+    assert mu_edits.shape == (data.n_edits,)
     assert data.allele_to_edit.shape == (
         data.n_guides,
         data.n_max_alleles - 1,
@@ -474,6 +464,12 @@ def MultiMixtureNormalModel(
 
     mu = torch.cat([torch.zeros((data.n_guides, 1)), mu_alleles], axis=-1)
     r = torch.exp(mu)
+
+    with pyro.plate("replicate_plate0", data.n_reps, dim=-1):
+        q_0 = pyro.sample(
+            "initial_guide_abundance",
+            dist.Dirichlet(torch.ones((data.n_reps, data.n_guides))),
+        )
     # The pi should be Dirichlet distributed instead of independent betas
     alpha_pi0 = (
         torch.ones(
@@ -501,6 +497,7 @@ def MultiMixtureNormalModel(
         exit(1)
     if (pi_a_scaled <= 0).any():
         print(torch.where(alpha_pi < 0))
+
     with replicate_plate:
         with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
             time_pi = data.control_timepoint
@@ -524,20 +521,20 @@ def MultiMixtureNormalModel(
         )
 
     with replicate_plate:
-        with pyro.plate("guide_plate2", data.n_guides):
-            q_0 = pyro.sample(
-                "initial_guide_abundance",
-                dist.Dirichlet(torch.ones((data.n_reps, data.n_guides))),
-            )
         with time_plate as t:
             time = data.timepoints[t]
+            print(f"ERROR time:{time}")
             assert time.shape == (data.n_condits,)
+
             with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
-                alleles_p_time = r.unsqueeze(0).expand(
-                    (data.n_condits, -1, -1)
-                ) ** time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1))
+                alleles_p_time = torch.clamp(
+                    time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1))
+                    * torch.log(r).unsqueeze(0).expand((data.n_condits, -1, -1)),
+                    max=MAX_LOGPI,
+                ).exp()
+
                 mask = data.allele_mask.unsqueeze(0).expand((data.n_condits, -1, -1))
-                alleles_p_time[~mask] = 0.0
+                alleles_p_time = alleles_p_time * mask
 
                 assert alleles_p_time.shape == (
                     data.n_condits,
@@ -555,49 +552,65 @@ def MultiMixtureNormalModel(
                 data.n_condits,
                 data.n_guides,
             ), expected_guide_p.shape
-
-    with replicate_plate2:
-        with pyro.plate("guide_plate3", data.n_guides, dim=-1):
-            a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
-            a_bcmatch = get_alpha(
-                expected_guide_p,
-                data.size_factor_bcmatch,
-                data.sample_mask,
-                data.a0_bcmatch,
-            )
-            # a_bcmatch = get_alpha(expected_guide_p, data.size_factor_bcmatch, data.sample_mask, data.a0_bcmatch)
-            # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_condits)
-            assert (
-                data.X.shape
-                == data.X_bcmatch_masked.shape
-                == (
-                    data.n_reps,
-                    data.n_condits,
-                    data.n_guides,
+    try:
+        with replicate_plate2:
+            with pyro.plate("guide_plate3", data.n_guides, dim=-1):
+                a = get_alpha(
+                    expected_guide_p, data.size_factor, data.sample_mask, data.a0
                 )
-            )
-            with poutine.mask(
-                mask=torch.logical_and(
-                    data.X_masked.permute(0, 2, 1).sum(axis=-1) > 10, data.repguide_mask
+                a_bcmatch = get_alpha(
+                    expected_guide_p,
+                    data.size_factor_bcmatch,
+                    data.sample_mask,
+                    data.a0_bcmatch,
                 )
-            ):
-                pyro.sample(
-                    "guide_counts",
-                    dist.DirichletMultinomial(a, validate_args=False),
-                    obs=data.X_masked.permute(0, 2, 1),
+                # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_condits)
+                assert (
+                    data.X.shape
+                    == data.X_bcmatch_masked.shape
+                    == (
+                        data.n_reps,
+                        data.n_condits,
+                        data.n_guides,
+                    )
                 )
-            if use_bcmatch:
                 with poutine.mask(
                     mask=torch.logical_and(
-                        data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1) > 10,
+                        data.X_masked.permute(0, 2, 1).sum(axis=-1) > 10,
                         data.repguide_mask,
                     )
                 ):
                     pyro.sample(
-                        "guide_bcmatch_counts",
-                        dist.DirichletMultinomial(a_bcmatch, validate_args=False),
-                        obs=data.X_bcmatch_masked.permute(0, 2, 1),
+                        "guide_counts",
+                        dist.DirichletMultinomial(a, validate_args=False),
+                        obs=data.X_masked.permute(0, 2, 1),
                     )
+                if use_bcmatch:
+                    with poutine.mask(
+                        mask=torch.logical_and(
+                            data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1) > 10,
+                            data.repguide_mask,
+                        )
+                    ):
+                        pyro.sample(
+                            "guide_bcmatch_counts",
+                            dist.DirichletMultinomial(a_bcmatch, validate_args=False),
+                            obs=data.X_bcmatch_masked.permute(0, 2, 1),
+                        )
+    except ValueError as e:
+        print(f"ERROR a is 0 at {torch.sum(a.sum(axis=-1) ==0)}")
+        print(
+            f"ERROR expected_guide_p is 0 at {torch.sum(expected_guide_p.sum(axis=1) ==0)}"
+        )
+        print(f"ERROR a is NaN at {torch.where(a.isnan().any(axis=-1))}")
+        print(
+            f"ERROR data.size_factor is NaN at {torch.where(data.size_factor.isnan())}"
+        )
+        print(
+            f"ERROR expected_guide_p is NaN at {torch.where(expected_guide_p.isnan().any(axis=1))}"
+        )
+        print(f"ERROR a0 is NaN at {torch.where(data.a0.isnan())}")
+        raise e
 
 
 def MultiMixtureNormalGuide(
@@ -655,7 +668,7 @@ def MultiMixtureNormalGuide(
                     pi_a_scaled.unsqueeze(0)
                     .unsqueeze(0)
                     .expand(data.n_reps, 1, -1, -1)
-                    # .clamp(1e-5)
+                    .clamp(1e-5)
                 ),
             )
 

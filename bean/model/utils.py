@@ -4,6 +4,7 @@ import pyro
 import pyro.distributions as dist
 import pyro.distributions.constraints as constraints
 
+MAX_LOGPI=10
 
 def get_alpha(
     expected_guide_p, size_factor, sample_mask, a0, epsilon=1e-5, normalize_by_a0=True
@@ -12,7 +13,6 @@ def get_alpha(
         p = (
             expected_guide_p.permute(0, 2, 1) * size_factor[:, None, :]
         )  # (n_reps, n_guides, n_bins)
-
         if normalize_by_a0:
             a = (
                 (p + epsilon / p.shape[-1])

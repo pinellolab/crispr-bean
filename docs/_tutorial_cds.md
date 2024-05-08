@@ -123,7 +123,8 @@ bean filter ${working_dir}/${screen_id}_masked.h5ad \
 --translate --translate-genes-list ${working_dir}/gene_symbols.txt
 ```
 
-Ouptut file `` shows number of alleles per guide and number of guides per variant, where we want high enough values for the latter. See the [typical output](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_filtering_ouptut/) for dataset with good editing coverage & filtering result.
+### CAUTION
+Ouptut file `...filtered_allele_stats.pdf` shows number of alleles per guide and number of guides per variant, where we want high enough values for the latter. If your alleles get filtered too drastically, consider adjusting filtering threshold `--filter-allele-proportion 0.1 --filter-sample-proportion 0.3`. See the [typical output](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_filtering_ouptut/) for dataset with good editing coverage & filtering result.
 
 ## 4. Quantify variant effect (:ref:`run`)
 By default, `bean run [sorting,survival] tiling` uses most filtered allele counts table for variant identification and quantification of their effects. Check [allele filtering output](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_filtering_ouptut/) and choose alternative filtered allele counts table if necessary.   

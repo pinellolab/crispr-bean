@@ -739,7 +739,7 @@ class TilingReporterScreenData(ReporterScreenData):
                 condit_allele_df[0] = condit_bcmatch_counts - condit_allele_df.loc[
                     :, condit_allele_df.columns != 0
                 ].sum(axis=1)
-                condit_allele_df[0].loc[condit_allele_df[0] < 0] = 0
+                condit_allele_df.loc[condit_allele_df[0] < 0, 0] = 0
                 condit_allele_df = condit_allele_df.sort_values(
                     "allele_id_for_guide", axis=1, ascending=True
                 )
@@ -794,7 +794,7 @@ class TilingReporterScreenData(ReporterScreenData):
             condit_allele_df[0] = condit_bcmatch_counts - condit_allele_df.loc[
                 :, condit_allele_df.columns != 0
             ].sum(axis=1)
-            condit_allele_df[0].loc[condit_allele_df[0] < 0] = 0
+            condit_allele_df.loc[condit_allele_df[0] < 0, 0] = 0
             condit_allele_df = condit_allele_df.sort_values(
                 "allele_id_for_guide", axis=1, ascending=True
             )

@@ -979,7 +979,7 @@ class SurvivalScreenData(ScreenData):
         self._post_init()
 
     def _pre_init(self, time_column: str, condition_column: str):
-        self.time_column = time_column
+        self.condition_column = self.time_column = time_column
         try:
             self.screen.samples[time_column] = self.screen.samples[time_column].astype(
                 float

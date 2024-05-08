@@ -106,7 +106,7 @@ def _get_input_parser(parser=None):
         "--edited-base",
         type=str,
         required=True,
-        help="For base editors, the base that should be ignored when matching the gRNA sequence",
+        help="For base editors, the base that should be ignored when matching the gRNA sequence. For dual editors, feed in comma-separated target base (e.g. A,C)",
     )
     parser.add_argument(
         "-f",

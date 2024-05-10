@@ -29,11 +29,6 @@ BEAN stores mapped gRNA and allele counts in `ReporterScreen` object which is co
 First install [PyTorch](https://pytorch.org/get-started/).
 Then download from PyPI:
 ```bash
-pip install crispr-bean[model]
-```
-
-Following installation without PyTorch dependency wouldn't have variant effect size quantification (`bean run`) functionality. 
-```bash
 pip install crispr-bean
 ```
 

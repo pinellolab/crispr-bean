@@ -45,7 +45,6 @@ setup(
         "nbconvert",
         "logomaker",
     ],
-    extras_require={"model": ["pyBigWig", "pyro-ppl", "statsmodels", "torch"]},
     include_package_data=True,
     package_data={
         "bean.annotate": ["ldlr_exons.fa"],

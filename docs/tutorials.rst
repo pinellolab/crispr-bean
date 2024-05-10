@@ -10,4 +10,4 @@ Workflow tutorials
     tutorial_cds
     tutorial_prolif_gwas
     tutorial_no_edit
-    `Visualize result (variant screens) <https://github.com/pinellolab/crispr-bean/tree/main/docs/visualize_var.ipynb>`
+    Visualize result (variant screens) <https://github.com/pinellolab/crispr-bean/tree/main/docs/visualize_var.ipynb>

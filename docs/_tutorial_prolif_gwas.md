@@ -151,3 +151,5 @@ If the data does not include reporter editing data, you can provide `--no-editin
     --fit-negctrl \
     --uniform-edit
     ```
+
+See the example output [here](https://github.com/pinellolab/crispr-bean/tree/main/tests/var_res_example/).

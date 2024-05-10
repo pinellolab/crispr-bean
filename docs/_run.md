@@ -62,3 +62,5 @@ Above command produces
     * `n_coocc`: # of cooccurring variants with a given variant in any alleles observed in the input.
 * `output_prefix/bean_sgRNA_result.[model_type].csv`: 
   * `edit_rate`: Estimated editing rate at the target loci.
+
+See the example output for `variant` run [here](https://github.com/pinellolab/crispr-bean/tree/main/tests/var_res_example/).

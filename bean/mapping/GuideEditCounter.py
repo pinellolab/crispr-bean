@@ -11,7 +11,13 @@ import pandas as pd
 from bean import Allele, ReporterScreen
 from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqPhredIterator
-from tqdm import tqdm
+if sys.stderr.isatty():
+    # Output into terminal
+    from tqdm import tqdm
+else:
+    # Writing into file
+    def tqdm(iterable, **kwargs):
+        return iterable
 
 from ._supporting_fn import (
     _base_edit_to_from,

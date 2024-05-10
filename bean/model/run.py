@@ -1,7 +1,15 @@
 import os
 import sys
 
-from tqdm import tqdm
+if sys.stderr.isatty():
+    # Output into terminal
+    from tqdm import tqdm
+else:
+    # Writing into file
+    def tqdm(iterable, **kwargs):
+        return iterable
+
+
 import pickle as pkl
 import pandas as pd
 import logging

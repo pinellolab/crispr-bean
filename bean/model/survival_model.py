@@ -523,7 +523,6 @@ def MultiMixtureNormalModel(
     with replicate_plate:
         with time_plate as t:
             time = data.timepoints[t]
-            print(f"ERROR time:{time}")
             assert time.shape == (data.n_condits,)
 
             with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):

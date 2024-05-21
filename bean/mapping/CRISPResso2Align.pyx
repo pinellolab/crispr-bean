@@ -316,10 +316,10 @@ def global_align_base_editor(str pystr_seqj, str pystr_seqi, dict target_base_ed
             currMatrix = JARRAY
         else:
             currMatrix = IARRAY
-#    print('seqi' + str(seqi))
-#    print('seqj' + str(seqj))
+    #print('seqi' + str(seqi))
+    #print('seqj' + str(seqj))
     while i > 0 or j > 0:
-        # print("i: " + str(i) + " j: " + str(j) + " currMatrix: " + str(currMatrix) + " match score: " + str(mScore[i,j]) + " last match: " +  str(mScore[i-1,j-1]) + " matrix[" + str(ci) + "," + str(cj) + "]: " + str(matrix[ci,cj]) + " last j " + str(jScore[i,j]) + " last i: " + str(iScore[i,j]) + " mpointer: " + str(mPointer[i,j]) + " ipointer: " + str(iPointer[i,j]) + " jpointer: " + str(jPointer[i,j]))
+        #print("i: " + str(i) + " j: " + str(j) + " currMatrix: " + str(currMatrix) + " match score: " + str(mScore[i,j]) + " last match: " +  str(mScore[i-1,j-1]) + " matrix[" + str(ci) + "," + str(cj) + "]: " + str(matrix[ci,cj]) + " last j " + str(jScore[i,j]) + " last i: " + str(iScore[i,j]) + " mpointer: " + str(mPointer[i,j]) + " ipointer: " + str(iPointer[i,j]) + " jpointer: " + str(jPointer[i,j]))
 
         currVal = mScore[i,j]
         currPtr = mPointer[i,j]
@@ -375,7 +375,7 @@ def global_align_base_editor(str pystr_seqj, str pystr_seqi, dict target_base_ed
             print('i: ' + str(i) + ' j: ' + str(j))
             print('currMatrix:' + str(currMatrix))
             print('seqj: ' + str(seqj) + ' seqi: ' + str(seqi))
-            raise Exception('wtf4!:pointer: %i', i)
+            raise Exception('Numerical error in alignment. Possible invalid bases in FASTQ? :pointer: %i', i)
 #          print('at end, currMatrix is ' + str(currMatrix))
         is_target_edit = False
         for ref_base, alt_base in target_base_edits.items():

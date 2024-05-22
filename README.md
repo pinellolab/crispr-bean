@@ -51,6 +51,8 @@ See the [documentation](https://pinellolab.github.io/crispr-bean/) for tutorials
 | Coding sequence tiling libarary | Survival / Proliferation | Yes/No | [Coding sequence tiling screen](https://pinellolab.github.io/crispr-bean/tutorial_prolif_cds.html)
 | Perturbation library without reporter | FACS sorting | No | [No reporter screen](https://pinellolab.github.io/crispr-bean/tutorial_no_edit.html)
 
+Also see notebook that visualizes screen analysis result [here]().
+
 
 ### Library design: variant or tiling?
 The `bean filter` and `bean run` steps depend on the type of gRNA library design, where BEAN supports two modes of running.

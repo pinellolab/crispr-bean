@@ -29,7 +29,7 @@ setup(
         "pandas",
         "scipy",
         "perturb-tools>=0.3.3",
-        "matplotlib<=3.9",  # temporary error? https://github.com/DeepLabCut/DeepLabCut/issues/2581
+        "matplotlib<3.9",  # temporary error? https://github.com/DeepLabCut/DeepLabCut/issues/2581
         "seaborn>=0.13.0",
         "tqdm",
         "bio",

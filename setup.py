@@ -29,7 +29,7 @@ setup(
         "pandas",
         "scipy",
         "perturb-tools>=0.3.3",
-        "matplotlib",
+        "matplotlib<=3.9",
         "seaborn>=0.13.0",
         "tqdm",
         "bio",

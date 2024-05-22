@@ -51,7 +51,7 @@ See the [documentation](https://pinellolab.github.io/crispr-bean/) for tutorials
 | Coding sequence tiling libarary | Survival / Proliferation | Yes/No | [Coding sequence tiling screen](https://pinellolab.github.io/crispr-bean/tutorial_prolif_cds.html)
 | Perturbation library without reporter | FACS sorting | No | [No reporter screen](https://pinellolab.github.io/crispr-bean/tutorial_no_edit.html)
 
-Also see notebook that visualizes screen analysis result [here]().
+Also see notebook that visualizes screen analysis result [here](https://github.com/pinellolab/crispr-bean/blob/main/docs/visualize_var.ipynb).
 
 
 ### Library design: variant or tiling?

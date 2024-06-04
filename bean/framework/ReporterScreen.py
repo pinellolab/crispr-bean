@@ -585,7 +585,7 @@ class ReporterScreen(Screen):
     def get_edit_from_allele(
         self, allele_count_key="allele_counts", allele_key="allele", return_result=False
     ):
-        if allele_count_key not in self.uns or len(self.uns[allele_count_key]) == 0:
+        if allele_count_key not in self.uns:
             raise ValueError(f"No allele information stored: {self.uns}")
 
         df = self.uns[allele_count_key].copy()

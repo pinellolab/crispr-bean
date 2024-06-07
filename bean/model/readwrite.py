@@ -137,6 +137,8 @@ def write_result_table(
             print(
                 f"Cannot adjust confidence by negative control due to too small number ({len(adjust_confidence_negatives)}) of negatives."
             )
+            fit_df = add_credible_interval(fit_df, "mu", "mu_sd")
+            fit_df = fit_df.iloc[(-fit_df.mu_z.abs()).argsort()]
         else:
             ncvar = fit_df.iloc[adjust_confidence_negatives]
             if "mu_z_scaled" in ncvar.columns:
@@ -156,6 +158,7 @@ def write_result_table(
                 ),
             )
             fit_df = add_credible_interval(fit_df, "mu_adj", "mu_sd_adj")
+            fit_df = fit_df.iloc[(-fit_df.mu_z_adj.abs()).argsort()]
             if sample_covariates is not None:
                 for i, sample_cov in enumerate(sample_covariates):
                     fit_df = adjust_normal_params_by_control(
@@ -176,7 +179,9 @@ def write_result_table(
                     fit_df = add_credible_interval(
                         fit_df, f"mu_{sample_cov}_adj", f"mu_sd_{sample_cov}_adj"
                     )
-
+    else:
+        fit_df = add_credible_interval(fit_df, "mu", "mu_sd")
+        fit_df = fit_df.iloc[(-fit_df.mu_z.abs()).argsort()]
     if write_fitted_eff or guide_acc is not None:
         if "alpha_pi" not in param_hist_dict.keys():
             pi = 1.0

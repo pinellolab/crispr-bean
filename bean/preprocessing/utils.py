@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Tuple, List
 import torch
 import numpy as np
 import pyBigWig
@@ -251,13 +251,20 @@ def _assign_rep_ids_and_sort(
     return screen
 
 
-def _obtain_effective_edit_rate(ndata, count_thres=10):
+def _obtain_effective_edit_rate(
+    ndata, count_thres=10
+) -> Tuple[List[torch.Tensor], torch.Tensor]:
     """Calculates effective editing rate of each variant for tiling screen.
 
     Allele count
     Args
     --
     count_thres: Per-replicate allele editing rate is ignored if X_bcmatch is lower than this threshold.
+
+    Returns
+    --
+    guide_idx: List of guide indices that generates each variant
+    editing_rates: Overall effective editing rates of each variant
     """
     allele_rates = ndata.allele_counts_control / ndata.X_bcmatch_control[:, :, :, None]
     allele_rates[
@@ -276,7 +283,16 @@ def _obtain_effective_edit_rate(ndata, count_thres=10):
         ndata.n_max_alleles - 1,
         ndata.n_edits,
     )
-    return (mean_allele_rates[:, :, None] * allele_to_edit_normed).nansum(axis=(0, 1))
+
+    editing_rates = (mean_allele_rates[:, :, None] * allele_to_edit_normed).nansum(
+        axis=1
+    )
+    guide_idx = [np.nonzero(t) for t in editing_rates.t()]
+    per_guide_edit_rates = [
+        t.cpu()[t.cpu() > 0].numpy().tolist() for t in editing_rates.t()
+    ]
+
+    return guide_idx, per_guide_edit_rates, editing_rates.nansum(axis=0)
 
 
 def _obtain_n_guides_alleles_per_variant(ndata):

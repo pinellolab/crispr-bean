@@ -143,7 +143,17 @@ def main(args):
             control_tag=args.control_guide_tag,
             splice_sites=None if args.splice_site_path is None else splice_site,
         )
-        target_info_df["effective_edit_rate"] = _obtain_effective_edit_rate(ndata).cpu()
+        _guide_idxs, _per_guide_edit_rates, eff_editing_rates = (
+            _obtain_effective_edit_rate(ndata, count_thres=0)
+        )
+        target_info_df["effective_edit_rate"] = eff_editing_rates.cpu()
+        target_info_df["editing_guides"] = [
+            ",".join(guide_index.values[_gidx.cpu().numpy().flatten()].tolist())
+            for _gidx in _guide_idxs
+        ]
+        target_info_df["per_guide_editing_rates"] = [
+            ",".join([f"{p:.3g}" for p in pger]) for pger in _per_guide_edit_rates
+        ]
         target_info_df["n_guides"] = _obtain_n_guides_alleles_per_variant(ndata).cpu()
         target_info_df["n_coocc"] = _obtain_n_cooccurring_variants(ndata)
         if args.adjust_confidence_by_negative_control:
@@ -152,7 +162,6 @@ def main(args):
                 & (target_info_df.coding == "coding")
             )[0]
             print("syn idx: ", adj_negctrl_idx)
-
     guide_info_df = ndata.screen.guides
 
     # Run the inference steps
@@ -192,7 +201,6 @@ def main(args):
         os.makedirs(prefix)
     with open(f"{prefix}/{model_label}.result{args.result_suffix}.pkl", "wb") as handle:
         pkl.dump(save_dict, handle)
-
     write_result_table(
         target_info_df,
         param_history_dict,

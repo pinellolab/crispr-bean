@@ -44,6 +44,7 @@ setup(
         "pytest-order",
         "nbconvert",
         "logomaker",
+        "ipywidgets",
     ],
     include_package_data=True,
     package_data={

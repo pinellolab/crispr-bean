@@ -1,7 +1,7 @@
 # `bean profile`: Profile editing patterns
 
 ```bash
-bean profile my_sorting_screen.h5ad -o output_prefix `# Prefix for editing profile report` 
+bean profile my_sorting_screen.h5ad -o output_prefix --pam-col '5-nt PAM'`# Prefix for editing profile report` 
 ```
 
 # Output

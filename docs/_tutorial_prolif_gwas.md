@@ -85,7 +85,7 @@ bean profile tests/data/${screen_id}.h5ad --pam-col '5-nt PAM'
 ```
 
 ### Output
-Output will be written under `${working_dir}/bean_profile.${screen_id}/`. See example output [here](https://github.com/pinellolab/crispr-bean/blob/main/bean/docs/example_profile_output/).
+Output will be written under `${working_dir}/bean_profile.${screen_id}/`. See example output [here](https://github.com/pinellolab/crispr-bean/blob/main//docs/example_profile_output/).
 
 ## 2. QC samples & guides (:ref:`qc`)
 Base editing data will include QC about editing efficiency. As QC uses predefined column names and values, beware to follow the [input file guideline](https://pinellolab.github.io/crispr-bean/input.html), but you can change the parameters with the full argument list of [bean qc](https://pinellolab.github.io/crispr-bean/qc.html). (Common factors you may want to tweak is `--ctrl-cond=bulk` and `--lfc-conds=top,bot` if you have different sample condition labels.)
@@ -102,7 +102,7 @@ bean qc \
 If the data does not include reporter editing data, you can provide `--no-editing` flag to omit the editing rate QC.
 
 ### Output
-Output will be written under `${working_dir}/`. See example output [here](https://github.com/pinellolab/crispr-bean/blob/main/bean/docs/example_profile_output/).
+Output will be written under `${working_dir}/`. See example output [here](https://github.com/pinellolab/crispr-bean/blob/main//docs/example_profile_output/).
 
 ## 3. Quantify variant effect (:ref:`run`)
 
@@ -156,4 +156,4 @@ Output will be written under `${working_dir}/`. See example output [here](https:
     ```
 
 ### Output
-Output will be written under `${working_dir}/`. See example output [here](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_run_ouptut/variant/).
+Output will be written under `${working_dir}/`. See example output [here](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_run_output/variant).

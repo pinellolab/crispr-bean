@@ -181,4 +181,4 @@ By default, `bean run [sorting,survival] tiling` uses most filtered allele count
     ```
 
 ### Output
-Output will be written under `${working_dir}/`. See example output [here](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_run_ouptut/tiling/).
+Output will be written under `${working_dir}/`. See example output [here](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_run_output/tiling).

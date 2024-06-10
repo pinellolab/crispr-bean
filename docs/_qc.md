@@ -4,15 +4,16 @@ bean qc \
   my_sorting_screen.h5ad             `# Input ReporterScreen .h5ad file path` \
   -o my_sorting_screen_masked.h5ad   `# Output ReporterScreen .h5ad file path` \
   -r qc_report_my_sorting_screen     `# Prefix for QC report` \
-  --ctrl-cond presort                `# "condition" column in the control sample before selection. Mean gRNA editing rates in these samples are reported. ` \
+  --control-condition presort        `# "condition" column in the control sample before selection. Mean gRNA editing rates in these samples are reported. ` \
 # Inspect the output qc_report_my_sorting_screen.html to tweak QC threshold
 
 bean qc \
   my_sorting_screen.h5ad              \
   -o my_sorting_screen_masked.h5ad    \
   -r qc_report_my_sorting_screen      \
+  --control-condition presort         \
   #[--count-correlation-thres 0.7 ...]\
-  -b
+  -b   # Removes the failing replicates without enough number of good quality samples.
 ```
 
 `bean qc` supports following quality control and masks samples with low quality. Specifically:  

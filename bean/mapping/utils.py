@@ -179,10 +179,16 @@ def _get_input_parser(parser=None):
         default=47,
     )
     parser.add_argument(
-        "--qstart-R2", help="Same as qstart_R1, for read 2 fastq file", default=0
+        "--qstart-R2",
+        help="Same as qstart_R1, for read 2 fastq file",
+        default=0,
+        type=int,
     )
     parser.add_argument(
-        "--qend-R2", help="Same as qstart_R2, for read 2 fastq file", default=36
+        "--qend-R2",
+        help="Same as qstart_R2, for read 2 fastq file",
+        default=36,
+        type=int,
     )
     parser.add_argument(
         "--gstart-reporter",
@@ -198,6 +204,7 @@ def _get_input_parser(parser=None):
     parser.add_argument(
         "--target-pos-col",
         help="Column name specifying the relative target position within *reporter* sequence.",  # ??
+        type=str,
         default="target_pos",
     )
 

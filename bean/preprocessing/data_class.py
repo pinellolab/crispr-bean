@@ -830,7 +830,7 @@ class TilingReporterScreenData(ReporterScreenData):
         mask = torch.zeros((self.n_guides, self.n_max_alleles))
         for i in range(mask.shape[0]):
             mask[i, 0] = 1
-            for j in range(n_valid_allele[i]):
+            for j in range(n_valid_allele.iloc[i]):
                 mask[i, j + 1] = 1
         return mask.bool()
 

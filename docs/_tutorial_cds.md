@@ -78,9 +78,12 @@ Make sure you follow the [input file format](https://pinellolab.github.io/crispr
 ## (Optional) Profile editing pattern (:ref:`profile`)
 You can profile the pattern of base editing based on the allele counts. 
 ```bash
-bean profile tests/data/${screen_id}.h5ad --pam-col '5-nt PAM'
+bean profile ${working_dir}/${screen_id}.h5ad --pam-col '5-nt PAM'
 ```
-Check the editing window, and consider feeding the start/end position of the editing window with the maximal editing rate into `bean qc` with `--edit-start-pos`, `--edit-end-pos` arguments.
+Check the editing window, and consider feeding the start/end position of the editing window with the maximal editing rate into `bean qc` with `--edit-start-pos`, `--edit-end-pos` arguments.  
+
+### Output
+Output will be written under `${working_dir}/bean_profile.${screen_id}/`. See example output [here](https://github.com/pinellolab/crispr-bean/blob/main/bean/docs/example_profile_output/).
 
 
 ## 2. QC (:ref:`qc`)
@@ -90,13 +93,14 @@ Base editing data will include QC about editing efficiency. As QC uses predefine
 bean qc \
   ${working_dir}/${screen_id}.h5ad           `# Input ReporterScreen .h5ad file path` \
   -o ${working_dir}/${screen_id}_masked.h5ad `# Output ReporterScreen .h5ad file path` \
-  -r ${working_dir}/qc_report_${screen_id}              `# Prefix for QC report` \
+  -r ${working_dir}/qc_report_${screen_id}              `# Prefix for QC report; don't include file extension as .html` \
   [--tiling]                          `# Not required if you have passed --tiling in counting step`
 ```
 
+If the data does not include reporter editing data, you can provide `--no-editing` flag to omit the editing rate QC.  
 
-
-If the data does not include reporter editing data, you can provide `--no-editing` flag to omit the editing rate QC.
+### Output
+Output will be written under `${working_dir}/`. See example output [here](https://github.com/pinellolab/crispr-bean/blob/main/bean/docs/example_profile_output/).
 
 ## 3. Filter alleles (:ref:`filter`)
 As tiling library doesn't have designated per-gRNA target variant, any base edit observed in reporter may be the candidate variant, while having too many variants with very low editing rate significantly decreases the power. Variants are filtered based on multiple criteria in `bean fitler`.  
@@ -126,6 +130,9 @@ bean filter ${working_dir}/${screen_id}_masked.h5ad \
 ### CAUTION
 Ouptut file `...filtered_allele_stats.pdf` shows number of alleles per guide and number of guides per variant, where we want high enough values for the latter. If your alleles get filtered too drastically, consider adjusting filtering threshold `--filter-allele-proportion 0.1 --filter-sample-proportion 0.3`. See the [typical output](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_filtering_ouptut/) for dataset with good editing coverage & filtering result.
 
+### Output
+Output will be written under `${working_dir}/`. See example output [here](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_filtering_ouptut/).
+
 ## 4. Quantify variant effect (:ref:`run`)
 By default, `bean run [sorting,survival] tiling` uses most filtered allele counts table for variant identification and quantification of their effects. Check [allele filtering output](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_filtering_ouptut/) and choose alternative filtered allele counts table if necessary.   
 
@@ -139,7 +146,7 @@ By default, `bean run [sorting,survival] tiling` uses most filtered allele count
     -o $working_dir \
     --fit-negctrl \
     --scale-by-acc \
-    --accessibility-col accessibility
+    --acc-col accessibility
     ```
 
   1-2. If your gRNA metadata table (`${working_dir}/test_guide_info.csv` above) included per-gRNA chromosome & position and you have bigWig file with accessibility signal, 
@@ -150,7 +157,7 @@ By default, `bean run [sorting,survival] tiling` uses most filtered allele count
     -o $working_dir \
     --fit-negctrl \
     --scale-by-acc \
-    --accessibility-bw accessibility.bw
+    --acc-bw-path accessibility.bw
     ```
 
 2. From **reporter**
@@ -172,3 +179,6 @@ By default, `bean run [sorting,survival] tiling` uses most filtered allele count
     --fit-negctrl \
     --uniform-edit
     ```
+
+### Output
+Output will be written under `${working_dir}/`. See example output [here](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_run_ouptut/tiling/).

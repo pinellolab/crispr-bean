@@ -45,12 +45,41 @@ def check_args(args, bdata):
                 "Both --acc-col and --acc-bw-path is specified. --acc-bw-path is ignored."
             )
             args.acc_bw_path = None
+        elif args.acc_bw_path is not None:
+            if "genomic_pos" not in bdata.guides.columns:
+                if "start_pos" in bdata.guides.columns:
+                    bdata.guides["genomic_pos"] = bdata.guides["start_pos"]
+                    warn(
+                        "'genomic_pos' not in ReporterScreen.guides.columns, using 'start_pos' to retrieve accessibility from the bigWig file. To provide separate position to extract accessibility from, please specify as ReporterScreen.guides['genomic_pos']."
+                    )
+                else:
+                    raise ValueError(
+                        "Guides' positions not provided in ReporterScreen.guides['start_pos']. Please check the input. To add/modify columns, see the API tutorial of ReporterScreen(https://pinellolab.github.io/crispr-bean/ReporterScreen_api.html)."
+                    )
     if args.outdir is None:
         args.outdir = os.path.dirname(args.bdata_path)
     if args.fit_negctrl and (args.negctrl_col not in bdata.guides.columns):
         raise ValueError(
             f"--negctrl-col argument '{args.negctrl_col}' not in ReporterScreen.guides.columns {bdata.guides.columns}. Please check the input or do not provide --fit-negctrl flag if you don't have the negative controls."
         )
+    if args.selection == "sorting":
+        if args.sorting_bin_upper_quantile_col not in bdata.samples.columns:
+            raise ValueError(
+                f"--sorting-bin-upper-quantile-col argument '{args.sorting_bin_upper_quantile_col}' not in ReporterScreen.samples.columns {bdata.samples.columns}. Please check the input. To add/modify columns, see the API tutorial of ReporterScreen(https://pinellolab.github.io/crispr-bean/ReporterScreen_api.html)."
+            )
+        if args.sorting_bin_lower_quantile_col not in bdata.samples.columns:
+            raise ValueError(
+                f"--sorting-bin-lower-quantile-col argument '{args.sorting_bin_lower_quantile_col}' not in ReporterScreen.samples.columns {bdata.samples.columns}. Please check the input. To add/modify columns, see the API tutorial of ReporterScreen(https://pinellolab.github.io/crispr-bean/ReporterScreen_api.html)."
+            )
+    elif args.selection == "survival":
+        if args.time_col not in bdata.samples.columns:
+            raise ValueError(
+                f"--time-col argument '{args.time_col}' not in ReporterScreen.samples.columns {bdata.samples.columns}. Please check the input. To add/modify columns, see the API tutorial of ReporterScreen(https://pinellolab.github.io/crispr-bean/ReporterScreen_api.html)."
+            )
+        elif not np.issubdtype(bdata.samples[args.time_col].dtype, np.number):
+            raise ValueError(
+                f"ReporterScreen.samples['{args.time_col}'] provided is not numeric ({bdata.samples[args.time_col]}). Please check the input .h5ad file or your --time-col argument. To add/modify columns, see the API tutorial of ReporterScreen(https://pinellolab.github.io/crispr-bean/ReporterScreen_api.html)."
+            )
     if args.library_design == "variant":
         args.adjust_confidence_by_negative_control = args.fit_negctrl and (
             not args.dont_adjust_confidence_by_negative_control
@@ -79,7 +108,8 @@ def check_args(args, bdata):
     else:
         raise ValueError(
             "Invalid library_design provided. Select either 'variant' or 'tiling'."
-        )  # TODO: change this into discrete modes via argparse
+        )
+
     if args.fit_negctrl:
         n_negctrl = (
             bdata.guides[args.negctrl_col].map(lambda s: s.lower())

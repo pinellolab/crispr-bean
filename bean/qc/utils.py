@@ -16,7 +16,6 @@ def check_args(args):
         raise ValueError(
             f"Specified --condition-col `{args.condition_col}` does not exist in ReporterScreen.samples.columns ({bdata.samples.columns}). Please check your input."
         )
-    print("ARGS.TILING", args.tiling)
     if (
         (
             (args.tiling is not None and args.tiling == False)

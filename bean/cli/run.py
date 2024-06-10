@@ -79,7 +79,7 @@ def main(args):
         + os.path.basename(args.bdata_path).rsplit(".", 1)[0]
     )
     os.makedirs(prefix, exist_ok=True)
-    file_logger = logging.FileHandler(f"{prefix}.log")
+    file_logger = logging.FileHandler(f"{prefix}/bean_run.log")
     file_logger.setLevel(logging.INFO)
     logging.getLogger().addHandler(file_logger)
     if args.cuda:
@@ -146,6 +146,23 @@ def main(args):
         _guide_idxs, _per_guide_edit_rates, eff_editing_rates = (
             _obtain_effective_edit_rate(ndata, count_thres=0)
         )
+        # Summary stats
+        # 1. guide_target_group: Aggregated `target_group` columns of guides that generated the variant.
+        # 2. effective_edit_rate: Sum of normalized editing rate per variant.
+        # 3. editing_guides: guide IDs that generated the variant.
+        # 4. per_guide_editing_rates: comma-separated editing rates, ordered as the same as `editing_guides``.
+        # 5. n_guides: # of guides generated the variant.
+        # 6. n_coocc: # of unique co-occurring variants that appears together in allele that generated the variant.
+        target_info_df["guide_target_group"] = [
+            ",".join(
+                np.unique(
+                    bdata.guides["target_group"]
+                    .values[_gidx.cpu().numpy().flatten()]
+                    .tolist()
+                )
+            )
+            for _gidx in _guide_idxs
+        ]
         target_info_df["effective_edit_rate"] = eff_editing_rates.cpu()
         target_info_df["editing_guides"] = [
             ",".join(guide_index.values[_gidx.cpu().numpy().flatten()].tolist())
@@ -161,7 +178,9 @@ def main(args):
                 (target_info_df.ref == target_info_df.alt)
                 & (target_info_df.coding == "coding")
             )[0]
-            print("syn idx: ", adj_negctrl_idx)
+            info(
+                f"Using {len(adj_negctrl_idx)} synonymous variants to adjust confidence."
+            )
     guide_info_df = ndata.screen.guides
 
     # Run the inference steps

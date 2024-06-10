@@ -9,8 +9,8 @@ def check_args(args):
         sample_path = os.path.dirname(args.bdata_path)
         if not sample_path:
             sample_path = "."
-        args.output_prefix = f"{sample_path}/bean_profile.{sample_id}/{sample_id}"
-        os.makedirs(args.output_prefix, exist_ok=True)
+        args.output_prefix = f"{sample_path}/bean_profile.{sample_id}/bean_profile"
+        os.makedirs(f"{sample_path}/bean_profile.{sample_id}/", exist_ok=True)
     if args.window_length < 1:
         raise ValueError(f"window_length {args.window_length} is too small.")
     cdata = be.read_h5ad(args.bdata_path)

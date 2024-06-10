@@ -83,7 +83,7 @@ bean profile ${working_dir}/${screen_id}.h5ad --pam-col '5-nt PAM'
 Check the editing window, and consider feeding the start/end position of the editing window with the maximal editing rate into `bean qc` with `--edit-start-pos`, `--edit-end-pos` arguments.  
 
 ### Output
-Output will be written under `${working_dir}/bean_profile.${screen_id}/`. See example output [here](https://github.com/pinellolab/crispr-bean/blob/main/bean/docs/example_profile_output/).
+Output will be written under `${working_dir}/bean_profile.${screen_id}/`. See example output [here](https://github.com/pinellolab/crispr-bean/tree/main/bean/docs/example_profile_output/).
 
 
 ## 2. QC (:ref:`qc`)
@@ -100,7 +100,7 @@ bean qc \
 If the data does not include reporter editing data, you can provide `--no-editing` flag to omit the editing rate QC.  
 
 ### Output
-Output will be written under `${working_dir}/`. See example output [here](https://github.com/pinellolab/crispr-bean/blob/main/bean/docs/example_profile_output/).
+Output will be written under `${working_dir}/`. See example output [here](https://github.com/pinellolab/crispr-bean/tree/main/bean/docs/example_qc_output/).
 
 ## 3. Filter alleles (:ref:`filter`)
 As tiling library doesn't have designated per-gRNA target variant, any base edit observed in reporter may be the candidate variant, while having too many variants with very low editing rate significantly decreases the power. Variants are filtered based on multiple criteria in `bean fitler`.  

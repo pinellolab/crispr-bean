@@ -11,7 +11,6 @@ else:
 
 
 import pickle as pkl
-import numpy as np
 import pandas as pd
 import logging
 from functools import partial
@@ -77,10 +76,12 @@ def check_args(args, bdata):
             raise ValueError(
                 f"--time-col argument '{args.time_col}' not in ReporterScreen.samples.columns {bdata.samples.columns}. Please check the input. To add/modify columns, see the API tutorial of ReporterScreen(https://pinellolab.github.io/crispr-bean/ReporterScreen_api.html)."
             )
-        elif not np.issubdtype(bdata.samples[args.time_col].dtype, np.number):
+        try:
+            pd.to_numeric(bdata.samples[args.time_col])
+        except ValueError as exc:
             raise ValueError(
                 f"ReporterScreen.samples['{args.time_col}'] provided is not numeric ({bdata.samples[args.time_col]}). Please check the input .h5ad file or your --time-col argument. To add/modify columns, see the API tutorial of ReporterScreen(https://pinellolab.github.io/crispr-bean/ReporterScreen_api.html)."
-            )
+            ) from exc
     if args.library_design == "variant":
         args.adjust_confidence_by_negative_control = args.fit_negctrl and (
             not args.dont_adjust_confidence_by_negative_control

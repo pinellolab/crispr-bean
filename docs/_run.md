@@ -63,4 +63,4 @@ Above command produces
 * `output_prefix/bean_sgRNA_result.[model_type].csv`: 
   * `edit_rate`: Estimated editing rate at the target loci.
 
-See the example output for `variant` run [here](https://github.com/pinellolab/crispr-bean/tree/main/tests/var_res_example/).
+See the example output [here](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_run_output).

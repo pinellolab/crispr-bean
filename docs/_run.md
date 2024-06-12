@@ -55,7 +55,7 @@ Above command produces
     * `mu_z`: z-score of `mu`
     * `sd`: Standard deviation of variant phenotype, given the wild type has standard normal phenotype distribution of `mu = 0, sd = 1`.
     * `CI[0.025`, `0.975]`: Credible interval of `mu`
-    * When negative control is provided, above columns with `_adj` suffix are provided, which are the corresponding values adjusted for negative control.  
+    * **When negative control is provided, above columns with `_adj` suffix are provided, which are the corresponding values adjusted for negative control.**  
   * Metrics on per-variant evidence provided in input (provided in `tiling` mode)
     * `effective_edit_rate`: Sum of per-variant editing rates over all alleles observed in the input. Allele-level editing rate is divided by the number of variants observed in the allele prior to summing up.
     * `n_guides`: # of guides covering the variant.
@@ -63,4 +63,4 @@ Above command produces
 * `output_prefix/bean_sgRNA_result.[model_type].csv`: 
   * `edit_rate`: Estimated editing rate at the target loci.
 
-See the example output [here](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_run_output).
+See the full output file description and example output [here](https://github.com/pinellolab/crispr-bean/tree/main/docs/example_run_output).

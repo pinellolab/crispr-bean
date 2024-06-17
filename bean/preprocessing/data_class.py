@@ -39,7 +39,7 @@ class ScreenData(abc.ABC):
         repguide_mask: str = None,
         sample_mask_column: str = None,
         shrink_alpha: bool = False,
-        condition_column: str = "sort",
+        condition_column: str = "condition",
         sample_covariate_column: List[str] = [],
         control_condition: str = "bulk",
         accessibility_col: str = None,
@@ -1001,9 +1001,9 @@ class SurvivalScreenData(ScreenData):
                 f"Not all replicate share same timepoint definition. If you have missing bin data, add the sample and add 'mask' column in 'screen.samples', or run `bean-qc` that automatically handles this. \n{self.screen.samples}"
             )
 
-    def _post_init(
-        self,
-    ):
+        # def _post_init(
+        #     self,
+        # ):
         self.timepoints = torch.as_tensor(
             self.screen_selected.samples[self.time_column].unique()
         )
@@ -1307,7 +1307,7 @@ class VariantSurvivalScreenData(VariantScreenData, SurvivalScreenData):
         )
         SurvivalScreenData._pre_init(self, time_column, condition_column)
         ScreenData._post_init(self)
-        SurvivalScreenData._post_init(self)
+        # SurvivalScreenData._post_init(self)
         VariantScreenData._post_init(self, target_col)
         if use_bcmatch:
             self.set_bcmatch(
@@ -1393,9 +1393,14 @@ class VariantSurvivalReporterScreenData(VariantReporterScreenData, SurvivalScree
             **kwargs,
         )
         SurvivalScreenData._pre_init(self, time_column, condition_column)
-        ScreenData._post_init(self)
-        SurvivalScreenData._post_init(self)
-        VariantScreenData._post_init(self, target_col)
+        ScreenData._post_init(
+            self,
+        )
+        # SurvivalScreenData._post_init(self)
+        VariantScreenData._post_init(
+            self,
+            target_col,
+        )
         ReporterScreenData._post_init(
             self,
             screen,

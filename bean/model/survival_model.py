@@ -366,7 +366,14 @@ def MixtureNormalGuide(
 
     replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
     guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
-
+    initial_abundance = pyro.param(
+        "initial_abundance", torch.ones(data.n_guides) / data.n_guides
+    )
+    with pyro.plate("replicate_plate0", data.n_reps, dim=-1):
+        q_0 = pyro.sample(
+            "initial_guide_abundance",
+            dist.Dirichlet(torch.ones((data.n_reps, data.n_guides))),
+        )
     # Set the prior for phenotype means
     mu_loc = pyro.param("mu_loc", torch.zeros((data.n_targets, 1)))
     mu_scale = pyro.param(
@@ -449,7 +456,14 @@ def MultiMixtureNormalModel(
     replicate_plate2 = pyro.plate("rep_plate2", data.n_reps, dim=-2)
     time_plate = pyro.plate("time_plate", data.n_condits, dim=-2)
     guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
-
+    initial_abundance = pyro.param(
+        "initial_abundance", torch.ones(data.n_guides) / data.n_guides
+    )
+    with pyro.plate("replicate_plate0", data.n_reps, dim=-1):
+        q_0 = pyro.sample(
+            "initial_guide_abundance",
+            dist.Dirichlet(torch.ones((data.n_reps, data.n_guides))),
+        )
     # Set the prior for phenotype means
     with pyro.plate("guide_plate1", data.n_edits):
         mu_edits = pyro.sample("mu_alleles", dist.Laplace(0, 1))

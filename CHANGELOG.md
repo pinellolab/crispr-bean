@@ -4,3 +4,6 @@
 
 ## 1.2.6
 * Fix overflow in `bean run survival` and autograde error related to inplace assignment for `bean run survival tiling`.
+
+## 1.2.7
+* **CRITICAL** Fix sample ordering & masking issue for survival screens

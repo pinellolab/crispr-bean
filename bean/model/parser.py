@@ -147,7 +147,7 @@ def parse_args(parser=None):
     parser.add_argument(
         "--sample-mask-col",
         type=str,
-        default=None,
+        default="mask",
         help="Name of the column indicating the sample mask in [Reporter]Screen.samples (or AnnData.var). Sample is ignored if the value in this column is 0. This can be used to mask out low-quality samples.",
     )
     parser.add_argument(

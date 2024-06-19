@@ -16,9 +16,10 @@ bean run sorting variant $working_dir/${screen_id1}.h5ad --control-condition D14
 
 # 2. Build prior
 # Feed first and second `bean run` scripts, and output file pickle file path that will store prior_params
+# Usage: bean build-prior command_run1 command_run2 raw_output_run1 param_output
 bean build-prior \
-'bean run sorting variant $working_dir/${screen_id1}.h5ad --control-condition D14_1 -o $working_dir --fit-negctrl --save-raw' \
-'bean run sorting variant $working_dir/${screen_id2}.h5ad --control-condition D14_2 -o $working_dir --fit-negctrl' \
+"bean run sorting variant $working_dir/${screen_id1}.h5ad --control-condition D14_1 -o $working_dir --fit-negctrl --save-raw" \
+"bean run sorting variant $working_dir/${screen_id2}.h5ad --control-condition D14_2 -o $working_dir --fit-negctrl" \
 $working_dir/bean_run_result.${screen_id1}/MixtureNormal.result.pkl \
 $working_dir/prior_params.pkl
 

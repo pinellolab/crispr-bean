@@ -1,4 +1,4 @@
-Cython>=3.0.10
+Cython==3.0.8
 numpy<2.0.0
 pandas
 scipy

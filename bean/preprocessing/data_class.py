@@ -112,7 +112,7 @@ class ScreenData(abc.ABC):
         self.condition_column = condition_column
         self.control_condition = control_condition
         self.sample_mask_column = sample_mask_column
-        self.repguide_mask = repguide_mask
+        self.repguide_mask_key = repguide_mask
         self.shrink_alpha = shrink_alpha
         self.popt = popt
 
@@ -146,29 +146,31 @@ class ScreenData(abc.ABC):
         self.X_masked = self.X * self.sample_mask[:, :, None]
         self.X_control = self.transform_data(self.screen_control.X, 1)
         self.X_control_masked = self.X_control * self.bulk_sample_mask[:, None, None]
-        if self.repguide_mask is None:
+        if self.repguide_mask_key is None:
             self.repguide_mask = ~(self.X == 0).any(axis=1)
         else:
             info(
-                f"Using replicate x guide mask in ReporterScreen.uns['{self.repguide_mask}'] to filter out outlier guides."
+                f"Using replicate x guide mask in ReporterScreen.uns['{self.repguide_mask_key}'] to filter out outlier guides."
             )
             assert (
-                self.repguide_mask in self.screen.uns.keys()
-            ), f"{self.repguide_mask} not in screen.uns"
-            assert self.screen_selected.uns[self.repguide_mask].shape == (
+                self.repguide_mask_key in self.screen.uns.keys()
+            ), f"{self.repguide_mask_key} not in screen.uns"
+            assert self.screen_selected.uns[self.repguide_mask_key].shape == (
                 self.n_guides,
                 self.n_reps,
             )
             assert (
-                self.screen_selected.uns[self.repguide_mask].index
+                self.screen_selected.uns[self.repguide_mask_key].index
                 == self.screen_selected.guides.index
             ).all()
             assert (
-                self.screen_selected.uns[self.repguide_mask].columns
+                self.screen_selected.uns[self.repguide_mask_key].columns
                 == self.screen_selected.samples[self.replicate_column].unique()
             ).all()
             self.repguide_mask = (
-                torch.as_tensor(self.screen_selected.uns[self.repguide_mask].values.T)
+                torch.as_tensor(
+                    self.screen_selected.uns[self.repguide_mask_key].values.T
+                )
                 > 0
             )
             self.repguide_mask = torch.logical_and(

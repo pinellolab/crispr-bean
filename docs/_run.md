@@ -4,7 +4,7 @@ BEAN uses Bayesian network to incorporate gRNA editing outcome to provide poster
 2. The weight of the mixture components are inferred from the reporter editing outcome and the chromatin accessibility of the loci.
 3. Cells with each gRNA, formulated as the mixture distribution, is sorted by the phenotypic quantile to produce the gRNA counts.
 
-For the full detail, see the method section of the [BEAN manuscript](https://www.medrxiv.org/content/10.1101/2023.09.08.23295253v1).
+For the full detail on modeling, see the [model description](https://pinellolab.github.io/crispr-bean/model.html).
 
 <img src="/crispr-bean/assets/bean.gif" alt="model" width="700"/>   
   

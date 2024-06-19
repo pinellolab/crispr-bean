@@ -31,6 +31,7 @@ from bean.model.run import (
     check_args,
     identify_model_guide,
     identify_negctrl_model_guide,
+    _check_prior_params,
 )
 
 logging.basicConfig(
@@ -60,7 +61,7 @@ warnings.filterwarnings(
 )
 
 
-def main(args):
+def main(args, return_data=False):
     print(
         r"""
     _ _       
@@ -114,7 +115,8 @@ def main(args):
         replicate_col=args.replicate_col,
         use_bcmatch=(not args.ignore_bcmatch),
     )
-
+    if return_data:
+        return ndata
     # Build variant dataframe
     adj_negctrl_idx = None
     if args.library_design == "variant":
@@ -183,6 +185,11 @@ def main(args):
             )
     guide_info_df = ndata.screen.guides
 
+    # Add user-defined prior.
+    if args.prior_params is not None:
+        prior_params = _check_prior_params(args.prior_params, ndata)
+        model = partial(model, prior_params=prior_params)
+
     # Run the inference steps
     info(f"Running inference for {model_label}...")
     if args.load_existing:
@@ -211,6 +218,8 @@ def main(args):
             )
         else:
             param_history_dict_negctrl = None
+        save_dict["data"] = ndata
+    # Save results
 
     outfile_path = (
         f"{prefix}/bean_element[sgRNA]_result.{model_label}{args.result_suffix}.csv"
@@ -218,8 +227,11 @@ def main(args):
     info(f"Done running inference. Writing result at {outfile_path}...")
     if not os.path.exists(prefix):
         os.makedirs(prefix)
-    with open(f"{prefix}/{model_label}.result{args.result_suffix}.pkl", "wb") as handle:
-        pkl.dump(save_dict, handle)
+    if args.save_raw:
+        with open(
+            f"{prefix}/{model_label}.result{args.result_suffix}.pkl", "wb"
+        ) as handle:
+            pkl.dump(save_dict, handle)
     write_result_table(
         target_info_df,
         param_history_dict,

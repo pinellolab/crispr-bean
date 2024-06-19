@@ -16,7 +16,7 @@ cdef extern from "stdlib.h":
 cdef extern from "Python.h":
     ctypedef void PyObject
 
-ctypedef np.npy_int DTYPE_INT
+ctypedef np.intp DTYPE_INT
 ctypedef np.int8_t DTYPE_BOOL
 
 cdef size_t UP = 1, LEFT = 2, DIAG = 3, NONE = 4

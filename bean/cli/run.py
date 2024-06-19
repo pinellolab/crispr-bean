@@ -60,7 +60,7 @@ warnings.filterwarnings(
 )
 
 
-def main(args):
+def main(args, return_data=False):
     print(
         r"""
     _ _       
@@ -114,7 +114,8 @@ def main(args):
         replicate_col=args.replicate_col,
         use_bcmatch=(not args.ignore_bcmatch),
     )
-
+    if return_data:
+        return ndata
     # Build variant dataframe
     adj_negctrl_idx = None
     if args.library_design == "variant":

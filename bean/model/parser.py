@@ -224,5 +224,10 @@ def parse_args(parser=None):
         action="store_true",
         help="Load existing .pkl file if present.",
     )
+    parser.add_argument(
+        "--save-raw",  # TODO: add check args
+        action="store_true",
+        help="Write .pkl file with raw input/output.",
+    )
 
     return parser

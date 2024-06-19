@@ -18,7 +18,7 @@ setup(
     url="https://github.com/pinellolab/crispr-bean",
     packages=find_namespace_packages(),
     ext_modules=cythonize(
-        ["bean/mapping/CRISPResso2Align.pyx"], compiler_directives={"language_level": 2}
+        ["bean/mapping/CRISPResso2Align.pyx"]}
     ),
     include_dirs=np.get_include(),
     setup_requires=[

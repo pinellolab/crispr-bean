@@ -26,3 +26,4 @@ def parse_args(parser=None):
         type=str,
         help="Output path to save prior parameters.",
     )
+    return parser

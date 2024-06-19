@@ -2,7 +2,7 @@
 
 from cython.view cimport array as cvarray
 import numpy as np
-cimport numpy as cnp
+cimport numpy as np
 
 from libc.stdlib cimport free, malloc
 

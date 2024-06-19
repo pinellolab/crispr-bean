@@ -258,10 +258,8 @@ class ReporterScreenData(ScreenData):
     size_factor_bcmatch: torch.Tensor
     X_bcmatch_control: torch.Tensor
     size_factor_bcmatch_control: torch.Tensor
-    allele_counts: torch.Tensor
     allele_counts_control: torch.Tensor
     a0_bcmatch: torch.Tensor
-    a0_allele: torch.Tensor
     pi_a0: torch.Tensor
 
     def __init__(

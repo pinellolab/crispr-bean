@@ -354,7 +354,7 @@ class ReporterScreen(Screen):
         target_base_edit: Optional[Dict[str, str]] = None,
         match_target_position: Optional[bool] = None,
         rel_pos_start=0,
-        rel_pos_end=np.Inf,
+        rel_pos_end=np.inf,
         rel_pos_is_reporter=False,
         target_pos_col="target_pos",
         edit_count_key="edit_counts",

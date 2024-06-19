@@ -4,7 +4,8 @@ import pyro
 import pyro.distributions as dist
 import pyro.distributions.constraints as constraints
 
-MAX_LOGPI=10
+MAX_LOGPI = 10
+
 
 def get_alpha(
     expected_guide_p, size_factor, sample_mask, a0, epsilon=1e-5, normalize_by_a0=True

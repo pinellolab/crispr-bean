@@ -1,3 +1,4 @@
+from typing import Optional
 import torch
 import pyro
 from pyro import poutine
@@ -19,28 +20,50 @@ def NormalModel(
     data: VariantSortingScreenData,
     mask_thres: int = 10,
     use_bcmatch: bool = True,
+    sd_scale: float = 0.01,
+    prior_params: Optional[dict] = None,
 ):
     """
     Fit only on guide counts
-    Args
-    --
-    data: input data
+
+    Args:
+        data: input data
+        mask_thres: threshold for masking guide counts for stability. Defaults to 10.
+        use_bcmatch: whether to use barcode-matched counts. Defaults to True.
+        sd_scale: scale for prior standard deviation. Defaults to 0.01 for improved identifiability.
+        prior_params: prior parameters. If provided, specified prior parameters will be used.
     """
     replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
     replicate_plate2 = pyro.plate("rep_plate2", data.n_reps, dim=-2)
     bin_plate = pyro.plate("bin_plate", data.n_condits, dim=-2)
     guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
 
+    sd_loc = torch.zeros((data.n_targets, 1))
+    sd_scale = torch.ones((data.n_targets, 1)) * sd_scale
+    mu_dist = dist.Laplace(0, 1)
+    if prior_params is not None:
+        if "sd_loc" in prior_params:
+            sd_loc = prior_params["sd_loc"]
+        if "sd_scale" in prior_params:
+            sd_scale = prior_params["sd_scale"]
+        if "mu_loc" in prior_params or "mu_scale" in prior_params:
+            mu_loc = 0.0
+            mu_scale = 1.0
+            if "mu_loc" in prior_params:
+                mu_loc = prior_params["mu_loc"]
+            if "mu_scale" in prior_params:
+                mu_scale = prior_params["mu_scale"]
+            mu_dist = dist.Normal(mu_loc, mu_scale)
+
     # Set the prior for phenotype means
     with pyro.plate("guide_plate0", 1):
         with pyro.plate("guide_plate1", data.n_targets):
-            mu_targets = pyro.sample("mu_targets", dist.Laplace(0, 1))
+            mu_targets = pyro.sample("mu_targets", mu_dist)
             sd_targets = pyro.sample(
                 "sd_targets",
-                dist.LogNormal(
-                    torch.zeros((data.n_targets, 1)), torch.ones(data.n_targets, 1)
-                ),
+                dist.LogNormal(sd_loc, sd_scale),
             )
+
     mu_center = mu_targets
     mu = torch.repeat_interleave(mu_center, data.target_lengths, dim=0)
     assert mu.shape == (data.n_guides, 1)
@@ -359,10 +382,19 @@ def MixtureNormalModel(
     sd_scale: float = 0.01,
     scale_by_accessibility: bool = False,
     fit_noise: bool = False,
+    prior_params: Optional[dict] = None,
 ):
     """
+    Using the reporter outcome, phenotype of cells with a guide will be modeled as mixture of two normal distributions of edited and unedited cells.
+
     Args:
-        scale_by_accessibility: If True, pi fitted from reporter data is scaled by accessibility
+        data: Input data of type VariantSortingReporterScreenData.
+        alpha_prior: Prior parameter for controlling the concentration of the Dirichlet process. Defaults to 1.
+        use_bcmatch: Flag indicating whether to use barcode-matched counts. Defaults to True.
+        sd_scale: Scale for the prior standard deviation. Defaults to 0.01.
+        scale_by_accessibility: If True, pi fitted from reporter data is scaled by accessibility.
+        fit_noise: Valid only when scale_by_accessibility is True. If True, parametrically fit noise of endo ~ reporter + noise.
+        prior_params: Optional dictionary of prior parameters. If provided, specified prior parameters will be used.
     """
     torch.autograd.set_detect_anomaly(True)
     replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
@@ -370,17 +402,32 @@ def MixtureNormalModel(
     bin_plate = pyro.plate("bin_plate", data.n_condits, dim=-2)
     guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
 
+    sd_loc = torch.zeros((data.n_targets, 1))
+    sd_scale = torch.ones((data.n_targets, 1)) * sd_scale
+    mu_dist = dist.Laplace(0, 1)
+    if prior_params is not None:
+        if "sd_loc" in prior_params:
+            sd_loc = prior_params["sd_loc"]
+        if "sd_scale" in prior_params:
+            sd_scale = prior_params["sd_scale"]
+        if "mu_loc" in prior_params or "mu_scale" in prior_params:
+            mu_loc = 0.0
+            mu_scale = 1.0
+            if "mu_loc" in prior_params:
+                mu_loc = prior_params["mu_loc"]
+            if "mu_scale" in prior_params:
+                mu_scale = prior_params["mu_scale"]
+            mu_dist = dist.Normal(mu_loc, mu_scale)
+
     # Set the prior for phenotype means
     with pyro.plate("guide_plate0", 1):
         with pyro.plate("guide_plate1", data.n_targets):
-            mu_targets = pyro.sample("mu_targets", dist.Laplace(0, 1))
+            mu_targets = pyro.sample("mu_targets", mu_dist)
             sd_targets = pyro.sample(
                 "sd_targets",
-                dist.LogNormal(
-                    torch.zeros((data.n_targets, 1)),
-                    torch.ones(data.n_targets, 1) * sd_scale,
-                ),
+                dist.LogNormal(sd_loc, sd_scale),
             )
+
     mu_center = torch.cat([torch.zeros((data.n_targets, 1)), mu_targets], axis=-1)
     mu = torch.repeat_interleave(mu_center, data.target_lengths, dim=0)
     assert mu.shape == (data.n_guides, 2)
@@ -446,6 +493,210 @@ def MixtureNormalModel(
                 )
                 assert alleles_p_bin.shape == (data.n_condits, data.n_guides, 2)
 
+            expected_allele_p = (
+                pi.expand(data.n_reps, data.n_condits, -1, -1)
+                * alleles_p_bin[None, :, :, :]
+            )
+            expected_guide_p = expected_allele_p.sum(axis=-1)
+            assert expected_guide_p.shape == (
+                data.n_reps,
+                data.n_condits,
+                data.n_guides,
+            ), expected_guide_p.shape
+
+    with replicate_plate2:
+        with pyro.plate("guide_plate3", data.n_guides, dim=-1):
+            a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
+            a_bcmatch = get_alpha(
+                expected_guide_p,
+                data.size_factor_bcmatch,
+                data.sample_mask,
+                data.a0_bcmatch,
+            )
+            # a_bcmatch = get_alpha(expected_guide_p, data.size_factor_bcmatch, data.sample_mask, data.a0_bcmatch)
+            # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_condits)
+            assert (
+                data.X.shape
+                == data.X_bcmatch.shape
+                == (
+                    data.n_reps,
+                    data.n_condits,
+                    data.n_guides,
+                )
+            )
+            with poutine.mask(
+                mask=torch.logical_and(
+                    data.X_masked.permute(0, 2, 1).sum(axis=-1) > 10, data.repguide_mask
+                )
+            ):
+                pyro.sample(
+                    "guide_counts",
+                    dist.DirichletMultinomial(a, validate_args=False),
+                    obs=data.X_masked.permute(0, 2, 1),
+                )
+            if use_bcmatch:
+                with poutine.mask(
+                    mask=torch.logical_and(
+                        data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1) > 10,
+                        data.repguide_mask,
+                    )
+                ):
+                    pyro.sample(
+                        "guide_bcmatch_counts",
+                        dist.DirichletMultinomial(a_bcmatch, validate_args=False),
+                        obs=data.X_bcmatch_masked.permute(0, 2, 1),
+                    )
+
+
+def MultiMixtureNormalModel(
+    data: TilingSortingReporterScreenData,
+    alpha_prior=1,
+    use_bcmatch=True,
+    sd_scale=0.01,
+    scale_by_accessibility=False,
+    fit_noise: bool = False,
+    prior_params: Optional[dict] = None,
+    epsilon=1e-5,
+):
+    """
+    Using the reporter outcome, phenotype of cells with a guide will be modeled as mixture of normal distributions of all major alleles (including WT) produced by the guide.
+
+    Args:
+        data: Input data of type VariantSortingReporterScreenData.
+        alpha_prior: Prior parameter for controlling the concentration of the Dirichlet process. Defaults to 1.
+        use_bcmatch: Flag indicating whether to use barcode-matched counts. Defaults to True.
+        sd_scale: Scale for the prior standard deviation. Defaults to 0.01.
+        scale_by_accessibility: If True, pi fitted from reporter data is scaled by accessibility.
+        fit_noise: Valid only when scale_by_accessibility is True. If True, parametrically fit noise of endo ~ reporter + noise.
+        prior_params: Optional dictionary of prior parameters. If provided, specified prior parameters will be used.
+        epsilon: Small value to avoid division by zero, assigned as Dirichlet parameters for non-existing alleles.
+    """
+
+    replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
+    replicate_plate2 = pyro.plate("rep_plate2", data.n_reps, dim=-2)
+    bin_plate = pyro.plate("bin_plate", data.n_condits, dim=-2)
+    guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
+
+    sd_loc = torch.zeros((data.n_edits,))
+    sd_scale = (
+        torch.ones(
+            data.n_edits,
+        )
+        * sd_scale
+    )
+    mu_dist = dist.Laplace(0, 1)
+    if prior_params is not None:
+        if "sd_loc" in prior_params:
+            sd_loc = prior_params["sd_loc"]
+        if "sd_scale" in prior_params:
+            sd_scale = prior_params["sd_scale"]
+        if "mu_loc" in prior_params or "mu_scale" in prior_params:
+            mu_loc = 0.0
+            mu_scale = 1.0
+            if "mu_loc" in prior_params:
+                mu_loc = prior_params["mu_loc"]
+            if "mu_scale" in prior_params:
+                mu_scale = prior_params["mu_scale"]
+            mu_dist = dist.Normal(mu_loc, mu_scale)
+
+    # Set the prior for phenotype means
+    with pyro.plate("guide_plate1", data.n_edits):
+        mu_edits = pyro.sample("mu_targets", mu_dist)
+        sd_edits = pyro.sample(
+            "sd_targets",
+            dist.LogNormal(
+                sd_loc,
+                sd_scale,
+            ),
+        )
+
+    assert mu_edits.shape == sd_edits.shape == (data.n_edits,)
+    assert data.allele_to_edit.shape == (
+        data.n_guides,
+        data.n_max_alleles - 1,
+        data.n_edits,
+    )
+    mu_targets = torch.matmul(data.allele_to_edit, mu_edits)
+    assert mu_targets.shape == (data.n_guides, data.n_max_alleles - 1)
+    sd_targets = torch.linalg.norm(
+        data.allele_to_edit * sd_edits[None, None, :], dim=-1
+    )  # Frobenius 2-norm
+
+    mu = torch.cat([torch.zeros((data.n_guides, 1)), mu_targets], axis=-1)
+    sd = torch.cat([torch.ones((data.n_guides, 1)), sd_targets], axis=-1)
+    assert mu.shape == sd.shape == (data.n_guides, data.n_max_alleles), (
+        mu.shape,
+        sd.shape,
+    )
+
+    # The pi should be Dirichlet distributed instead of independent betas
+    alpha_pi0 = (
+        torch.ones(
+            (
+                data.n_guides,
+                data.n_max_alleles,
+            )
+        )
+        * alpha_prior
+    )
+    # Effectively remove alphas for non-existing alleles
+    assert data.allele_mask.shape == (data.n_guides, data.n_max_alleles)
+    alpha_pi0[~data.allele_mask] = epsilon
+    alpha_pi = pyro.param("alpha_pi", alpha_pi0, constraint=constraints.positive)
+    alpha_pi[~data.allele_mask] = epsilon
+    pi_a_scaled = (
+        (alpha_pi + epsilon / alpha_pi.shape[-1])
+        / (alpha_pi.sum(axis=-1)[:, None] + epsilon)
+        * data.pi_a0[:, None]
+    )
+    pi_a_scaled[pi_a_scaled < epsilon] = epsilon
+    if torch.isnan(pi_a_scaled).any():
+        print(torch.where(alpha_pi.isnan()))
+        print(torch.where(alpha_pi < 0))
+        exit(1)
+    if (pi_a_scaled <= 0).any():
+        print(torch.where(alpha_pi < 0))
+    with replicate_plate:
+        with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
+            pi = pyro.sample(
+                "pi",
+                dist.Dirichlet(
+                    pi_a_scaled.unsqueeze(0).unsqueeze(0).expand(data.n_reps, 1, -1, -1)
+                ),
+            )
+            pyro.sample(
+                "bulk_allele_count",
+                dist.Multinomial(probs=pi, validate_args=False),
+                obs=data.allele_counts_control,
+            )
+    if scale_by_accessibility:
+        # Endogenous target site editing rate may be different
+        pi = scale_pi_by_accessibility(
+            pi, data.guide_accessibility, fit_noise=fit_noise
+        )
+
+    with replicate_plate:
+        with bin_plate as b:
+            uq = data.upper_bounds[b]
+            lq = data.lower_bounds[b]
+            assert uq.shape == lq.shape == (data.n_condits,)
+            with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
+                alleles_p_bin = get_std_normal_prob(
+                    uq.unsqueeze(-1)
+                    .unsqueeze(-1)
+                    .expand((-1, data.n_guides, data.n_max_alleles)),
+                    lq.unsqueeze(-1)
+                    .unsqueeze(-1)
+                    .expand((-1, data.n_guides, data.n_max_alleles)),
+                    mu.unsqueeze(0).expand((data.n_condits, -1, -1)),
+                    sd.unsqueeze(0).expand((data.n_condits, -1, -1)),
+                    mask=data.allele_mask.unsqueeze(0).expand((data.n_condits, -1, -1)),
+                )
+                assert alleles_p_bin.shape == (
+                    data.n_condits,
+                    data.n_guides,
+                    data.n_max_alleles,
+                )
             expected_allele_p = (
                 pi.expand(data.n_reps, data.n_condits, -1, -1)
                 * alleles_p_bin[None, :, :, :]
@@ -623,178 +874,6 @@ def ControlNormalGuide(data, mask_thres=10, use_bcmatch=True):
     )
     pyro.sample("mu_targets", dist.Normal(mu_loc, mu_scale))
     pyro.sample("sd_targets", dist.LogNormal(sd_loc, sd_scale))
-
-
-def MultiMixtureNormalModel(
-    data: TilingSortingReporterScreenData,
-    alpha_prior=1,
-    use_bcmatch=True,
-    sd_scale=0.01,
-    norm_pi=False,
-    scale_by_accessibility=False,
-    epsilon=1e-5,
-    fit_noise: bool = False,
-):
-    """Tiling version of MixtureNormalModel"""
-
-    replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
-    replicate_plate2 = pyro.plate("rep_plate2", data.n_reps, dim=-2)
-    bin_plate = pyro.plate("bin_plate", data.n_condits, dim=-2)
-    guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
-
-    # Set the prior for phenotype means
-    with pyro.plate("guide_plate1", data.n_edits):
-        mu_edits = pyro.sample("mu_targets", dist.Laplace(0, 1))
-        sd_edits = pyro.sample(
-            "sd_targets",
-            dist.LogNormal(
-                torch.zeros((data.n_edits,)),
-                torch.ones(
-                    data.n_edits,
-                )
-                * sd_scale,
-            ),
-        )
-    assert mu_edits.shape == sd_edits.shape == (data.n_edits,)
-    assert data.allele_to_edit.shape == (
-        data.n_guides,
-        data.n_max_alleles - 1,
-        data.n_edits,
-    )
-    mu_targets = torch.matmul(data.allele_to_edit, mu_edits)
-    assert mu_targets.shape == (data.n_guides, data.n_max_alleles - 1)
-    sd_targets = torch.linalg.norm(
-        data.allele_to_edit * sd_edits[None, None, :], dim=-1
-    )  # Frobenius 2-norm
-
-    mu = torch.cat([torch.zeros((data.n_guides, 1)), mu_targets], axis=-1)
-    sd = torch.cat([torch.ones((data.n_guides, 1)), sd_targets], axis=-1)
-    assert mu.shape == sd.shape == (data.n_guides, data.n_max_alleles), (
-        mu.shape,
-        sd.shape,
-    )
-
-    # The pi should be Dirichlet distributed instead of independent betas
-    alpha_pi0 = (
-        torch.ones(
-            (
-                data.n_guides,
-                data.n_max_alleles,
-            )
-        )
-        * alpha_prior
-    )
-    # Effectively remove alphas for non-existing alleles
-    assert data.allele_mask.shape == (data.n_guides, data.n_max_alleles)
-    alpha_pi0[~data.allele_mask] = epsilon
-    alpha_pi = pyro.param("alpha_pi", alpha_pi0, constraint=constraints.positive)
-    alpha_pi[~data.allele_mask] = epsilon
-    pi_a_scaled = (
-        (alpha_pi + epsilon / alpha_pi.shape[-1])
-        / (alpha_pi.sum(axis=-1)[:, None] + epsilon)
-        * data.pi_a0[:, None]
-    )
-    pi_a_scaled[pi_a_scaled < epsilon] = epsilon
-    if torch.isnan(pi_a_scaled).any():
-        print(torch.where(alpha_pi.isnan()))
-        print(torch.where(alpha_pi < 0))
-        exit(1)
-    if (pi_a_scaled <= 0).any():
-        print(torch.where(alpha_pi < 0))
-    with replicate_plate:
-        with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
-            pi = pyro.sample(
-                "pi",
-                dist.Dirichlet(
-                    pi_a_scaled.unsqueeze(0).unsqueeze(0).expand(data.n_reps, 1, -1, -1)
-                ),
-            )
-            pyro.sample(
-                "bulk_allele_count",
-                dist.Multinomial(probs=pi, validate_args=False),
-                obs=data.allele_counts_control,
-            )
-    if scale_by_accessibility:
-        # Endogenous target site editing rate may be different
-        pi = scale_pi_by_accessibility(
-            pi, data.guide_accessibility, fit_noise=fit_noise
-        )
-
-    with replicate_plate:
-        with bin_plate as b:
-            uq = data.upper_bounds[b]
-            lq = data.lower_bounds[b]
-            assert uq.shape == lq.shape == (data.n_condits,)
-            with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
-                alleles_p_bin = get_std_normal_prob(
-                    uq.unsqueeze(-1)
-                    .unsqueeze(-1)
-                    .expand((-1, data.n_guides, data.n_max_alleles)),
-                    lq.unsqueeze(-1)
-                    .unsqueeze(-1)
-                    .expand((-1, data.n_guides, data.n_max_alleles)),
-                    mu.unsqueeze(0).expand((data.n_condits, -1, -1)),
-                    sd.unsqueeze(0).expand((data.n_condits, -1, -1)),
-                    mask=data.allele_mask.unsqueeze(0).expand((data.n_condits, -1, -1)),
-                )
-                assert alleles_p_bin.shape == (
-                    data.n_condits,
-                    data.n_guides,
-                    data.n_max_alleles,
-                )
-            expected_allele_p = (
-                pi.expand(data.n_reps, data.n_condits, -1, -1)
-                * alleles_p_bin[None, :, :, :]
-            )
-            expected_guide_p = expected_allele_p.sum(axis=-1)
-            assert expected_guide_p.shape == (
-                data.n_reps,
-                data.n_condits,
-                data.n_guides,
-            ), expected_guide_p.shape
-
-    with replicate_plate2:
-        with pyro.plate("guide_plate3", data.n_guides, dim=-1):
-            a = get_alpha(expected_guide_p, data.size_factor, data.sample_mask, data.a0)
-            a_bcmatch = get_alpha(
-                expected_guide_p,
-                data.size_factor_bcmatch,
-                data.sample_mask,
-                data.a0_bcmatch,
-            )
-            # a_bcmatch = get_alpha(expected_guide_p, data.size_factor_bcmatch, data.sample_mask, data.a0_bcmatch)
-            # assert a.shape == a_bcmatch.shape == (data.n_reps, data.n_guides, data.n_condits)
-            assert (
-                data.X.shape
-                == data.X_bcmatch.shape
-                == (
-                    data.n_reps,
-                    data.n_condits,
-                    data.n_guides,
-                )
-            )
-            with poutine.mask(
-                mask=torch.logical_and(
-                    data.X_masked.permute(0, 2, 1).sum(axis=-1) > 10, data.repguide_mask
-                )
-            ):
-                pyro.sample(
-                    "guide_counts",
-                    dist.DirichletMultinomial(a, validate_args=False),
-                    obs=data.X_masked.permute(0, 2, 1),
-                )
-            if use_bcmatch:
-                with poutine.mask(
-                    mask=torch.logical_and(
-                        data.X_bcmatch_masked.permute(0, 2, 1).sum(axis=-1) > 10,
-                        data.repguide_mask,
-                    )
-                ):
-                    pyro.sample(
-                        "guide_bcmatch_counts",
-                        dist.DirichletMultinomial(a_bcmatch, validate_args=False),
-                        obs=data.X_bcmatch_masked.permute(0, 2, 1),
-                    )
 
 
 def MultiMixtureNormalGuide(

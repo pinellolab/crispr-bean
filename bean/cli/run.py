@@ -31,6 +31,7 @@ from bean.model.run import (
     check_args,
     identify_model_guide,
     identify_negctrl_model_guide,
+    _check_prior_params,
 )
 
 logging.basicConfig(
@@ -183,6 +184,11 @@ def main(args, return_data=False):
                 f"Using {len(adj_negctrl_idx)} synonymous variants to adjust confidence."
             )
     guide_info_df = ndata.screen.guides
+
+    # Add user-defined prior.
+    if args.prior_params is not None:
+        prior_params = _check_prior_params(args.prior_params, ndata)
+        model = partial(model, prior_params=prior_params)
 
     # Run the inference steps
     info(f"Running inference for {model_label}...")

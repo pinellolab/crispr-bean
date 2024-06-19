@@ -1,4 +1,4 @@
-Cython
+Cython<3.0
 numpy
 pandas
 scipy

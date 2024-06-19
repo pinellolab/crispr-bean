@@ -37,13 +37,13 @@ def generate_prior_data_for_disjoint_library_pair(
     batch2_idx = np.array(batch2_idx)
     if isinstance(ndata, SortingScreenData):
         mu_loc = torch.zeros((ndata2.n_targets, 1))
-        mu_loc[batch2_idx, :] = data["params"]["params"]["mu_loc"][batch1_idx, :]
+        mu_loc[batch2_idx, :] = data["params"]["mu_loc"][batch1_idx, :]
         mu_scale = torch.ones((ndata2.n_targets, 1))
-        mu_scale[batch2_idx, :] = data["params"]["params"]["mu_scale"][batch1_idx, :]
+        mu_scale[batch2_idx, :] = data["params"]["mu_scale"][batch1_idx, :]
         sd_loc = torch.zeros((ndata2.n_targets, 1))
-        sd_loc[batch2_idx, :] = data["params"]["params"]["sd_loc"][batch1_idx, :]
+        sd_loc[batch2_idx, :] = data["params"]["sd_loc"][batch1_idx, :]
         sd_scale = torch.ones((ndata2.n_targets, 1)) * 0.01
-        sd_scale[batch2_idx, :] = data["params"]["params"]["sd_scale"][batch1_idx, :]
+        sd_scale[batch2_idx, :] = data["params"]["sd_scale"][batch1_idx, :]
         prior_params = {
             "mu_loc": mu_loc,
             "mu_scale": mu_scale,
@@ -52,9 +52,9 @@ def generate_prior_data_for_disjoint_library_pair(
         }
     else:
         mu_loc = torch.zeros((ndata2.n_targets, 1))
-        mu_loc[batch2_idx, :] = data["params"]["params"]["mu_loc"][batch1_idx, :]
+        mu_loc[batch2_idx, :] = data["params"]["mu_loc"][batch1_idx, :]
         mu_scale = torch.ones((ndata2.n_targets, 1))
-        mu_scale[batch2_idx, :] = data["params"]["params"]["mu_scale"][batch1_idx, :]
+        mu_scale[batch2_idx, :] = data["params"]["mu_scale"][batch1_idx, :]
         prior_params = {
             "mu_loc": mu_loc,
             "mu_scale": mu_scale,

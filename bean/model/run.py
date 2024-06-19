@@ -254,8 +254,7 @@ def run_inference(
     return pyro.get_param_store(), {
         "loss": losses,
         "params": {
-            k: pyro.param(k).data.cpu().numpy()
-            for k, v in pyro.get_param_store().items()
+            k: pyro.param(k).data.cpu() for k, v in pyro.get_param_store().items()
         },
     }
 

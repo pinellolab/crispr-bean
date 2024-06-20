@@ -18,19 +18,33 @@ In `variant` mode for variant screens (e.g., GWAS candidate variant targeting li
 categories: alleles with ($Y_{g1}$) or without ($Y_{g0}$) the target variant. The non-edited component in these models is fixed to have a wild-type phenotypic distribution $Y_0$. That is, the phenotype $Y_{g}$ of cells with gRNA $g$ that induces variant $v$ with editing rate $\pi$ is
 modeled as follows:
 
-$$f_{Y_{g}}(y) = \left( 1 - \pi_{g} \right)f_{Y_{0}}(y) + \pi_{g}f_{Y_{v}}(y)$$
+$$
+f_{Y_{g}}(y) = \left( 1 - \pi_{g} \right)f_{Y_{0}}(y) + \pi_{g}f_{Y_{v}}(y)
+$$
 
-$$Y_{0}\mathcal{\sim\ N}\left( 0,\ 1 \right)$$
+$$
+Y_{0}\mathcal{\sim\ N}\left( 0,\ 1 \right)
+$$
 
-$$\mu_{v}\sim Laplace(0,\ 1)$$
+$$
+\mu_{v}\sim Laplace(0,\ 1)
+$$
 
-$$\sigma_{v}\sim LogNormal(0,\ 0.01)$$
+$$
+\sigma_{v}\sim LogNormal(0,\ 0.01)
+$$
 
-$$Y_{v}\mathcal{\sim N(}\mu_{v},\ \sigma_{v})$$
+$$
+Y_{v}\mathcal{\sim N(}\mu_{v},\ \sigma_{v})
+$$
 
-$$\mu_{v}\sim Laplace(0,\ 1)$$
+$$
+\mu_{v}\sim Laplace(0,\ 1)
+$$
 
-$$\sigma_{v}\sim LogNormal(0,\ 0.01)$$
+$$
+\sigma_{v}\sim LogNormal(0,\ 0.01)
+$$
 
 , where $f_{Y_g}$ indicates the probability density function of $Y$. The prior for $\mu_{v}$ and $\sigma_{v}$ are set to be narrow based on the assumption that most variant would have close to wild-type effect size
 of mean 0 and standard deviation 1.
@@ -48,9 +62,13 @@ $A\left( g \right) = \{ a|Allele\ a\ is\ produced\ by\ g\}$ the set of alleles p
 again as the mixture distribution of allelic phenotype for the alleles
 it induces ($a \in A(g)$) as follows:
 
-$$f_{Y_{g}}(y) = \ \sum_{a \in A(g)}^{}{{\widetilde{\pi}}_{a}f_{Y_{a}}(y)}$$
+$$
+f_{Y_{g}}(y) = \ \sum_{a \in A(g)}^{}{{\widetilde{\pi}}_{a}f_{Y_{a}}(y)}
+$$
 
-$$Y_{a} = \ \sum_{v \in a}^{}Y_{v},\ \ Y_{a} = Y_{0}\text{\ if\ }\left| a \right| = 0$$
+$$
+Y_{a} = \ \sum_{v \in a}^{}Y_{v},\ \ Y_{a} = Y_{0}\text{\ if\ }\left| a \right| = 0
+$$
 
 , where $\widetilde{\pi_{a}}$ is the endogenous editing rate, estimated
 from $\pi_{a}$, the reporter editing rate, of allele $a$. The non-edited
@@ -64,11 +82,17 @@ and per-gRNA allele count
 $\mathbf{Z}_{\mathbf{g}} = \left( A_{g0},\ \ldots,\ A_{g\left| A\left( g \right) \right|} \right)$
 are modeled as the Dirichlet and Multinomial distributions :
 
-$$\widetilde{\mathbf{\alpha}_{\mathbf{\text{gπ}}}} = \frac{\mathbf{\alpha}_{\mathbf{\text{gπ}}} + \epsilon}{\sum\mathbf{\alpha}_{\mathbf{\text{gπ}}} + \epsilon}\alpha_{\text{gπ}}^{\circ}$$
+$$
+\widetilde{\mathbf{\alpha}_{\mathbf{\text{gπ}}}} = \frac{\mathbf{\alpha}_{\mathbf{\text{gπ}}} + \epsilon}{\sum\mathbf{\alpha}_{\mathbf{\text{gπ}}} + \epsilon}\alpha_{\text{gπ}}^{\circ}
+$$
 
-$$\mathbf{\pi}_{\mathbf{g}}\mathbf{\ }\sim\ Dir(\widetilde{\mathbf{\alpha}_{\mathbf{\text{gπ}}}})$$
+$$
+\mathbf{\pi}_{\mathbf{g}}\mathbf{\ }\sim\ Dir(\widetilde{\mathbf{\alpha}_{\mathbf{\text{gπ}}}})
+$$
 
-$$\mathbf{Z}_{\mathbf{g}}\ \sim\ Multinomial(\mathbf{\pi}_{\mathbf{g}})$$
+$$
+\mathbf{Z}_{\mathbf{g}}\ \sim\ Multinomial(\mathbf{\pi}_{\mathbf{g}})
+$$
 
 Where $\mathbf{\alpha}_{\mathbf{\pi}}$ is initialized as
 $\overrightarrow{\mathbf{1}}$, $\epsilon = 1e^{- 5}$ and
@@ -79,11 +103,17 @@ Optionally, the reporter editing rate $\mathbf{\pi}_{\mathbf{g}}$ can further sc
 used as the endogenous editing rate $\widetilde{\mathbf{\pi}_{\mathbf{g}}}$ through a function $f$, by feeding in (`--scale-by-acc` flag into `bean run`). This function $f$ is learned a priori from the paired reporter and endogenous
 editing rate data while the deviation of $\widetilde{\mathbf{\pi}_{\mathbf{g}}}$ from $f\left( \mathbf{\pi}_{\mathbf{g}} \right)$ is fitted per gRNA. The deviation $\epsilon_{\text{πg}}$ below accounts for the incomplete correlation between endogenous and reporter editing rates.
 
-$$\widetilde{\pi_{\text{gj}}} = \frac{f(\pi_{\text{gj}})}{\sum_{j \in \left\{ 1,\ ..,\ \left| A\left( g \right) \right| \right\}}^{}{f(\pi_{\text{gj}})}} + \ \epsilon_{\pi},\ \ f\left( \pi \right) = \pi e^{b}w^{a}$$
+$$
+\widetilde{\pi_{\text{gj}}} = \frac{f(\pi_{\text{gj}})}{\sum_{j \in \left\{ 1,\ ..,\ \left| A\left( g \right) \right| \right\}}^{}{f(\pi_{\text{gj}})}} + \ \epsilon_{\pi},\ \ f\left( \pi \right) = \pi e^{b}w^{a}
+$$
 
-$$\epsilon_{\text{gπ}} = logit^{- 1}\left( l_{\text{gπ}} \right),\ \ l_{\text{gπ}}\mathcal{\ \sim\ N}(0,\ \sigma_{\pi})$$
+$$
+\epsilon_{\text{gπ}} = logit^{- 1}\left( l_{\text{gπ}} \right),\ \ l_{\text{gπ}}\mathcal{\ \sim\ N}(0,\ \sigma_{\pi})
+$$
 
-$$\widetilde{\mathbf{\pi}_{\mathbf{g}}} = \left( 1 - \sum_{j \in \left\{ 1,..\ ,\ \left| A\left( g \right) \right| \right\}}^{}\widetilde{\pi_{\text{gj}}},\ \ \widetilde{\pi_{g1}},\ \ \ldots,\ \ \widetilde{\ \pi_{\text{gn}}} \right)$$
+$$
+\widetilde{\mathbf{\pi}_{\mathbf{g}}} = \left( 1 - \sum_{j \in \left\{ 1,..\ ,\ \left| A\left( g \right) \right| \right\}}^{}\widetilde{\pi_{\text{gj}}},\ \ \widetilde{\pi_{g1}},\ \ \ldots,\ \ \widetilde{\ \pi_{\text{gn}}} \right)
+$$
 
 <figure>
 <img src="assets/model_editing_rate.png" alt="legend" width="400"/>
@@ -95,7 +125,9 @@ logit-scale deviation $l_{\pi}$ (see full detail in [Accessibility scaling](#adj
 ### `bean run` without reporter
 When `bean run` is fed with `--uniform-edit`, it does not require the data to have reporter counts. In this scenario, the model assumes a single component Normal distribution of cellular phenotype, reflecting the assumption that all gRNAs would have the same editing efficiency.
 
-$$Y_{g}\mathcal{\sim\ N}\left( \mu_{v},\ \sigma_{v} \right),\ g\ induces\ v$$
+$$
+Y_{g}\mathcal{\sim\ N}\left( \mu_{v},\ \sigma_{v} \right),\ g\ induces\ v
+$$
 
 ## Sorting screen model (`bean run ... sorting`)
 
@@ -112,25 +144,38 @@ over-dispersed multinomial count distribution, which we confirm from our
 data (see more on **Supplementary Note 4** of the manuscript).  
 
 The gRNA read counts across sorting bins
-$$\mathbf{X}_{\mathbf{\text{gr}}} = (X_{\text{gr}}^{\left( 0.0,\ 0.2 \right)},\ X_{\text{gr}}^{\left( 0.2,\ 0.4 \right)},\ X_{\text{gr}}^{\left( 0.6,\ 0.8 \right)},\ X_{\text{gr}}^{\left( 0.8,\ 1.0 \right)})$$
+$$
+\mathbf{X}_{\mathbf{\text{gr}}} = (X_{\text{gr}}^{\left( 0.0,\ 0.2 \right)},\ X_{\text{gr}}^{\left( 0.2,\ 0.4 \right)},\ X_{\text{gr}}^{\left( 0.6,\ 0.8 \right)},\ X_{\text{gr}}^{\left( 0.8,\ 1.0 \right)})
+$$
 and the barcode-matched gRNA read count
 $\mathbf{X}_{\mathbf{\text{gr}}}^{\mathbf{b}}\mathbf{\ }$for gRNA $g$
 and replicate $r$ are modeled as following:
 
-$$p_{g}^{(q_{l},\ q_{h})} = P\left( q_{l} \leq Y_{g} \leq q_{h} \right) = \ \sum_{a}^{}{\Phi\left( \frac{q_{h} - \mu_{a}}{\sigma_{a}} \right) - \Phi\left( \frac{q_{l} - \mu_{a}}{\sigma_{a}} \right)}$$
+$$
+p_{g}^{(q_{l},\ q_{h})} = P\left( q_{l} \leq Y_{g} \leq q_{h} \right) = \ \sum_{a}^{}{\Phi\left( \frac{q_{h} - \mu_{a}}{\sigma_{a}} \right) - \Phi\left( \frac{q_{l} - \mu_{a}}{\sigma_{a}} \right)}
+$$
 
-$$\mathbf{p}_{\mathbf{g}} = (p_{g}^{\left( 0.0,\ 0.2 \right)},\ p_{g}^{\left( 0.2,\ 0.4 \right)},\ p_{g}^{\left( 0.6,\ 0.8 \right)},\ p_{g}^{\left( 0.8,\ 1.0 \right)})$$
+$$
+\mathbf{p}_{\mathbf{g}} = (p_{g}^{\left( 0.0,\ 0.2 \right)},\ p_{g}^{\left( 0.2,\ 0.4 \right)},\ p_{g}^{\left( 0.6,\ 0.8 \right)},\ p_{g}^{\left( 0.8,\ 1.0 \right)})
+$$
 
-$$\widetilde{\mathbf{p}_{\mathbf{g}}} = \ \frac{\mathbf{p}_{\mathbf{g}}}{\sum\mathbf{p}_{\mathbf{g}}}p_{g}^{\circ}$$
+$$
+\widetilde{\mathbf{p}_{\mathbf{g}}} = \ \frac{\mathbf{p}_{\mathbf{g}}}{\sum\mathbf{p}_{\mathbf{g}}}p_{g}^{\circ}
+$$
 
-$$\mathbf{X}_{\mathbf{\text{gr}}}\ \sim\ DirichletMultinomial(\widetilde{\mathbf{p}_{\mathbf{g}}} \odot \mathbf{s}_{\mathbf{r}})$$
+$$
+\mathbf{X}_{\mathbf{\text{gr}}}\ \sim\ DirichletMultinomial(\widetilde{\mathbf{p}_{\mathbf{g}}} \odot \mathbf{s}_{\mathbf{r}})$$
 
-$$\mathbf{X}_{\mathbf{\text{gr}}}^{\mathbf{b}}\ \sim\ DirichletMultinomial(\widetilde{\mathbf{p}_{\mathbf{g}}^{\mathbf{b}}} \odot \mathbf{s}_{\mathbf{r}}^{\mathbf{b}})$$
+$$
+\mathbf{X}_{\mathbf{\text{gr}}}^{\mathbf{b}}\ \sim\ DirichletMultinomial(\widetilde{\mathbf{p}_{\mathbf{g}}^{\mathbf{b}}} \odot \mathbf{s}_{\mathbf{r}}^{\mathbf{b}})
+$$
 
 ,where $\odot$ denotes element-wise multiplication. Here,
 $\mathbf{p}_{\mathbf{g}}$ is scaled as $\mathbf{\alpha}_{\mathbf{\pi}}$
 by the data-fitted precision parameter $p_{g}^{\circ}$ ([Over-dispersed multinomial count data modeling](#over-dispersed-multinomial-count-data-modeling)) then scaled by the sample-specific size factor $s_r$
-$$\mathbf{s}_{\mathbf{r}}\mathbf{=}(s_{r}^{\left( 0.0,\ 0.2 \right)},\ s_{r}^{\left( 0.2,\ 0.4 \right)},\ s_{r}^{\left( 0.6,\ 0.8 \right)},\ s_{r}^{\left( 0.8,\ 1.0 \right)})\ \mathbf{\ }$$
+$$
+\mathbf{s}_{\mathbf{r}}\mathbf{=}(s_{r}^{\left( 0.0,\ 0.2 \right)},\ s_{r}^{\left( 0.2,\ 0.4 \right)},\ s_{r}^{\left( 0.6,\ 0.8 \right)},\ s_{r}^{\left( 0.8,\ 1.0 \right)})\ \mathbf{\ }
+$$
 where the sample size factor is calculated as in DESeq2. 
 
 <figure>
@@ -151,11 +196,17 @@ of each variant is fitted as a Normal distribution with a posterior
 standard deviation parameter and mean parameter which has Normal
 posterior distribution:
 
-$$P\left( Y_{v} \middle| \mathcal{D} \right)\  \approx Q(\widehat{Y})$$
+$$
+P\left( Y_{v} \middle| \mathcal{D} \right)\  \approx Q(\widehat{Y})
+$$
 
-$$\widehat{Y}\mathcal{\ \sim\ N(}\widehat{\mu_{v}},\ \widehat{\sigma_{v}})$$
+$$
+\widehat{Y}\mathcal{\ \sim\ N(}\widehat{\mu_{v}},\ \widehat{\sigma_{v}})
+$$
 
-$$\widehat{\mu_{v}}\mathcal{\ \sim\ N(}\widehat{\mu_{\mu_{v}}},\ \widehat{\sigma_{\mu_{v}}})$$
+$$
+\widehat{\mu_{v}}\mathcal{\ \sim\ N(}\widehat{\mu_{\mu_{v}}},\ \widehat{\sigma_{\mu_{v}}})
+$$
 
 Where $\mathcal{D}$ is observed data for the model and $Q$ is the
 variational distribution.  
@@ -170,11 +221,17 @@ distribution of negative controls as a single normal distribution.
 Subsequently the results are scaled so that the fitted negative control
 distribution is transformed to a standard normal.
 
-$$\widehat{Y_{\text{ctrl}}}\mathcal{\ \sim\ N(}\widehat{\mu_{\text{ctrl}}},\ \widehat{\sigma_{\text{ctrl}}})$$
+$$
+\widehat{Y_{\text{ctrl}}}\mathcal{\ \sim\ N(}\widehat{\mu_{\text{ctrl}}},\ \widehat{\sigma_{\text{ctrl}}})
+$$
 
-$$Y_{v}^{\left( \text{scaled} \right)} = \frac{\widehat{Y_{v}} - \ \widehat{\mu_{\text{ctrl}}}}{\widehat{\sigma_{\text{ctrl}}}\text{|}\mathcal{D}}\mathcal{\ \ \sim\ N(}\mu_{v}^{\left( \text{scaled} \right)},\ \sigma_{v}^{\left( \text{scaled} \right)})$$
+$$
+Y_{v}^{\left( \text{scaled} \right)} = \frac{\widehat{Y_{v}} - \ \widehat{\mu_{\text{ctrl}}}}{\widehat{\sigma_{\text{ctrl}}}\text{|}\mathcal{D}}\mathcal{\ \ \sim\ N(}\mu_{v}^{\left( \text{scaled} \right)},\ \sigma_{v}^{\left( \text{scaled} \right)})
+$$
 
-$$\mu_{v}^{\left( \text{scaled} \right)} = \frac{\widehat{\mu_{\mu_{v}}} - \widehat{\mu_{\text{ctrl}}}}{\widehat{\sigma_{\text{ctrl}}}}\mathcal{\ \ \sim\ N(}\mu_{\mu_{v}}^{\left( \text{scaled} \right)},\ \sigma_{\mu_{v}}^{\left( \text{scaled} \right)})$$
+$$
+\mu_{v}^{\left( \text{scaled} \right)} = \frac{\widehat{\mu_{\mu_{v}}} - \widehat{\mu_{\text{ctrl}}}}{\widehat{\sigma_{\text{ctrl}}}}\mathcal{\ \ \sim\ N(}\mu_{\mu_{v}}^{\left( \text{scaled} \right)},\ \sigma_{\mu_{v}}^{\left( \text{scaled} \right)})
+$$
 
 In order to control for false discovery with negative control variants,
 the standard deviations of variants
@@ -182,7 +239,9 @@ $\sigma_{\mu_{v}}^{\left( \text{scaled} \right)}$ are scaled so that the
 standard deviation of $\mu_{n}$, where $n$ are the negative control
 variants, is equal to 1. 
 
-$$\sigma_{\mu_{v}}^{(adj)} = \ \sigma_{\mu_{v}}^{\left( \text{scaled} \right)}\ *\widehat{\sigma_{n}}$$
+$$
+\sigma_{\mu_{v}}^{(adj)} = \ \sigma_{\mu_{v}}^{\left( \text{scaled} \right)}\ *\widehat{\sigma_{n}}
+$$
 
 Where $\widehat{\sigma_{n}}$ is fitted as the standard deviation
 estimate of
@@ -267,17 +326,25 @@ using method-of-moments. For
 $X = (X^{\left( 1 \right)},\ldots,\ X^{(d)})$ and
 $k \in \{ 1,\ \ldots,\ d\}$,
 
-$$\mu^{(k)} = E\left\lbrack X^{(k)} \right\rbrack = np^{(k)}$$
+$$
+\mu^{(k)} = E\left\lbrack X^{(k)} \right\rbrack = np^{(k)}
+$$
 
-$$V^{(k)} = Var\left( X^{(k)} \right) = np^{(k)}\ \left( 1 - p^{(k)} \right)\left( 1 + \frac{n - 1}{1 + \alpha^{\circ}} \right)\ $$
+$$
+V^{(k)} = Var\left( X^{(k)} \right) = np^{(k)}\ \left( 1 - p^{(k)} \right)\left( 1 + \frac{n - 1}{1 + \alpha^{\circ}} \right)\ 
+$$
 
 Where $p^{(k)} = \frac{\alpha^{\left( k \right)}}{\alpha^{\circ}}$.
 Given $n$, we can get the method-of-moment estimates of $p^{(k)}$and
 $\alpha^{\circ}$ as
 
-$$\widehat{p^{(k)}} = \frac{\widehat{\mu^{(k)}}}{n}$$
+$$
+\widehat{p^{(k)}} = \frac{\widehat{\mu^{(k)}}}{n}
+$$
 
-$$\widehat{\alpha^{\circ}} = \left( \sum_{k \in \left\{ 1\ldots d \right\}}^{}{\frac{n - 1}{\frac{\widehat{V^{(k)}} - \widehat{\mu^{(k)}}}{n\widehat{p^{(k)}}\left( 1 - \widehat{p^{(k)}} \right)} - 1 + \frac{1}{1 - \widehat{p^{(k)}}}} - 1} \right)/d\ $$
+$$
+\widehat{\alpha^{\circ}} = \left( \sum_{k \in \left\{ 1\ldots d \right\}}^{}{\frac{n - 1}{\frac{\widehat{V^{(k)}} - \widehat{\mu^{(k)}}}{n\widehat{p^{(k)}}\left( 1 - \widehat{p^{(k)}} \right)} - 1 + \frac{1}{1 - \widehat{p^{(k)}}}} - 1} \right)/d\ 
+$$
 
 Next, as multiple observations from different replicates does not share
 $n$ across replicates, we follow DESeq's count normalization procedure
@@ -285,9 +352,13 @@ to obtain within-group variances and means as follows. Here,
 $s_{r}^{\left( k \right)}$ is the size factor of the sample in
 $r^{\text{th}}$ replicate and $k^{\text{th}}$ sorting bin calculated as in DESeq2.
 
-$$\widehat{\mu^{(k)}} = \sum_{r = 1\ldots R}^{}\frac{X_{r}^{\left( k \right)}\text{/}\ s_{r}^{\left( k \right)}}{R}$$
+$$
+\widehat{\mu^{(k)}} = \sum_{r = 1\ldots R}^{}\frac{X_{r}^{\left( k \right)}\text{/}\ s_{r}^{\left( k \right)}}{R}
+$$
 
-$$\widehat{V^{(k)}} = \frac{\sum_{r = 1\ldots R}^{}\left( X_{r}^{\left( k \right)}\text{/}\ s_{r}^{\left( k \right)} - \widehat{\mu^{\left( k \right)}} \right)^{2}}{R}$$
+$$
+\widehat{V^{(k)}} = \frac{\sum_{r = 1\ldots R}^{}\left( X_{r}^{\left( k \right)}\text{/}\ s_{r}^{\left( k \right)} - \widehat{\mu^{\left( k \right)}} \right)^{2}}{R}
+$$
 
 We report overdispersion of counts from comparing within-group variances
 and and multinomial variances.
@@ -297,9 +368,13 @@ $\widehat{\alpha^{\circ}}$ in log
 scale. Thus, the linear trend between $log(\widehat{n})$ and
 $log(\widehat{\alpha^{\circ}})$ is fit (See more detail in Supplementary Fig. 17 of the manuscript).
 
-$$\tau_{g} = \ \log\left( \widehat{\alpha_{g}^{\circ}} \right)\sim\beta_{0} + \beta_{1}log({\widehat{n}}_{g})$$
+$$
+\tau_{g} = \ \log\left( \widehat{\alpha_{g}^{\circ}} \right)\sim\beta_{0} + \beta_{1}log({\widehat{n}}_{g})
+$$
 
-$$\log\left( {\widehat{\alpha^{\circ}}}_{\text{tr}}\left( {\widehat{n}}_{g} \right) \right) = \widehat{\beta_{0}} + \widehat{\beta_{1}}log({\widehat{n}}_{g})$$
+$$
+\log\left( {\widehat{\alpha^{\circ}}}_{\text{tr}}\left( {\widehat{n}}_{g} \right) \right) = \widehat{\beta_{0}} + \widehat{\beta_{1}}log({\widehat{n}}_{g})
+$$
 
 We
 take$\ {\widehat{\alpha^{\circ}}}_{\text{tr}}\left( {\widehat{n}}_{g} \right)$
@@ -317,12 +392,20 @@ methods-of-moment(MoM)-fitted
 $\tau_{g} = \log\left( \widehat{\alpha_{g}^{\circ}} \right)$ for
 individual gRNA.
 
-$$\kappa_{g}\mathcal{\sim\ N}\left( \log\left( {\widehat{\alpha^{\circ}}}_{\text{tr}}\left( {\widehat{n}}_{g} \right) \right),\ \eta \right)$$
+$$
+\kappa_{g}\mathcal{\sim\ N}\left( \log\left( {\widehat{\alpha^{\circ}}}_{\text{tr}}\left( {\widehat{n}}_{g} \right) \right),\ \eta \right)
+$$
 
-$$\tau_{g}|\kappa_{g}\mathcal{\ \sim\ N}\left( \kappa_{g},\ \nu \right)\ $$
+$$
+\tau_{g}|\kappa_{g}\mathcal{\ \sim\ N}\left( \kappa_{g},\ \nu \right)\ 
+$$
 
-$$\eta = \frac{\sum_{g \in G}^{}\left( \tau_{g} - log\left( {\widehat{\alpha^{\circ}}}_{\text{tr}}\left( {\widehat{n}}_{g} \right) \right)\  \right)^{2}}{\left| G \right| - 1}$$
+$$
+\eta = \frac{\sum_{g \in G}^{}\left( \tau_{g} - log\left( {\widehat{\alpha^{\circ}}}_{\text{tr}}\left( {\widehat{n}}_{g} \right) \right)\  \right)^{2}}{\left| G \right| - 1}
+$$
 
-$${\log\left( \widehat{\alpha_{g}^{\circ}} \right)}_{\text{shrink}} = E\left\lbrack \kappa_{g} \middle| \tau_{g} \right\rbrack = \ \frac{\eta}{\nu + \eta}\tau_{g} + \frac{\nu}{\nu + \eta}\log\left( {\widehat{\alpha^{\circ}}}_{\text{tr}}\left( {\widehat{n}}_{g} \right) \right)$$
+$$
+{\log\left( \widehat{\alpha_{g}^{\circ}} \right)}_{\text{shrink}} = E\left\lbrack \kappa_{g} \middle| \tau_{g} \right\rbrack = \ \frac{\eta}{\nu + \eta}\tau_{g} + \frac{\nu}{\nu + \eta}\log\left( {\widehat{\alpha^{\circ}}}_{\text{tr}}\left( {\widehat{n}}_{g} \right) \right)
+$$
 
 Here, $G$ is the set of gRNAs.

@@ -42,6 +42,14 @@ Workflows
     tutorials
 
 
+Model description
+--------------------------
+.. toctree::
+    :maxdepth: 2
+
+    model
+
+
 API references
 --------------------------
 .. toctree::

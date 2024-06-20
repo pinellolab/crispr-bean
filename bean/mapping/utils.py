@@ -321,6 +321,7 @@ def _check_arguments(args, info_logger, warn_logger, error_logger):
     sgRNA_info_tbl = pd.read_csv(args.sgRNA_filename)
 
     def _check_sgrna_info_table(args, sgRNA_info_tbl):
+        # Check column names
         if args.offset:
             if "offset" not in sgRNA_info_tbl.columns:
                 raise InputFileError(
@@ -345,6 +346,10 @@ def _check_arguments(args, info_logger, warn_logger, error_logger):
                 raise InputFileError(
                     f"Offset option is set but the input file doesn't contain the `reporter` column: Provided {sgRNA_info_tbl.columns}"
                 )
+        if sgRNA_info_tbl["name"].duplicated().any():
+            raise InputFileError(
+                f"Duplicate guide names: {sgRNA_info_tbl.loc[sgRNA_info_tbl['name'].duplicated(),:].index}. Please provide unique IDs for each guide."
+            )
 
     _check_sgrna_info_table(args, sgRNA_info_tbl)
 

@@ -7,6 +7,7 @@ from bean.annotate.utils import parse_args as get_filter_parser
 from bean.model.parser import parse_args as get_run_parser
 from bean.framework.parser import get_input_parser as get_create_screen_parser
 from bean.annotate.utils import get_splice_parser as get_splice_site_parser
+from bean.model.parser_prior import parse_args as get_prior_parser
 from bean.cli.count import main as count
 from bean.cli.count_samples import main as count_samples
 from bean.cli.profile import main as profile
@@ -15,6 +16,15 @@ from bean.cli.filter import main as filter
 from bean.cli.run import main as run
 from bean.cli.create_screen import main as create_screen
 from bean.cli.get_splice_sites import main as get_splice_sites
+from bean.cli.build_prior import main as build_prior
+
+import warnings
+
+warnings.filterwarnings(
+    action="ignore",
+    category=FutureWarning,
+    message=r".*The default of observed=False is deprecated and will be changed to True in a future version of pandas.*",
+)
 
 
 def get_parser():
@@ -40,6 +50,10 @@ def get_parser():
         "get-splice-sites", help="get splice sites"
     )
     splice_site_parser = get_splice_site_parser(splice_site_parser)
+    prior_parser = subparsers.add_parser(
+        "build-prior", help="obtain prior_params.pkl for batched runs"
+    )
+    prior_parser = get_prior_parser(prior_parser)
     return parser
 
 
@@ -65,5 +79,7 @@ def main() -> None:
         create_screen(args)
     elif args.subcommand == "get-splice-sites":
         get_splice_sites(args)
+    elif args.subcommand == "build-prior":
+        build_prior(args)
     else:
         parser.print_help()

@@ -224,3 +224,8 @@ def test_run_tiling_no_translation():
         )
     except subprocess.CalledProcessError as exc:
         raise exc
+
+
+# TODO: make test data for --prior-params
+# TODO: semantic testing on splitting a single screen into two to train
+# TODO: add test using --prior-params

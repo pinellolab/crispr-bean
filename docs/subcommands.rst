@@ -13,3 +13,4 @@ Subcommands
     filter
     run
     create_screen
+    build_prior

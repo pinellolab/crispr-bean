@@ -15,6 +15,7 @@ import pandas as pd
 import logging
 from functools import partial
 import pyro
+from bean.preprocessing.data_class import ScreenData
 import bean.model.model as sorting_model
 import bean.model.survival_model as survival_model
 
@@ -164,6 +165,7 @@ def check_args(args, bdata):
             )
     else:
         args.popt = None
+
     return args, bdata
 
 
@@ -208,6 +210,22 @@ def _get_guide_target_info(bdata, args, cols_include=[]):
 def run_inference(
     model, guide, data, initial_lr=0.01, gamma=0.1, num_steps=2000, autoguide=False
 ):
+    """
+    Run the inference process using stochastic variational inference (SVI) for the given model and guide.
+
+    Args:
+        model: The Pyro model to be used for inference.
+        guide: The Pyro guide to be used for inference.
+        data: The ScreenData object to be used in the inference process.
+        initial_lr: The initial learning rate for optimization (default is 0.01).
+        gamma: The factor by which the learning rate is decayed at each step (default is 0.1).
+        num_steps: The number of steps for the inference process (default is 2000).
+        autoguide: A flag indicating whether autoguide is used (default is False).
+
+    Returns:
+        Tuple containing the Pyro parameter store and a dictionary with loss information.
+    """
+
     pyro.clear_param_store()
     lrd = gamma ** (1 / num_steps)
     svi = pyro.infer.SVI(
@@ -235,7 +253,9 @@ def run_inference(
         )
     return pyro.get_param_store(), {
         "loss": losses,
-        "params": pyro.get_param_store().get_state(),
+        "params": {
+            k: pyro.param(k).data.cpu() for k, v in pyro.get_param_store().items()
+        },
     }
 
 
@@ -315,3 +335,71 @@ def identify_negctrl_model_guide(args, data_has_bcmatch):
         use_bcmatch=(not args.ignore_bcmatch and data_has_bcmatch),
     )
     return negctrl_model, negctrl_guide
+
+
+from bean.preprocessing.data_class import SortingScreenData
+
+
+def _check_prior_params(param_path: str, ndata: ScreenData):
+    if os.path.exists(param_path):
+        with open(param_path, "rb") as f:
+            prior_params = pkl.load(f)
+    else:
+        raise ValueError(
+            f"Specified prior parameter file --prior-params {param_path} is not found."
+        )
+    if isinstance(ndata, SortingScreenData):
+        if "sd_loc" in prior_params:
+            if prior_params["sd_loc"].shape == (ndata.n_targets,):
+                prior_params["sd_loc"] = prior_params["sd_loc"].reshape(-1, 1)
+            elif prior_params["sd_loc"].shape != (ndata.n_targets, 1):
+                raise ValueError(
+                    f"Specified prior parameter --prior-params {param_path}: prior_params['sd_loc'].shape {prior_params['sd_loc'].shape} does not match the number of target variants {(ndata.n_targets, 1)}."
+                )
+        if "sd_scale" in prior_params:
+            if prior_params["sd_scale"].shape == (ndata.n_targets):
+                prior_params["sd_scale"] = prior_params["sd_scale"].reshape(-1, 1)
+            elif prior_params["sd_scale"].shape != (ndata.n_targets, 1):
+                raise ValueError(
+                    f"Specified prior parameter --prior-params {param_path}: prior_params['sd_scale'].shape {prior_params['sd_scale'].shape} does not match the number of target variants {(ndata.n_targets, 1)}."
+                )
+        if "mu_loc" in prior_params:
+            if hasattr(prior_params["mu_loc"], "__len__"):
+                if prior_params["mu_loc"].shape == (ndata.n_targets,):
+                    prior_params["mu_loc"] = prior_params["mu_loc"].reshape(-1, 1)
+                elif prior_params["mu_loc"].shape != (ndata.n_targets, 1):
+                    raise ValueError(
+                        f"Specified prior parameter --prior-params {param_path}: prior_params['mu_loc'].shape {prior_params['mu_loc'].shape} does not match the number of target variants {(ndata.n_targets, 1)}."
+                    )
+        if "mu_scale" in prior_params:
+            if hasattr(prior_params["mu_scale"], "__len__"):
+                if prior_params["mu_scale"].shape == (ndata.n_targets):
+                    prior_params["mu_scale"] = prior_params["mu_scale"].reshape(-1, 1)
+                elif prior_params["mu_scale"].shape != (ndata.n_targets, 1):
+                    raise ValueError(
+                        f"Specified prior parameter --prior-params {param_path}: prior_params['mu_scale'].shape {prior_params['mu_scale'].shape} does not match the number of target variants {(ndata.n_targets, 1)}."
+                    )
+    else:
+        # Survival model
+        if "initial_abundance" in prior_params:
+            if prior_params["initial_abundance"].shape != (ndata.n_targets,):
+                raise ValueError(
+                    f"Specified prior parameter --prior-params {param_path}: prior_params['initial_abundance'].shape does not match the number of guides {(ndata.n_guides, 1)}."
+                )
+        if "mu_loc" in prior_params:
+            if hasattr(prior_params["mu_loc"], "__len__"):
+                if prior_params["mu_loc"].shape == (ndata.n_targets):
+                    prior_params["mu_loc"] = prior_params["mu_loc"].reshape(-1, 1)
+                elif prior_params["mu_loc"].shape != (ndata.n_targets, 1):
+                    raise ValueError(
+                        f"Specified prior parameter --prior-params {param_path}: prior_params['mu_loc'].shape does not match the number of target variants {(ndata.n_targets, 1)}."
+                    )
+        if "mu_scale" in prior_params:
+            if hasattr(prior_params["mu_scale"], "__len__"):
+                if prior_params["mu_scale"].shape == (ndata.n_targets):
+                    prior_params["mu_scale"] = prior_params["mu_scale"].reshape(-1, 1)
+                elif prior_params["mu_scale"].shape != (ndata.n_targets, 1):
+                    raise ValueError(
+                        f"Specified prior parameter --prior-params {param_path}: prior_params['mu_scale'].shape does not match the number of target variants {(ndata.n_targets, 1)}."
+                    )
+    return prior_params

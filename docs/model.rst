@@ -13,7 +13,7 @@ as reference.
 .. raw:: html
 
    <figure>
-   <img src="assets/model_legend_pheno.png" alt="legend" width="500"/>
+   <img src="assets/model_legend_pheno.png" alt="legend" width="600"/>
    </figure>
 
 For the cells with a guide, their phenotype is modeled as a mixture of
@@ -74,7 +74,7 @@ to wild-type effect size of mean 0 and standard deviation 1.
 .. raw:: html
 
    <figure>
-   <img src="assets/model_mixture.png" alt="legend" width="250"/>
+   <img src="assets/model_mixture.png" alt="legend" width="350"/>
    </figure>
 
 Multiallelic outcome modeling in ``tiling`` mode
@@ -176,7 +176,7 @@ incomplete correlation between endogenous and reporter editing rates.
 .. raw:: html
 
    <figure>
-   <img src="assets/model_editing_rate.png" alt="legend" width="400"/>
+   <img src="assets/model_editing_rate.png" alt="legend" width="500"/>
    </figure>
 
 :math:`f\left( \pi \right)` is fitted from the data generated for
@@ -272,7 +272,7 @@ where the sample size factor is calculated as in DESeq2.
 .. raw:: html
 
    <figure>
-   <img src="assets/model_sorting.png" alt="legend" width="300"/>
+   <img src="assets/model_sorting.png" alt="legend" width="500"/>
    </figure>
 
 For sample :math:`j`,
@@ -382,7 +382,7 @@ accessibility.
 .. raw:: html
 
    <figure>
-   <img src="assets/model_acc.png" alt="legend" width="450"/>
+   <img src="assets/model_acc.png" alt="legend" width="600"/>
    <figcaption>Fig 1f of the manuscript</figcaption>
    </figure>
 
@@ -441,8 +441,15 @@ values using method-of-moments. For
 .. math::
 
 
-   \mu^{(k)} = E\left\lbrack X^{(k)} \right\rbrack = np^{(k)} \\
+   \mu^{(k)} = E\left\lbrack X^{(k)} \right\rbrack = np^{(k)}
+
+
+.. math::
+
+
    V^{(k)} = Var\left( X^{(k)} \right) = np^{(k)}\ \left( 1 - p^{(k)} \right)\left( 1 + \frac{n - 1}{1 + \alpha^{\circ}} \right)\ 
+
+   
 
 Where
 :math:`p^{(k)} = \frac{\alpha^{\left( k \right)}}{\alpha^{\circ}}`.
@@ -452,8 +459,16 @@ Given :math:`n`, we can get the method-of-moment estimates of
 .. math::
 
 
-   \widehat{p^{(k)}} = \frac{\widehat{\mu^{(k)}}}{n} \\
-   \widehat{\alpha^{\circ}} = \left( \sum_{k \in \left\{ 1\ldots d \right\}}^{}{\frac{n - 1}{\frac{\widehat{V^{(k)}} - \widehat{\mu^{(k)}}}{n\widehat{p^{(k)}}\left( 1 - \widehat{p^{(k)}} \right)} - 1 + \frac{1}{1 - \widehat{p^{(k)}}}} - 1} \right)/d\ 
+   \widehat{p^{(k)}} = \frac{\widehat{\mu^{(k)}}}{n}
+
+
+
+.. math::
+
+
+  \widehat{\alpha^{\circ}} = \left( \sum_{k \in \left\{ 1\ldots d \right\}}^{}{\frac{n - 1}{\frac{\widehat{V^{(k)}} - \widehat{\mu^{(k)}}}{n\widehat{p^{(k)}}\left( 1 - \widehat{p^{(k)}} \right)} - 1 + \frac{1}{1 - \widehat{p^{(k)}}}} - 1} \right)/d\ 
+
+
 
 Next, as multiple observations from different replicates does not share
 :math:`n` across replicates, we follow DESeq’s count normalization

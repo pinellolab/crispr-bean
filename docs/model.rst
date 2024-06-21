@@ -187,7 +187,7 @@ resulting coefficients :math:`a = 0.2513` and :math:`b = \  - 1.9458`
 are used for the analyses presented in this paper. The residual of the
 regression is fitted as the Normal distribution, which is used as the
 prior for the logit-scale deviation :math:`l_{\pi}` (see full detail in
-`Accessibility scaling <#adjusting-editing-rates-by-accessibility-with---scale-by-acc>`__
+`Accessibility scaling <#adjusting-editing-rates-by-accessibility-with-scale-by-acc>`__
 section).
 
 ``bean run`` without reporter

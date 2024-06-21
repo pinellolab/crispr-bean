@@ -418,7 +418,6 @@ def MixtureNormalModel(
             if "mu_scale" in prior_params:
                 mu_scale = prior_params["mu_scale"]
             mu_dist = dist.Normal(mu_loc, mu_scale)
-
     # Set the prior for phenotype means
     with pyro.plate("guide_plate0", 1):
         with pyro.plate("guide_plate1", data.n_targets):

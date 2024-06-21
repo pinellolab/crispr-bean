@@ -51,6 +51,7 @@ See the [documentation](https://pinellolab.github.io/crispr-bean/) for tutorials
 | GWAS variant library | Survival / Proliferation | Yes/No |  [GWAS variant screen](https://pinellolab.github.io/crispr-bean/tutorial_prolif_gwas.html)
 | Coding sequence tiling libarary | Survival / Proliferation | Yes/No | [Coding sequence tiling screen](https://pinellolab.github.io/crispr-bean/tutorial_prolif_cds.html)
 | Perturbation library without reporter | FACS sorting | No | [No reporter screen](https://pinellolab.github.io/crispr-bean/tutorial_no_edit.html)
+| Integration of disjoint libraries | Any | Any | [Feeding custom prior](https://pinellolab.github.io/crispr-bean/tutorial_custom_prior.html)
 
 Also see notebook that visualizes screen analysis result [here](https://github.com/pinellolab/crispr-bean/blob/main/docs/visualize_var.ipynb).
 

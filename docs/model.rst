@@ -447,9 +447,9 @@ values using method-of-moments. For
 .. math::
 
 
-   V^{(k)} = Var\left( X^{(k)} \right) = np^{(k)}\ \left( 1 - p^{(k)} \right)\left( 1 + \frac{n - 1}{1 + \alpha^{\circ}} \right)\ 
+   V^{(k)} = Var \left( X^{(k)} \right) = np^{(k)} \left( 1 - p^{(k)} \right) \left( 1 + \frac{n - 1}{1 + \alpha^{\circ}} \right)
 
-   
+
 
 Where
 :math:`p^{(k)} = \frac{\alpha^{\left( k \right)}}{\alpha^{\circ}}`.
@@ -466,7 +466,7 @@ Given :math:`n`, we can get the method-of-moment estimates of
 .. math::
 
 
-  \widehat{\alpha^{\circ}} = \left( \sum_{k \in \left\{ 1\ldots d \right\}}^{}{\frac{n - 1}{\frac{\widehat{V^{(k)}} - \widehat{\mu^{(k)}}}{n\widehat{p^{(k)}}\left( 1 - \widehat{p^{(k)}} \right)} - 1 + \frac{1}{1 - \widehat{p^{(k)}}}} - 1} \right)/d\ 
+  \widehat{\alpha^{\circ}} = \left( \sum_{k \in \{ 1 \ldots d \}}^{}{\frac{n - 1}{\frac{\widehat{V^{(k)}} - \widehat{\mu^{(k)}}}{n\widehat{p^{(k)}} \left( 1 - \widehat{p^{(k)}} \right) } - 1 + \frac{1}{1 - \widehat{p^{(k)}}}} - 1} \right)/d
 
 
 

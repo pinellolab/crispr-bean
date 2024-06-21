@@ -13,9 +13,7 @@ as reference.
 .. raw:: html
 
    <figure>
-
-.. raw:: html
-
+   <img src="assets/model_legend_pheno.png" alt="legend" width="500"/>
    </figure>
 
 For the cells with a guide, their phenotype is modeled as a mixture of
@@ -76,9 +74,7 @@ to wild-type effect size of mean 0 and standard deviation 1.
 .. raw:: html
 
    <figure>
-
-.. raw:: html
-
+   <img src="assets/model_mixture.png" alt="legend" width="250"/>
    </figure>
 
 Multiallelic outcome modeling in ``tiling`` mode
@@ -180,9 +176,7 @@ incomplete correlation between endogenous and reporter editing rates.
 .. raw:: html
 
    <figure>
-
-.. raw:: html
-
+   <img src="assets/model_editing_rate.png" alt="legend" width="400"/>
    </figure>
 
 :math:`f\left( \pi \right)` is fitted from the data generated for
@@ -278,9 +272,7 @@ where the sample size factor is calculated as in DESeq2.
 .. raw:: html
 
    <figure>
-
-.. raw:: html
-
+   <img src="assets/model_sorting.png" alt="legend" width="300"/>
    </figure>
 
 For sample :math:`j`,
@@ -320,9 +312,7 @@ is the variational distribution.
 .. raw:: html
 
    <figure>
-
-.. raw:: html
-
+   <img src="assets/model_output_simple.png" alt="legend" width="400"/>
    </figure>
 
 Negative control variants are used to control the significance of
@@ -392,19 +382,8 @@ accessibility.
 .. raw:: html
 
    <figure>
-
-.. raw:: html
-
-   <figcaption>
-
-Fig 1f of the manuscript
-
-.. raw:: html
-
-   </figcaption>
-
-.. raw:: html
-
+   <img src="assets/model_acc.png" alt="legend" width="450"/>
+   <figcaption>Fig 1f of the manuscript</figcaption>
    </figure>
 
 In the model, BEAN fits a function :math:`f` that maps the reporter
@@ -462,11 +441,7 @@ values using method-of-moments. For
 .. math::
 
 
-   \mu^{(k)} = E\left\lbrack X^{(k)} \right\rbrack = np^{(k)}
-
-.. math::
-
-
+   \mu^{(k)} = E\left\lbrack X^{(k)} \right\rbrack = np^{(k)} \\
    V^{(k)} = Var\left( X^{(k)} \right) = np^{(k)}\ \left( 1 - p^{(k)} \right)\left( 1 + \frac{n - 1}{1 + \alpha^{\circ}} \right)\ 
 
 Where
@@ -477,11 +452,7 @@ Given :math:`n`, we can get the method-of-moment estimates of
 .. math::
 
 
-   \widehat{p^{(k)}} = \frac{\widehat{\mu^{(k)}}}{n}
-
-.. math::
-
-
+   \widehat{p^{(k)}} = \frac{\widehat{\mu^{(k)}}}{n} \\
    \widehat{\alpha^{\circ}} = \left( \sum_{k \in \left\{ 1\ldots d \right\}}^{}{\frac{n - 1}{\frac{\widehat{V^{(k)}} - \widehat{\mu^{(k)}}}{n\widehat{p^{(k)}}\left( 1 - \widehat{p^{(k)}} \right)} - 1 + \frac{1}{1 - \widehat{p^{(k)}}}} - 1} \right)/d\ 
 
 Next, as multiple observations from different replicates does not share

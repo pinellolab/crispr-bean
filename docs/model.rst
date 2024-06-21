@@ -89,7 +89,7 @@ that lead to the same coding sequence amino acid mutations together (if
 you use ``--translate`` flag in ``bean filter``).
 
 We denote with
-:math:`A\left( g \right) = \{ a|Allele\ a\ is\ produced\ by\ g\}` the
+:math:`A\left( g \right) = \{ a|\text{Allele }a\text{ is produced by }g\}` the
 set of alleles produced by gRNA :math:`g` that is robustly observed
 (defined by thresholds in ``bean-filter``) The phenotype of a given
 allele :math:`a` is defined as the **sum of phenotypic effect of
@@ -166,7 +166,7 @@ incomplete correlation between endogenous and reporter editing rates.
 .. math::
 
 
-   \epsilon_{\text{gπ}} = logit^{- 1}\left( l_{\text{gπ}} \right),\ \ l_{\text{gπ}}\mathcal{\ \sim\ N}(0,\ \sigma_{\pi})
+   \epsilon_{\text{gπ}} = \text{logit}^{- 1}\left( l_{\text{gπ}} \right),\ \ l_{\text{gπ}}\mathcal{\ \sim\ N}(0,\ \sigma_{\pi})
 
 .. math::
 
@@ -201,7 +201,7 @@ the assumption that all gRNAs would have the same editing efficiency.
 .. math::
 
 
-   Y_{g}\mathcal{\sim\ N}\left( \mu_{v},\ \sigma_{v} \right),\ g\ induces\ v
+   Y_{g}\mathcal{\sim\ N}\left( \mu_{v},\ \sigma_{v} \right),\ g\ \text{induces}\ v
 
 Sorting screen model (``bean run ... sorting``)
 -----------------------------------------------
@@ -365,7 +365,7 @@ editing rate is reported and for \`tiling\` mode, the number of gRNAs
 covering each variant (`n_guide`), number of co-occurring variants that
 is edited together in any of the observed alleles (`n_coocc`), and
 effective editing rate which is calculated as
-:math:`\sum_{g \in \{ g|g\ induces\ v\}}^{}{\sum_{a \in \{ g\ induces\ a,\ a\ has\ v\}}^{}\frac{\widetilde{\pi_{\text{ga}}}}{\left| a \right|}}`,
+:math:`\sum_{g \in \{ g|g\ \text{induces}\ v\}}^{}{\sum_{a \in \{ g\ \text{induces}\ a,\ a\ has\ v\}}^{}\frac{\widetilde{\pi_{\text{ga}}}}{\left| a \right|}}`,
 are reported. The model, variational distribution and inference
 procedure are available as the default options of ``bean-run`` command
 of *bean*\ :sup:`21` software. Specifically, BEAN-Uniform is run with
@@ -402,7 +402,7 @@ rate :math:`\widetilde{\pi_{\text{gi}}}` in the mini-tiling screen data.
 Specifically, linear model of
 :math:`r = \log\left( \frac{\widetilde{\pi_{\text{gi}}} + 0.05}{\pi_{\text{gi}} + 0.05} \right),\ \ E\left\lbrack r \right\rbrack = aw + b`
 was studied where
-:math:`w = \text{window\_mean}\left( \log\left( \text{accessibility\_signal} + 1 \right) \right)`
+:math:`w = \text{window_mean}\left( \log\left( \text{accessibility_signal} + 1 \right) \right)`
 and :math:`\text{accessibility\_signal}` is the mean log-transformed
 accessibility signal. The coefficients were fitted to be
 :math:`a = 0.2513,\ b = - 1.9458` from our data and would be used as the
@@ -411,12 +411,12 @@ default value.
 The fitted relationship was used to transform allele editing rate in the
 reporter to the rate in the endogenous editing. To account for the
 deviation of :math:`r` from the predicted, :math:`\epsilon_{g}`
-=\ :math:`\text{logit}\left( \sum_{i \neq 0}^{}\widetilde{\pi_{\text{gj}}} \right) - logit\left( \sum_{i \neq 0}^{}\pi_{\text{gj}} \right)`
+=\ :math:`\text{logit}\left( \sum_{i \neq 0}^{}\widetilde{\pi_{\text{gj}}} \right) - \text{logit}\left( \sum_{i \neq 0}^{}\pi_{\text{gj}} \right)`
 is fitted during the inference time per gRNA :math:`g`, and its prior is
 set to be :math:`\epsilon_{g}\mathcal{\sim N}(0,\ \sigma_{\epsilon})`
 where :math:`\sigma_{\epsilon} = 0.655` is the observed standard
 deviation of the residual
-:math:`\text{logit}\left( \widetilde{\pi_{\text{gi}}} \right) - logit\left( f\left( \pi_{\text{gi}} \right) \right)`
+:math:`\text{logit}\left( \widetilde{\pi_{\text{gi}}} \right) - \text{logit}\left( f\left( \pi_{\text{gi}} \right) \right)`
 using the :math:`f` from the above fitted relationship.
 
 See full detail in Supplementary Notes 2.4.3 and Supplementary Figure 16
@@ -532,12 +532,14 @@ individual gRNA.
 .. math::
 
 
-   \tau_{g}|\kappa_{g}\mathcal{\ \sim\ N}\left( \kappa_{g},\ \nu \right)\ 
+   \tau_{g}|\kappa_{g} \sim \mathcal{N}\left( \kappa_{g}, \nu \right)
+
 
 .. math::
 
 
    \eta = \frac{\sum_{g \in G}^{}\left( \tau_{g} - log\left( {\widehat{\alpha^{\circ}}}_{\text{tr}}\left( {\widehat{n}}_{g} \right) \right)\  \right)^{2}}{\left| G \right| - 1}
+
 
 .. math::
 

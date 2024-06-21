@@ -187,8 +187,7 @@ resulting coefficients :math:`a = 0.2513` and :math:`b = \  - 1.9458`
 are used for the analyses presented in this paper. The residual of the
 regression is fitted as the Normal distribution, which is used as the
 prior for the logit-scale deviation :math:`l_{\pi}` (see full detail in
-`Accessibility
-scaling <#adjusting-editing-rates-by-accessibility-with---scale-by-acc>`__
+`Accessibility scaling <#adjusting-editing-rates-by-accessibility-with---scale-by-acc>`__
 section).
 
 ``bean run`` without reporter
@@ -371,8 +370,11 @@ are reported. The model, variational distribution and inference
 procedure are available as the default options of ``bean-run`` command
 of *bean*\ :sup:`21` software. Specifically, BEAN-Uniform is run with
 ``--uniform-edit`` and full BEAN model is run by specifying
-``--scale-by-acc`` argument. ## Adjusting editing rates by accessibility
-with ``--scale-by-acc``
+``--scale-by-acc`` argument. 
+
+
+Adjusting editing rates by accessibility with ``--scale-by-acc``
+----------------------------------------------------------------------------
 
 BEAN takes account for the observation that endogenous editing rate
  :math:`\widetilde{\mathbf{\pi}}` is roughly proportional to the

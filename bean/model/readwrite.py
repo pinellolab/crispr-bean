@@ -187,7 +187,10 @@ def write_result_table(
     else:
         a_fitted = param_hist_dict["alpha_pi"].detach().cpu().numpy()
         pi = a_fitted[..., 1:].sum(axis=1) / a_fitted.sum(axis=1)
-    guide_info_df.insert(0, "edit_rate", pi)
+    guide_info_df["edit_rate"] = pi
+    guide_info_df = guide_info_df[
+        ["edit_rate"] + [col for col in guide_info_df.columns if col != "Mid"]
+    ]
     if guide_acc is not None:
         guide_info_df.insert(1, "accessibility", guide_acc)
         scaled_pi = _scale_pi(

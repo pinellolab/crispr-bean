@@ -117,6 +117,7 @@ def main(args, return_data=False):
         use_bcmatch=(not args.ignore_bcmatch),
     )
     guide_index = ndata.screen.guides.index.copy()
+    assert len(guide_index) == bdata.n_obs, (len(guide_index), bdata.n_obs)
     if return_data:
         return ndata
     # Build variant dataframe
@@ -191,7 +192,11 @@ def main(args, return_data=False):
     if args.library_design == "tiling":
         # add variant into to guide_info_tbl
         guide_info_df = pd.concat(
-            [guide_info_df, _get_guide_to_variant_df(target_info_df)], axis=1
+            [
+                guide_info_df,
+                _get_guide_to_variant_df(target_info_df).reindex(guide_info_df.index),
+            ],
+            axis=1,
         )
 
     # Add user-defined prior.

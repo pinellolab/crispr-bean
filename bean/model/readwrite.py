@@ -48,15 +48,14 @@ def adjust_normal_params_by_control(
 
 def write_result_table(
     target_info_df: pd.DataFrame,
+    guide_info_df: pd.DataFrame,
     param_hist_dict,
     model_label: str,
     prefix: str = "",
     suffix: str = "",
     negctrl_params=None,
-    write_fitted_eff: bool = True,
     adjust_confidence_by_negative_control: bool = True,
     adjust_confidence_negatives: Optional[np.ndarray] = None,
-    guide_index: Optional[Sequence[str]] = None,
     guide_acc: Optional[Sequence] = None,
     sd_is_fitted: bool = True,
     sample_covariates: Optional[List[str]] = None,
@@ -182,25 +181,30 @@ def write_result_table(
     else:
         fit_df = add_credible_interval(fit_df, "mu", "mu_sd")
         fit_df = fit_df.iloc[(-fit_df.mu_z.abs()).argsort()]
-    if write_fitted_eff or guide_acc is not None:
-        if "alpha_pi" not in param_hist_dict.keys():
-            pi = 1.0
-        else:
-            a_fitted = param_hist_dict["alpha_pi"].detach().cpu().numpy()
-            pi = a_fitted[..., 1:].sum(axis=1) / a_fitted.sum(axis=1)
-        sgRNA_df = pd.DataFrame({"edit_eff": pi}, index=guide_index)
-        if guide_acc is not None:
-            sgRNA_df["accessibility"] = guide_acc
-            sgRNA_df["scaled_edit_eff"] = _scale_pi(
-                pi,
-                guide_acc,
-                fitted_noise_logit=param_hist_dict["noise_scale"]
-                .detach()
-                .cpu()
-                .numpy(),
-            )
-        sgRNA_df.to_csv(f"{prefix}bean_sgRNA_result.{model_label}{suffix}.csv")
+    # write sgRNA info
+    if "alpha_pi" not in param_hist_dict.keys():
+        pi = 1.0
+    else:
+        a_fitted = param_hist_dict["alpha_pi"].detach().cpu().numpy()
+        pi = a_fitted[..., 1:].sum(axis=1) / a_fitted.sum(axis=1)
+    guide_info_df["edit_rate"] = pi
+    guide_info_df = guide_info_df[
+        ["edit_rate"] + [col for col in guide_info_df.columns if col != "Mid"]
+    ]
+    if guide_acc is not None:
+        guide_info_df.insert(1, "accessibility", guide_acc)
+        scaled_pi = _scale_pi(
+            pi,
+            guide_acc,
+            fitted_noise_logit=(
+                param_hist_dict["noise_scale"].detach().cpu().numpy()
+                if "noise_scale" in param_hist_dict.keys()
+                else None
+            ),
+        )
+        guide_info_df.insert(2, "scaled_edit_eff", scaled_pi)
 
+    guide_info_df.to_csv(f"{prefix}bean_sgRNA_result.{model_label}{suffix}.csv")
     if return_result:
         return fit_df
     fit_df.to_csv(f"{prefix}bean_element_result.{model_label}{suffix}.csv")
@@ -233,5 +237,5 @@ def _add_noise_to_pi(pi: np.ndarray, fitted_noise_logit: np.ndarray):
 def _scale_pi(pi: np.ndarray, guide_acc: np.ndarray, fitted_noise_logit=None):
     scaled_pi = _scale_edited_pi(pi, guide_acc)
     if fitted_noise_logit is None:
-        return scaled_pi, None
+        return scaled_pi
     return _add_noise_to_pi(scaled_pi, fitted_noise_logit)

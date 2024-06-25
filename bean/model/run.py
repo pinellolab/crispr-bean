@@ -1,5 +1,6 @@
 import os
 import sys
+import numpy as np
 
 if sys.stderr.isatty():
     # Output into terminal
@@ -120,7 +121,7 @@ def check_args(args, bdata):
         ).sum()
         if not n_negctrl >= 10:
             raise ValueError(
-                f"Not enough negative control guide in the input data: {n_negctrl}. Check your input arguments."
+                f"Not enough negative control guide in the input data: {n_negctrl}. Please check your input arguments."
             )
     if args.repguide_mask is not None and args.repguide_mask not in bdata.uns.keys():
         bdata.uns[args.repguide_mask] = pd.DataFrame(
@@ -205,6 +206,122 @@ def _get_guide_target_info(bdata, args, cols_include=[]):
         )
         target_info = target_info.join(edit_rate_info)
     return target_info
+
+
+def _get_guide_info(bdata, args, guide_lfc_pseudocount: int = 5):
+    """ """
+    if args.selection == "sorting":
+        # Calculate LFC between the lowest / highest bin
+        conditions = bdata.samples[
+            [
+                args.condition_col,
+                args.sorting_bin_lower_quantile_col,
+                args.sorting_bin_upper_quantile_col,
+            ]
+        ].drop_duplicates()
+        high_upper_conds = conditions.loc[
+            conditions[args.sorting_bin_upper_quantile_col]
+            == conditions[args.sorting_bin_upper_quantile_col].max()
+        ]
+        highest_cond = high_upper_conds.loc[
+            high_upper_conds[args.sorting_bin_lower_quantile_col]
+            == high_upper_conds[args.sorting_bin_lower_quantile_col].max(),
+            args.condition_col,
+        ].item()
+        low_upper_conds = conditions.loc[
+            conditions[args.sorting_bin_upper_quantile_col]
+            == conditions[args.sorting_bin_upper_quantile_col].min()
+        ]
+        lowest_cond = low_upper_conds.loc[
+            low_upper_conds[args.sorting_bin_lower_quantile_col]
+            == low_upper_conds[args.sorting_bin_lower_quantile_col].min(),
+            args.condition_col,
+        ].item()
+        guide_lfc = bdata.log_fold_change_agg(
+            highest_cond,
+            lowest_cond,
+            agg_col=args.replicate_col,
+            compare_col=args.condition_col,
+            return_result=True,
+            pseudocount=guide_lfc_pseudocount,
+        ).to_frame(f"{highest_cond}_{lowest_cond}.median_lfc")
+    else:
+        # earliest / latest bin & earliest non-plasmid / latest
+        conditions = bdata.samples[
+            [
+                args.condition_col,
+                args.time_col,
+            ]
+        ].drop_duplicates()
+        latest_cond = conditions.loc[
+            conditions[args.time_col] == conditions[args.time_col].max(),
+            args.condition_col,
+        ].item()
+        earliest_cond = conditions.loc[
+            conditions[args.time_col] == conditions[args.time_col].min(),
+            args.condition_col,
+        ].item()
+        guide_lfc = bdata.log_fold_change_agg(
+            latest_cond,
+            earliest_cond,
+            agg_col=args.replicate_col,
+            compare_col=args.condition_col,
+            return_result=True,
+            pseudocount=guide_lfc_pseudocount,
+        ).to_frame(f"{latest_cond}_{earliest_cond}.median_lfc")
+        if args.plasmid_condition is not None:
+            selected_conditions = conditions.loc[
+                conditions[args.condition_col] != args.plasmid_condition
+            ]
+            earliest_selected_cond = selected_conditions.loc[
+                selected_conditions[args.time_col]
+                == selected_conditions[args.time_col].min(),
+                args.condition_col,
+            ].item()
+            guide_lfc2 = bdata.log_fold_change_agg(
+                latest_cond,
+                earliest_selected_cond,
+                agg_col=args.replicate_col,
+                compare_col=args.condition_col,
+                return_result=True,
+                pseudocount=guide_lfc_pseudocount,
+            ).to_frame(f"{latest_cond}_{earliest_selected_cond}.median_lfc")
+            guide_lfc = pd.concat([guide_lfc, guide_lfc2], axis=1)
+    return guide_lfc
+
+
+def _get_guide_to_variant_df(target_info_df: pd.DataFrame) -> pd.DataFrame:
+    editing_guides = target_info_df["editing_guides"].map(
+        lambda s: s.strip(",").split(",") if not (s and pd.isnull(s)) else []
+    )
+
+    per_guide_edit_rates = target_info_df["per_guide_editing_rates"].map(
+        lambda s: (
+            [lambda x: (float(x) if x else np.nan) for x in s.strip(",").split(",")]
+            if not (s and pd.isnull(s))
+            else []
+        )
+    )
+    df = pd.DataFrame(
+        {
+            "variant": target_info_df.edit,
+            "guide": editing_guides,
+            "edit_rate": per_guide_edit_rates,
+        }
+    )
+    df["zipped"] = df.apply(lambda row: list(zip(row.guide, row.edit_rate)), axis=1)
+    df_exp = df[["variant", "zipped"]].explode("zipped")
+    df_exp["guide"] = df_exp["zipped"].map(
+        lambda x: x[0] if not pd.isnull(x) else np.nan
+    )
+    df_exp["edit_rate"] = df_exp["zipped"].map(
+        lambda x: x[1] if not pd.isnull(x) else np.nan
+    )
+    df_exp = df_exp.loc[~df_exp.guide.isnull()]
+    guide_to_var_df = (
+        df_exp[["guide", "variant", "edit_rate"]].groupby("guide").agg(list)
+    )
+    return guide_to_var_df
 
 
 def run_inference(

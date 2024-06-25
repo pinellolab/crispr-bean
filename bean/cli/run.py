@@ -27,6 +27,8 @@ from bean.preprocessing.utils import (
 import bean as be
 from bean.model.run import (
     run_inference,
+    _get_guide_info,
+    _get_guide_to_variant_df,
     _get_guide_target_info,
     check_args,
     identify_model_guide,
@@ -94,7 +96,6 @@ def main(args, return_data=False):
 
     # Format bdata into data structure compatible with Pyro model
     bdata = prepare_bdata(bdata, args, warn, prefix)
-    guide_index = bdata.guides.index.copy()
     ndata = DATACLASS_DICT[args.selection][model_label](
         screen=bdata,
         device=args.device,
@@ -115,6 +116,8 @@ def main(args, return_data=False):
         replicate_col=args.replicate_col,
         use_bcmatch=(not args.ignore_bcmatch),
     )
+    guide_index = ndata.screen.guides.index.copy()
+    assert len(guide_index) == bdata.n_obs, (len(guide_index), bdata.n_obs)
     if return_data:
         return ndata
     # Build variant dataframe
@@ -183,7 +186,18 @@ def main(args, return_data=False):
             info(
                 f"Using {len(adj_negctrl_idx)} synonymous variants to adjust confidence."
             )
-    guide_info_df = ndata.screen.guides
+    guide_info_df = _get_guide_info(
+        ndata.screen, args, guide_lfc_pseudocount=args.guide_lfc_pseudocount
+    )
+    if args.library_design == "tiling":
+        # add variant into to guide_info_tbl
+        guide_info_df = pd.concat(
+            [
+                guide_info_df,
+                _get_guide_to_variant_df(target_info_df).reindex(guide_info_df.index),
+            ],
+            axis=1,
+        )
 
     # Add user-defined prior.
     if args.prior_params is not None:
@@ -204,7 +218,7 @@ def main(args, return_data=False):
                 args, "X_bcmatch" in bdata.layers
             )
             negctrl_idx = np.where(
-                guide_info_df[args.negctrl_col].map(lambda s: s.lower())
+                ndata.screen.guides[args.negctrl_col].map(lambda s: s.lower())
                 == args.negctrl_col_value.lower()
             )[0]
             info(
@@ -234,12 +248,12 @@ def main(args, return_data=False):
             pkl.dump(save_dict, handle)
     write_result_table(
         target_info_df,
+        guide_info_df,
         param_history_dict,
         negctrl_params=param_history_dict_negctrl,
         model_label=model_label,
         prefix=f"{prefix}/",
         suffix=args.result_suffix,
-        guide_index=guide_index,
         guide_acc=(
             ndata.guide_accessibility.cpu().numpy()
             if hasattr(ndata, "guide_accessibility")

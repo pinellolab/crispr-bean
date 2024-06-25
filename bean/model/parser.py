@@ -74,6 +74,12 @@ def parse_args(parser=None):
         help="Fit the shared negative control distribution to normalize the fitted parameters",
     )
     run_parser.add_argument(
+        "--guide-lfc-pseudocount",
+        type=int,
+        default=5,
+        help="LFC pseudocount that will be output as the bean_sgRNA_result.csv",
+    )
+    run_parser.add_argument(
         "--dont-fit-noise",  # TODO: add check args
         action="store_true",
     )
@@ -118,6 +124,12 @@ def parse_args(parser=None):
         help="Value in `bdata.samples[condition_col]` that indicates control experimental condition whose editing patterns will be used. Select this as the condition with the least selection- For the sorting screen, use presort (bulk). For the survival screens, use the closest one with T=0.",
     )
 
+    input_parser.add_argument(
+        "--plasmid-condition",
+        default="bulk",
+        type=str,
+        help="For survival screens, condition label of the plasmid library, if included in the ReporterScreen.",
+    )
     input_parser.add_argument(
         "--replicate-col",
         default="replicate",

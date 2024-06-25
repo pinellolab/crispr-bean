@@ -105,7 +105,7 @@ phenotype for the alleles it induces (:math:`a \in A(g)`) as follows:
 .. math::
 
 
-   Y_{a} = \ \sum_{v \in a}^{}Y_{v},\ \ Y_{a} = Y_{0}\text{\ if\ }\left| a \right| = 0
+   Y_{a} = \ \sum_{v \in a}^{}Y_{v},\ \ Y_{a} = Y_{0}\text{ if }\left| a \right| = 0
 
 , where :math:`\widetilde{\pi_{a}}` is the endogenous editing rate,
 estimated from :math:`\pi_{a}`, the reporter editing rate, of allele
@@ -182,7 +182,7 @@ incomplete correlation between endogenous and reporter editing rates.
 :math:`f\left( \pi \right)` is fitted from the data generated for
 comparison of endogenous and reporter editing based on the regression
 :math:`E\left\lbrack \log\left( \frac{\pi_{\text{endo}}}{\pi_{\text{reporter}}} \right) \right\rbrack = aw + b`
-where :math:`w` is :math:`log(accessibility\ signal + 1)` and the
+where :math:`w` is :math:`log(\text{accessibility_signal + 1})` and the
 resulting coefficients :math:`a = 0.2513` and :math:`b = \  - 1.9458`
 are used for the analyses presented in this paper. The residual of the
 regression is fitted as the Normal distribution, which is used as the
@@ -365,7 +365,7 @@ editing rate is reported and for \`tiling\` mode, the number of gRNAs
 covering each variant (`n_guide`), number of co-occurring variants that
 is edited together in any of the observed alleles (`n_coocc`), and
 effective editing rate which is calculated as
-:math:`\sum_{g \in \{ g|g\ \text{induces}\ v\}}^{}{\sum_{a \in \{ g\ \text{induces}\ a,\ a\ has\ v\}}^{}\frac{\widetilde{\pi_{\text{ga}}}}{\left| a \right|}}`,
+:math:`\sum_{g \in \{ g|g\ \text{induces}\ v\}}^{}{\sum_{a \in \{ g\ \text{induces}\ a,\ a\text{ has }v\}}^{}\frac{\widetilde{\pi_{\text{ga}}}}{\left| a \right|}}`,
 are reported. The model, variational distribution and inference
 procedure are available as the default options of ``bean-run`` command
 of *bean*\ :sup:`21` software. Specifically, BEAN-Uniform is run with
@@ -403,7 +403,7 @@ Specifically, linear model of
 :math:`r = \log\left( \frac{\widetilde{\pi_{\text{gi}}} + 0.05}{\pi_{\text{gi}} + 0.05} \right),\ \ E\left\lbrack r \right\rbrack = aw + b`
 was studied where
 :math:`w = \text{window_mean}\left( \log\left( \text{accessibility_signal} + 1 \right) \right)`
-and :math:`\text{accessibility\_signal}` is the mean log-transformed
+and :math:`\text{accessibility_signal}` is the mean log-transformed
 accessibility signal. The coefficients were fitted to be
 :math:`a = 0.2513,\ b = - 1.9458` from our data and would be used as the
 default value.

@@ -20,6 +20,7 @@ These are the example output of [`bean run`](https://pinellolab.github.io/crispr
   - `per_guide_editing_rates`: The per-guide editing rates of the variant.
   - `n_guides`: The number of guides that edited the variant.
   - `n_coocc`: The number of unique co-occurring variants that appeared together in any alleles that contains the variant.
+  
 - Variant effect size: Use `mu_z_adj` whenever available, otherwise `mu_z_scaled`, otherwise `mu_z`.
   - `mu`: The mean value of the variant effect size.
   - `mu_sd`: The standard deviation of the mean value of the variant effect size.

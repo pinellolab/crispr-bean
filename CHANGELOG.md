@@ -1,4 +1,7 @@
 # Changelog
+## 1.2.9
+* Add sgRNA information as output
+* Add pseudocounts for LFC calculation (`perturb-tools>=0.3.5`)
 ## 1.2.8
 * Change .pyx files to be compatible with more recent numpy versions
 ## 1.2.7

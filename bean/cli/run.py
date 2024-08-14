@@ -139,6 +139,12 @@ def main(args, return_data=False):
                 == args.negctrl_col_value.lower()
             )[0]
     else:
+        if "edit_rate_norm" not in ndata.screen.guides.columns:
+            ndata.screen.get_edit_from_allele()
+            ndata.screen.get_edit_mat_from_uns(rel_pos_is_reporter=True)
+            ndata.screen.get_guide_edit_rate(
+                unsorted_condition_label=args.control_condition
+            )
         if args.splice_site_path is not None:
             splice_site = pd.read_csv(args.splice_site_path).pos
         target_info_df = be.an.translate_allele.annotate_edit(
@@ -198,7 +204,6 @@ def main(args, return_data=False):
             ],
             axis=1,
         )
-
     # Add user-defined prior.
     if args.prior_params is not None:
         prior_params = _check_prior_params(args.prior_params, ndata)

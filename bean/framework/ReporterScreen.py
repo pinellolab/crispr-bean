@@ -434,12 +434,14 @@ class ReporterScreen(Screen):
                 edits.target_pos_matches,
                 ["guide", "edit"] + self.samples.index.tolist(),
             ]
-
+        good_edits = good_edits.copy()
         good_guide_idx = guide_name_to_idx.loc[good_edits.guide, "index"].astype(int)
+        edit_mat = np.zeros(self.layers["edits"].shape)
         for gidx, eidx in zip(good_guide_idx, good_edits.index):
-            self.layers["edits"][gidx, :] += good_edits.loc[
+            edit_mat[gidx, :] = edit_mat[gidx, :] + good_edits.loc[
                 eidx, self.samples.index.tolist()
             ].astype(int)
+        self.layers["edits"] = edit_mat
         print("New edit matrix saved in .layers['edits']. Returning old edits.")
         return old_edits
 
@@ -505,17 +507,21 @@ class ReporterScreen(Screen):
             prior_weight = 1
         n_edits = self.layers[edit_layer].copy()[:, bulk_idx].sum(axis=1)
         n_counts = self.layers[count_layer].copy()[:, bulk_idx].sum(axis=1)
-        edit_rate = (n_edits + prior_weight / 2) / (
-            (n_counts * num_targetable_sites) + prior_weight / 2
-        )
+        edit_rate = (n_edits + prior_weight / 2) / ((n_counts) + prior_weight / 2)
+        if normalize_by_editable_base:
+            edit_rate_norm = (n_edits + prior_weight / 2) / (
+                (n_counts * num_targetable_sites) + prior_weight / 2
+            )
         edit_rate[n_counts < bcmatch_thres] = np.nan
         if normalize_by_editable_base:
             print("normalize by editable counts")
-            edit_rate[num_targetable_sites == 0] = np.nan
+            edit_rate_norm[num_targetable_sites == 0] = np.nan
         if return_result:
             return edit_rate
         else:
             self.guides["edit_rate"] = edit_rate
+            if normalize_by_editable_base:
+                self.guides["edit_rate_norm"] = edit_rate_norm
             print(self.guides.edit_rate)
 
     def get_edit_rate(

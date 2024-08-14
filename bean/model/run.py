@@ -293,7 +293,10 @@ def _get_guide_info(bdata, args, guide_lfc_pseudocount: int = 5):
             [bdata.guides[["edit_rate", "edit_rate_norm"]], guide_lfc], axis=1
         )
     else:
-        guide_info = pd.concat([bdata.guides[["edit_rate"]], guide_lfc], axis=1)
+        if "edit_rate" in bdata.guides.columns.tolist():
+            guide_info = pd.concat([bdata.guides[["edit_rate"]], guide_lfc], axis=1)
+        else:
+            guide_info = guide_lfc
     return guide_info
 
 

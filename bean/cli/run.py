@@ -123,12 +123,13 @@ def main(args, return_data=False):
     # Build variant dataframe
     adj_negctrl_idx = None
     if args.library_design == "variant":
-        if "edit_rate" not in ndata.screen.guides.columns:
-            ndata.screen.get_edit_from_allele()
-            ndata.screen.get_edit_mat_from_uns(rel_pos_is_reporter=True)
-            ndata.screen.get_guide_edit_rate(
-                unsorted_condition_label=args.control_condition
-            )
+        if not args.uniform_edit:
+            if "edit_rate" not in ndata.screen.guides.columns:
+                ndata.screen.get_edit_from_allele()
+                ndata.screen.get_edit_mat_from_uns(rel_pos_is_reporter=True)
+                ndata.screen.get_guide_edit_rate(
+                    unsorted_condition_label=args.control_condition
+                )
         target_info_df = _get_guide_target_info(
             ndata.screen, args, cols_include=[args.negctrl_col]
         )

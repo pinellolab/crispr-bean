@@ -331,6 +331,21 @@ class ReporterScreenData(ScreenData):
             self.screen_control.samples["size_factor_bcmatch"].to_numpy()
         ).reshape(self.n_reps, 1)
 
+        if hasattr(self, "timepoints") and not hasattr(self, "allele_counts"):
+            control_allele_counts = []
+            for timepoint in self.timepoints:
+                screen_t = self.screen[:, self.screen.samples.time == timepoint.item()]
+                edited_control = self.transform_data(screen_t.layers["edits"], n_bins=1)
+                nonedited_control = (
+                    self.transform_data(screen_t.layers["X_bcmatch"], 1)
+                    - edited_control
+                )
+                nonedited_control[nonedited_control < 0] = 0
+                control_allele_counts.append(
+                    torch.stack([nonedited_control, edited_control], axis=-1)
+                )  # (n_reps, n_bins, n_guides, n_alleles)
+            self.allele_counts = torch.cat(control_allele_counts, axis=1)
+
         edited_control = self.transform_data(
             self.screen_control.layers["edits"], n_bins=1
         )
@@ -981,12 +996,25 @@ class SurvivalScreenData(ScreenData):
     def _pre_init(self, time_column: str, condition_column: str):
         self.condition_column = self.time_column = time_column
         try:
+            max_time = self.screen.samples[time_column].max()
             self.screen.samples[time_column] = self.screen.samples[time_column].astype(
                 float
             )
             self.screen.samples[time_column] = (
-                self.screen.samples[time_column]
-                / self.screen.samples[time_column].max()
+                self.screen.samples[time_column] / max_time
+            )
+
+            self.screen_selected.samples[time_column] = self.screen_selected.samples[
+                time_column
+            ].astype(float)
+            self.screen_selected.samples[time_column] = (
+                self.screen_selected.samples[time_column] / max_time
+            )
+            self.screen_control.samples[time_column] = self.screen_control.samples[
+                time_column
+            ].astype(float)
+            self.screen_control.samples[time_column] = (
+                self.screen_control.samples[time_column] / max_time
             )
         except ValueError as e:
             raise ValueError(

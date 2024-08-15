@@ -289,28 +289,35 @@ def MixtureNormalModel(
 
     with replicate_plate:
         with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
-            time_pi = data.control_timepoint
-            # Accounting for sample specific overall edit rate across all guides.
-            # P(allele | guide, bin=bulk)
             pi = pyro.sample(
                 "pi",
                 dist.Dirichlet(
                     pi_a_scaled.unsqueeze(0).unsqueeze(0).expand(data.n_reps, 1, -1, -1)
                 ),
             )
-            assert pi.shape == (
-                data.n_reps,
-                1,
-                data.n_guides,
-                2,
-            ), pi.shape
-            # If pi is sampled in later timepoint, account for the selection.
-            expanded_allele_p = pi * r.expand(data.n_reps, 1, -1, -1) ** time_pi
-            pyro.sample(
-                "bulk_allele_count",
-                dist.Multinomial(probs=expanded_allele_p, validate_args=False),
-                obs=data.allele_counts_control,
-            )
+        with time_plate:
+            with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
+                time_pi = data.timepoints
+                # Accounting for sample specific overall edit rate across all guides.
+                # P(allele | guide, bin=bulk)
+                assert pi.shape == (
+                    data.n_reps,
+                    1,
+                    data.n_guides,
+                    2,
+                ), pi.shape
+                # If pi is sampled in later timepoint, account for the selection.
+
+                expanded_allele_p = pi * r.expand(
+                    data.n_reps, len(data.timepoints), -1, -1
+                ) ** time_pi.unsqueeze(0).unsqueeze(-1).unsqueeze(-1).expand(
+                    data.n_reps, len(data.timepoints), -1, -1
+                )
+                pyro.sample(
+                    "allele_count",
+                    dist.Multinomial(probs=expanded_allele_p, validate_args=False),
+                    obs=data.allele_counts,
+                )
     if scale_by_accessibility:
         # Endogenous target site editing rate may be different
         pi = scale_pi_by_accessibility(
@@ -486,13 +493,19 @@ def MultiMixtureNormalModel(
                     pi_a_scaled.unsqueeze(0).unsqueeze(0).expand(data.n_reps, 1, -1, -1)
                 ),
             )
-            # If pi is sampled in later timepoint, account for the selection.
-            expanded_allele_p = pi * r.expand(data.n_reps, 1, -1, -1) ** time_pi
-            pyro.sample(
-                "bulk_allele_count",
-                dist.Multinomial(probs=expanded_allele_p, validate_args=False),
-                obs=data.allele_counts_control,
-            )
+        with time_plate:
+            with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
+                # If pi is sampled in later timepoint, account for the selection.
+                expanded_allele_p = pi * r.expand(
+                    data.n_reps, 1, -1, -1
+                ) ** time_pi.unsqueeze(0).unsqueeze(-1).unsqueeze(-1).expand(
+                    data.n_reps, len(data.timepoints), -1, -1
+                )
+                pyro.sample(
+                    "allele_count",
+                    dist.Multinomial(probs=expanded_allele_p, validate_args=False),
+                    obs=data.allele_counts,
+                )
     if scale_by_accessibility:
         # Endogenous target site editing rate may be different
         pi = scale_pi_by_accessibility(

@@ -996,7 +996,7 @@ class SurvivalScreenData(ScreenData):
     def _pre_init(self, time_column: str, condition_column: str):
         self.condition_column = self.time_column = time_column
         try:
-            max_time = self.screen.samples[time_column].max()
+            max_time = self.screen.samples[time_column].astype(float).max()
             self.screen.samples[time_column] = self.screen.samples[time_column].astype(
                 float
             )

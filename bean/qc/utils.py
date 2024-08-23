@@ -34,12 +34,13 @@ def check_args(args):
         raise ValueError(
             f"Specified --posctrl-col `{args.posctrl_col}` does not exist in ReporterScreen.guides.columns ({bdata.guides.columns}). Please check your input."
         )
+    bdata.guides[args.posctrl_col] = bdata.guides[args.posctrl_col].astype(str)
     if (
         args.posctrl_col
         and args.posctrl_val not in bdata.guides[args.posctrl_col].tolist()
     ):
         raise ValueError(
-            f"Specified --control-condition `{args.posctrl_val}` does not exist in ReporterScreen.guides[{args.posctrl_col}] ({bdata.guides[args.posctrl_col]}). Please check your input."
+            f"Specified --posctrl-val `{args.posctrl_val}` does not exist in ReporterScreen.guides[{args.posctrl_col}] ({bdata.guides[args.posctrl_col]}). Please check your input. To proceed without positive control, please provide --posctrl-col='' argument."
         )
     if args.control_condition not in bdata.samples[args.condition_col].tolist():
         raise ValueError(

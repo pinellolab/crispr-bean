@@ -130,6 +130,8 @@ def check_args(args, bdata):
         warn(
             f"{args.bdata_path} does not have replicate x guide outlier mask. All guides are included in analysis."
         )
+    if args.sample_mask_col == "":
+        args.sample_mask_col = None
     if args.sample_mask_col is not None:
         if args.sample_mask_col not in bdata.samples.columns.tolist():
             raise ValueError(
@@ -139,10 +141,16 @@ def check_args(args, bdata):
         raise ValueError(
             f"Condition column `{args.condition_col}` set by `--condition-col` not in ReporterScreen.samples.columns:{bdata.samples.columns}. Check your input."
         )
-    if args.control_condition not in bdata.samples[args.condition_col].tolist():
+    if args.selection == "survival" and args.condition_col == args.time_col:
         raise ValueError(
-            f"No sample has control label `{args.control_condition}` (set by `--control-condition`)  in ReporterScreen.samples[{args.condition_col}]: {bdata.samples[args.condition_col]}. Check your input.  For the selection of this argument, see more in `--condition-col` under `bean run --help`."
+            f"Invalid to have the same `--condition-col` ({args.condition_col}) and `--time-col` ({args.time_col})."
         )
+    control_condits = args.control_condition.split(",")
+    for control_condit in control_condits:
+        if control_condit not in bdata.samples[args.condition_col].astype(str).tolist():
+            raise ValueError(
+                f"No sample has control label `{args.control_condition}` (set by `--control-condition`)  in ReporterScreen.samples[{args.condition_col}]: {bdata.samples[args.condition_col]}. Check your input.  For the selection of this argument, see more in `--condition-col` under `bean run --help`."
+            )
     if args.replicate_col not in bdata.samples.columns:
         raise ValueError(
             f"Condition column set by `--replicate-col` {args.replicate_col} not in ReporterScreen.samples.columns:{bdata.samples.columns}. Check your input."

@@ -219,6 +219,7 @@ def MixtureNormalModel(
     data: VariantSurvivalReporterScreenData,
     alpha_prior: float = 1,
     use_bcmatch: bool = True,
+    use_all_timepoints_for_pi: bool = True,
     sd_scale: float = 0.01,
     scale_by_accessibility: bool = False,
     fit_noise: bool = False,
@@ -231,6 +232,7 @@ def MixtureNormalModel(
         data: Input data of type VariantSortingReporterScreenData.
         alpha_prior: Prior parameter for controlling the concentration of the Dirichlet process. Defaults to 1.
         use_bcmatch: Flag indicating whether to use barcode-matched counts. Defaults to True.
+        use_all_timepoints_for_pi: Use all available timepoints instead of the `--control-condition` timepoint.
         sd_scale: Scale for the prior standard deviation. Defaults to 0.01.
         scale_by_accessibility: If True, pi fitted from reporter data is scaled by accessibility.
         fit_noise: Valid only when scale_by_accessibility is True. If True, parametrically fit noise of endo ~ reporter + noise.
@@ -295,28 +297,34 @@ def MixtureNormalModel(
                     pi_a_scaled.unsqueeze(0).unsqueeze(0).expand(data.n_reps, 1, -1, -1)
                 ),
             )
-        with time_plate:
+            assert pi.shape == (
+                data.n_reps,
+                1,
+                data.n_guides,
+                2,
+            ), pi.shape
+        with pyro.plate("time_plate0", len(data.control_timepoint), dim=-2):
             with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
-                time_pi = data.timepoints
-                # Accounting for sample specific overall edit rate across all guides.
-                # P(allele | guide, bin=bulk)
-                assert pi.shape == (
-                    data.n_reps,
-                    1,
-                    data.n_guides,
-                    2,
-                ), pi.shape
+                # if use_all_timepoints_for_pi:
+                #     time_pi = data.timepoints
+                #     expanded_allele_p = pi * r.expand(
+                #         data.n_reps, len(data.timepoints), -1, -1
+                #     ) ** time_pi.unsqueeze(0).unsqueeze(-1).unsqueeze(-1).expand(
+                #         data.n_reps, len(data.timepoints), -1, -1
+                #     )
+                #     pyro.sample(
+                #         "allele_count",
+                #         dist.Multinomial(probs=expanded_allele_p, validate_args=False),
+                #         obs=data.allele_counts,
+                #     )
+                # else:
+                time_pi = data.control_timepoint
                 # If pi is sampled in later timepoint, account for the selection.
-
-                expanded_allele_p = pi * r.expand(
-                    data.n_reps, len(data.timepoints), -1, -1
-                ) ** time_pi.unsqueeze(0).unsqueeze(-1).unsqueeze(-1).expand(
-                    data.n_reps, len(data.timepoints), -1, -1
-                )
+                expanded_allele_p = pi * r.expand(data.n_reps, 1, -1, -1) ** time_pi
                 pyro.sample(
-                    "allele_count",
+                    "control_allele_count",
                     dist.Multinomial(probs=expanded_allele_p, validate_args=False),
-                    obs=data.allele_counts,
+                    obs=data.allele_counts_control,
                 )
     if scale_by_accessibility:
         # Endogenous target site editing rate may be different
@@ -396,6 +404,7 @@ def MultiMixtureNormalModel(
     data: TilingSurvivalReporterScreenData,
     alpha_prior=1,
     use_bcmatch=True,
+    use_all_timepoints_for_pi: bool = True,
     sd_scale=0.01,
     norm_pi=False,
     scale_by_accessibility=False,
@@ -410,6 +419,7 @@ def MultiMixtureNormalModel(
         data: Input data of type VariantSortingReporterScreenData.
         alpha_prior: Prior parameter for controlling the concentration of the Dirichlet process. Defaults to 1.
         use_bcmatch: Flag indicating whether to use barcode-matched counts. Defaults to True.
+        use_all_timepoints_for_pi: Use all available timepoints instead of the `--control-condition` timepoint.
         sd_scale: Scale for the prior standard deviation. Defaults to 0.01.
         scale_by_accessibility: If True, pi fitted from reporter data is scaled by accessibility.
         fit_noise: Valid only when scale_by_accessibility is True. If True, parametrically fit noise of endo ~ reporter + noise.
@@ -486,25 +496,35 @@ def MultiMixtureNormalModel(
 
     with replicate_plate:
         with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
-            time_pi = data.control_timepoint
             pi = pyro.sample(
                 "pi",
                 dist.Dirichlet(
                     pi_a_scaled.unsqueeze(0).unsqueeze(0).expand(data.n_reps, 1, -1, -1)
                 ),
             )
-        with time_plate:
+        with pyro.plate("time_plate0", len(data.control_timepoint), dim=-2):
             with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
+                # if use_all_timepoints_for_pi:
+                #     time_pi = data.timepoints
+                #     # If pi is sampled in later timepoint, account for the selection.
+                #     expanded_allele_p = pi * r.expand(
+                #         data.n_reps, 1, -1, -1
+                #     ) ** time_pi.unsqueeze(0).unsqueeze(-1).unsqueeze(-1).expand(
+                #         data.n_reps, len(data.timepoints), -1, -1
+                #     )
+                #     pyro.sample(
+                #         "allele_count",
+                #         dist.Multinomial(probs=expanded_allele_p, validate_args=False),
+                #         obs=data.allele_counts,
+                #     )
+                # else:
+                time_pi = data.control_timepoint
                 # If pi is sampled in later timepoint, account for the selection.
-                expanded_allele_p = pi * r.expand(
-                    data.n_reps, 1, -1, -1
-                ) ** time_pi.unsqueeze(0).unsqueeze(-1).unsqueeze(-1).expand(
-                    data.n_reps, len(data.timepoints), -1, -1
-                )
+                expanded_allele_p = pi * r.expand(data.n_reps, 1, -1, -1) ** time_pi
                 pyro.sample(
-                    "allele_count",
+                    "control_allele_count",
                     dist.Multinomial(probs=expanded_allele_p, validate_args=False),
-                    obs=data.allele_counts,
+                    obs=data.allele_counts_control,
                 )
     if scale_by_accessibility:
         # Endogenous target site editing rate may be different

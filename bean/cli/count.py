@@ -72,6 +72,8 @@ def main(args):
         ]
         if match_target_pos:
             counter.screen.get_edit_mat_from_uns(target_base_edits, match_target_pos)
+        else:
+            counter.screen.get_edit_mat_from_uns(target_base_edits)
     counter.screen.write(f"{counter.output_dir}.h5ad")
     counter.screen.to_Excel(f"{counter.output_dir}.xlsx")
     info(f"Output written at:\n {counter.output_dir}.h5ad,\n {counter.output_dir}.xlsx")

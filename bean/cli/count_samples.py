@@ -92,12 +92,15 @@ def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
         screen = counter.screen
         if screen.X.max() == 0:
             warn(f"Nothing counted for {sample_id}. Check your input.")
-        if counter.count_reporter_edits and match_target_pos:
+        if counter.count_reporter_edits:
             screen.uns["allele_counts"] = screen.uns["allele_counts"].loc[
                 screen.uns["allele_counts"].allele.map(str) != "", :
             ]
             screen.get_edit_from_allele("allele_counts", "allele")
-            screen.get_edit_mat_from_uns(target_base_edits, match_target_pos)
+            if match_target_pos:
+                screen.get_edit_mat_from_uns(target_base_edits, match_target_pos)
+            else:
+                screen.get_edit_mat_from_uns(target_base_edits)
         info(
             f"Done for {sample_id}. \n\
             Output written at {counter.output_dir}.h5ad"

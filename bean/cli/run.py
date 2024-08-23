@@ -85,8 +85,8 @@ def main(args, return_data=False):
     file_logger = logging.FileHandler(f"{prefix}/bean_run.log")
     file_logger.setLevel(logging.INFO)
     logging.getLogger().addHandler(file_logger)
+    info(f"Running: {' '.join(sys.argv[:])}")
     if args.cuda:
-        os.environ["CUDA_VISIBLE_DEVICES"] = "1"
         torch.set_default_tensor_type(torch.cuda.FloatTensor)
     else:
         torch.set_default_tensor_type(torch.FloatTensor)

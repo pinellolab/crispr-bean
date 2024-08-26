@@ -382,9 +382,9 @@ class ReporterScreen(Screen):
             reporter_length = self.uns["reporter_length"]
         if "reproter_right_flank_length" in self.uns:
             reporter_right_flank_length = self.uns["reporter_right_flank_length"]
-        if edit_count_key not in self.uns or len(self.uns[edit_count_key]) == 0:
+        if edit_count_key not in self.uns:
             raise ValueError(
-                "Edit count isn't calculated. "
+                f"Edit count isn't calculated or not provided with specified key `{edit_count_key}`. "
                 + "Call .get_edit_from_allele(allele_count_key, allele_key)"
             )
         edits = self.uns[edit_count_key].copy()

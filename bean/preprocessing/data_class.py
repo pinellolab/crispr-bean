@@ -105,6 +105,7 @@ class ScreenData(abc.ABC):
         self.screen_control = screen[
             :, screen.samples[condition_column].astype(str).isin(control_condition)
         ]
+        self.control_can_be_selected = control_can_be_selected
         self.n_samples = len(screen.samples)  # 8
         self.n_guides = len(screen.guides)
         self.n_reps = len(screen.samples[replicate_column].unique())
@@ -328,6 +329,7 @@ class ReporterScreenData(ScreenData):
             self.screen_control.layers["X_bcmatch"], len(self.control_condition)
         )
         # print(self.control_sample_mask.shape, self.X_bcmatch_control.shape) torch.Size([3, 2]) torch.Size([3, 2, 11035])
+        # print("bcm init @ ReporterScreen", self.X_bcmatch_control_masked.shape)
         self.X_bcmatch_control_masked = (
             self.X_bcmatch_control * self.control_sample_mask[:, :, None]
         )
@@ -972,13 +974,26 @@ class SortingScreenData(ScreenData):
                     .values.astype(int)
                 )
             )
-        self.screen_selected = _assign_rep_ids_and_sort(
-            self.screen_selected, self.replicate_column, self.condition_column
-        )
-        self.screen_control = _assign_rep_ids_and_sort(
-            self.screen_control,
-            self.replicate_column,
-        )
+        if not self.control_can_be_selected:
+            self.screen_selected = screen[
+                :,
+                ~(
+                    self.screen.samples[self.condition_column]
+                    .astype(str)
+                    .isin(self.control_condition)
+                ),
+            ]
+        else:
+            self.screen_selected = self.screen[
+                :, ~self.screen.samples[self.condition_column].isnull()
+            ]
+
+        self.screen_control = self.screen[
+            :,
+            self.screen.samples[self.condition_column]
+            .astype(str)
+            .isin(self.control_condition),
+        ]
 
 
 @dataclass
@@ -1370,10 +1385,13 @@ class VariantSurvivalScreenData(VariantScreenData, SurvivalScreenData):
         if hasattr(ndata, "X_bcmatch"):
             ndata.X_bcmatch = ndata.X_bcmatch[:, :, guide_idx]
         if hasattr(ndata, "X_bcmatch_masked"):
+            print("b shape", ndata.X_bcmatch.shape)
             ndata.X_bcmatch_masked = ndata.X_bcmatch_masked[:, :, guide_idx]
         if hasattr(ndata, "X_bcmatch_control"):
+            print("bc shape", ndata.X_bcmatch_control.shape)
             ndata.X_bcmatch_control = ndata.X_bcmatch_control[:, :, guide_idx]
         if hasattr(ndata, "X_bcmatch_control_masked"):
+            print("bcm shape", ndata.X_bcmatch_control_masked.shape)
             ndata.X_bcmatch_control_masked = ndata.X_bcmatch_control_masked[
                 :, :, guide_idx
             ]
@@ -1395,7 +1413,7 @@ class VariantSurvivalScreenData(VariantScreenData, SurvivalScreenData):
             self.screen_control.layers["X_bcmatch"], len(self.control_condition)
         )
         self.X_bcmatch_control_masked = (
-            self.X_bcmatch_control * self.control_sample_mask[:, None, None]
+            self.X_bcmatch_control * self.control_sample_mask[:, :, None]
         )
         self.size_factor_bcmatch = torch.as_tensor(
             self.screen_selected.samples["size_factor_bcmatch"].to_numpy()

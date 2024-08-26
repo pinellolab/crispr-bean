@@ -30,11 +30,13 @@ def check_args(args):
         raise ValueError(
             f"Specified --target-pos-col `{args.target_pos_col}` does not exist in ReporterScreen.guides.columns ({bdata.guides.columns}). Please check your input. (--tiling {args.tiling}, ReporterScreen.tiling: {bdata.tiling})"
         )
-    if args.posctrl_col and args.posctrl_col not in bdata.guides.columns:
-        raise ValueError(
-            f"Specified --posctrl-col `{args.posctrl_col}` does not exist in ReporterScreen.guides.columns ({bdata.guides.columns}). Please check your input."
-        )
-    bdata.guides[args.posctrl_col] = bdata.guides[args.posctrl_col].astype(str)
+    if args.posctrl_col != "":
+        if args.posctrl_col and args.posctrl_col not in bdata.guides.columns:
+            raise ValueError(
+                f"Specified --posctrl-col `{args.posctrl_col}` does not exist in ReporterScreen.guides.columns ({bdata.guides.columns}). Please check your input."
+            )
+        else:
+            bdata.guides[args.posctrl_col] = bdata.guides[args.posctrl_col].astype(str)
     if (
         args.posctrl_col
         and args.posctrl_val not in bdata.guides[args.posctrl_col].tolist()

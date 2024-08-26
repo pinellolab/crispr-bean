@@ -410,7 +410,7 @@ class ReporterScreen(Screen):
         edits["guide_start_pos"] = (
             reporter_length
             - reporter_right_flank_length
-            - guide_len[edits.guide_idx].reset_index(drop=True)
+            - guide_len.iloc[edits.guide_idx].reset_index(drop=True)
         )
         if not match_target_position:
             edits["rel_pos"] = edits.edit.map(lambda e: e.rel_pos)

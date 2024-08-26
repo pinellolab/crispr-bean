@@ -223,10 +223,10 @@ class ScreenData(abc.ABC):
                 .T.reshape((self.n_reps, n_bins, self.n_guides))
                 .float()
             )
-        except RuntimeError:
+        except RuntimeError as e:
             print((self.n_reps, n_bins, self.n_guides))
             print(X.shape)
-            exit(1)
+            raise e
         if self.device is not None:
             x = x.cuda()
         return x
@@ -347,9 +347,7 @@ class ReporterScreenData(ScreenData):
                 ]
                 edited_control = self.transform_data(screen_t.layers["edits"], n_bins=1)
                 nonedited_control = (
-                    self.transform_data(
-                        screen_t.layers["X_bcmatch"], len(self.control_condition)
-                    )
+                    self.transform_data(screen_t.layers["X_bcmatch"], n_bins=1)
                     - edited_control
                 )
                 nonedited_control[nonedited_control < 0] = 0

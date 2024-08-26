@@ -47,7 +47,9 @@ def count_sample(R1: str, R2: str, sample_id: str, args: argparse.Namespace):
     except KeyError as e:
         raise KeyError(args_dict["edited_base"]) from e
 
-    match_target_pos = args_dict["match_target_pos"]
+    match_target_pos = (
+        args_dict["match_target_pos"] if not args_dict["tiling"] else False
+    )
     if (
         "guide_start_seqs_tbl" in args_dict
         and args_dict["guide_start_seqs_tbl"] is not None

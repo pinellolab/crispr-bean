@@ -275,11 +275,11 @@ def MixtureNormalModel(
     assert mu.shape == (data.n_guides, 2)
     r = torch.exp(mu)
 
-    with pyro.plate("replicate_plate0", data.n_reps, dim=-1):
-        q_0 = pyro.sample(
-            "initial_guide_abundance",
-            dist.Dirichlet(initial_abundance.unsqueeze(0).expand(data.n_reps, -1)),
-        )
+    # with pyro.plate("replicate_plate0", data.n_reps, dim=-1):
+    #     q_0 = pyro.sample(
+    #         "initial_guide_abundance",
+    #         dist.Dirichlet(initial_abundance.unsqueeze(0).expand(data.n_reps, -1)),
+    #     )
     alpha_pi = pyro.param(
         "alpha_pi",
         torch.ones(
@@ -349,26 +349,26 @@ def MixtureNormalModel(
             with guide_plate:
                 alleles_p_time = torch.pow(
                     r.unsqueeze(0).expand((data.n_condits, -1, -1)),
-                    time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 2)),
+                    time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
                 )
                 # alleles_p_time = torch.clamp(
                 #     time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1))
                 #     * torch.log(r).unsqueeze(0).expand((data.n_condits, -1, -1)),
                 #     max=MAX_LOGPI,
                 # ).exp()
-                negctrl_abundance = pyro.param(
-                    "negctrl_abundance",
-                    torch.ones((data.n_condits,)),
-                    constraint=constraints.positive,
-                )
-                alleles_p_time = (
-                    alleles_p_time / negctrl_abundance.clamp(min=1e-5)[:, None, None]
-                )
+                # negctrl_abundance = pyro.param(
+                #     "negctrl_abundance",
+                #     torch.ones((data.n_condits,)),
+                #     constraint=constraints.positive,
+                # )
+                # alleles_p_time = (
+                #     alleles_p_time / negctrl_abundance.clamp(min=1e-5)[:, None, None]
+                # )
                 assert alleles_p_time.shape == (data.n_condits, data.n_guides, 2)
 
             expected_allele_p = (
                 pi.expand(-1, data.n_condits, -1, -1) * alleles_p_time[None, :, :, :]
-            ) * q_0.unsqueeze(1).unsqueeze(-1).expand((-1, data.n_condits, -1, -1))
+            )  # * q_0.unsqueeze(1).unsqueeze(-1).expand((-1, data.n_condits, -1, -1))
             expected_guide_p = expected_allele_p.sum(axis=-1)
             assert expected_guide_p.shape == (
                 data.n_reps,

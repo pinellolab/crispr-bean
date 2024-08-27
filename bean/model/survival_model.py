@@ -328,8 +328,14 @@ def MixtureNormalModel(
                 # else:
                 time_pi = data.control_timepoint[t]
                 # If pi is sampled in later timepoint, account for the selection.
-                expanded_allele_p = pi * torch.pow(
-                    r.expand(data.n_reps, 1, -1, -1), time_pi
+                expanded_allele_p = pi.expand(-1, len(time_pi), -1, -1) * torch.pow(
+                    r.unsqueeze(0)
+                    .unsqueeze(0)
+                    .expand(data.n_reps, len(time_pi), -1, -1),
+                    time_pi.unsqueeze(0)
+                    .unsqueeze(-1)
+                    .unsqueeze(-1)
+                    .expand(data.n_reps, -1, data.n_guides, 2),
                 )
                 pyro.sample(
                     "control_allele_count",

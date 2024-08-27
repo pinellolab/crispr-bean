@@ -265,13 +265,13 @@ def MixtureNormalModel(
     with pyro.plate("guide_plate0", 1):
         with pyro.plate("guide_plate1", data.n_targets):
             mu_targets = pyro.sample("mu_targets", mu_dist)
-    with pyro.plate("negctrl_plate", len(data.negctrl_guide_idx)):
-        mu_negctrl = pyro.sample("mu_negctrl", dist.Normal(0, 1))
+    # with pyro.plate("negctrl_plate", len(data.negctrl_guide_idx)):
+    #     mu_negctrl = pyro.sample("mu_negctrl", dist.Normal(0, 1))
     mu_center = torch.cat([torch.zeros((data.n_targets, 1)), mu_targets], axis=-1)
     mu = torch.repeat_interleave(mu_center, data.target_lengths, dim=0)
     # Fix negative control's mu to be 0
     if hasattr(data, "negctrl_guide_idx"):
-        mu[data.negctrl_guide_idx, :] = mu_negctrl[:, None]
+        mu[data.negctrl_guide_idx, :] = 0.0  # mu_negctrl[:, None]
     assert mu.shape == (data.n_guides, 2)
     r = torch.exp(mu)
 

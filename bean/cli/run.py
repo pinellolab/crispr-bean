@@ -96,6 +96,10 @@ def main(args, return_data=False):
 
     # Format bdata into data structure compatible with Pyro model
     bdata = prepare_bdata(bdata, args, warn, prefix)
+    negctrl_idx = np.where(
+        bdata.guides[args.negctrl_col].map(lambda s: s.lower())
+        == args.negctrl_col_value.lower()
+    )[0]
     ndata = DATACLASS_DICT[args.selection][model_label](
         screen=bdata,
         device=args.device,
@@ -115,6 +119,7 @@ def main(args, return_data=False):
         popt=args.popt,
         replicate_col=args.replicate_col,
         use_bcmatch=(not args.ignore_bcmatch),
+        negctrl_guide_idx=negctrl_idx,
     )
     guide_index = ndata.screen.guides.index.copy()
     assert len(guide_index) == bdata.n_obs, (len(guide_index), bdata.n_obs)
@@ -122,6 +127,7 @@ def main(args, return_data=False):
         return ndata
     # Build variant dataframe
     adj_negctrl_idx = None
+
     if args.library_design == "variant":
         if not args.uniform_edit:
             if "edit_rate" not in ndata.screen.guides.columns:

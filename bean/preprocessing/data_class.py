@@ -2,7 +2,7 @@ import sys
 import abc
 import logging
 from dataclasses import dataclass
-from typing import Optional, Dict, Tuple, List
+from typing import Optional, Dict, Tuple, List, Sequence
 from xmlrpc.client import Boolean
 from copy import deepcopy
 import torch
@@ -49,6 +49,7 @@ class ScreenData(abc.ABC):
         popt: Optional[Tuple[float]] = None,
         pi_popt: Optional[Tuple[float]] = None,
         control_can_be_selected: bool = False,
+        negctrl_guide_idx: Optional[Sequence[int]] = None,
         **kwargs,
     ):
         """
@@ -109,6 +110,7 @@ class ScreenData(abc.ABC):
         self.n_samples = len(screen.samples)  # 8
         self.n_guides = len(screen.guides)
         self.n_reps = len(screen.samples[replicate_column].unique())
+        self.negctrl_guide_idx = negctrl_guide_idx
         self.accessibility_col = accessibility_col
         self.accessibility_bw_path = accessibility_bw_path
         self.replicate_column = replicate_column

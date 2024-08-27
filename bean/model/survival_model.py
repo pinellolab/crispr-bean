@@ -356,14 +356,14 @@ def MixtureNormalModel(
                 #     * torch.log(r).unsqueeze(0).expand((data.n_condits, -1, -1)),
                 #     max=MAX_LOGPI,
                 # ).exp()
-                # negctrl_abundance = pyro.param(
-                #     "negctrl_abundance",
-                #     torch.ones((data.n_condits,)),
-                #     constraint=constraints.positive,
-                # )
-                # alleles_p_time = (
-                #     alleles_p_time / negctrl_abundance.clamp(min=1e-5)[:, None, None]
-                # )
+                negctrl_abundance = pyro.param(
+                    "negctrl_abundance",
+                    torch.ones((data.n_condits,)),
+                    constraint=constraints.positive,
+                )
+                alleles_p_time = (
+                    alleles_p_time / negctrl_abundance.clamp(min=1e-5)[:, None, None]
+                )
                 assert alleles_p_time.shape == (data.n_condits, data.n_guides, 2)
 
             expected_allele_p = (

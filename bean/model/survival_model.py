@@ -266,15 +266,10 @@ def MixtureNormalModel(
         with pyro.plate("guide_plate1", data.n_targets):
             mu_targets = pyro.sample("mu_targets", mu_dist)
     mu_negctrl = pyro.param("mu_negctrl", torch.tensor(0.0))
-    # mu_center = torch.cat(
-    #     [mu_negctrl.detach().expand(data.n_targets, 1), mu_targets + mu_negctrl],
-    #     axis=-1,
-    # )
-    # mu_center[data.negctrl_guide_idx, :] = 0.0
     mu_guide_edited = torch.repeat_interleave(mu_targets, data.target_lengths, dim=0)
     mu_guide_edited[data.negctrl_guide_idx, :] = mu_negctrl
-    mu_guide_unedited = mu_negctrl.detach()
-    mu = torch.cat([mu_guide_unedited, mu_guide_edited], axis=-1)
+    mu_guide_unedited = mu_negctrl.detach().expand((data.n_guides, 1))
+    mu = torch.cat([mu_guide_unedited, mu_guide_edited + mu_negctrl.detach()], axis=-1)
     assert mu.shape == (data.n_guides, 2)
     r = torch.exp(mu)
     alpha_pi = pyro.param(
@@ -341,14 +336,14 @@ def MixtureNormalModel(
                     r.unsqueeze(0).expand((data.n_condits, -1, -1)),
                     time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
                 )
-                negctrl_abundance = pyro.param(
-                    "negctrl_abundance",
-                    torch.ones((data.n_condits,)),
-                    constraint=constraints.positive,
-                )
-                alleles_p_time = (
-                    alleles_p_time / negctrl_abundance.clamp(min=1e-5)[:, None, None]
-                )
+                # negctrl_abundance = pyro.param(
+                #     "negctrl_abundance",
+                #     torch.ones((data.n_condits,)),
+                #     constraint=constraints.positive,
+                # )
+                # alleles_p_time = (
+                #     alleles_p_time / negctrl_abundance.clamp(min=1e-5)[:, None, None]
+                # )
                 assert alleles_p_time.shape == (data.n_condits, data.n_guides, 2)
 
             expected_allele_p = (
@@ -510,20 +505,6 @@ def MultiMixtureNormalModel(
             )
         with pyro.plate("time_plate0", len(data.control_timepoint), dim=-2):
             with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
-                # if use_all_timepoints_for_pi:
-                #     time_pi = data.timepoints
-                #     # If pi is sampled in later timepoint, account for the selection.
-                #     expanded_allele_p = pi * r.expand(
-                #         data.n_reps, 1, -1, -1
-                #     ) ** time_pi.unsqueeze(0).unsqueeze(-1).unsqueeze(-1).expand(
-                #         data.n_reps, len(data.timepoints), -1, -1
-                #     )
-                #     pyro.sample(
-                #         "allele_count",
-                #         dist.Multinomial(probs=expanded_allele_p, validate_args=False),
-                #         obs=data.allele_counts,
-                #     )
-                # else:
                 time_pi = data.control_timepoint
                 # If pi is sampled in later timepoint, account for the selection.
                 expanded_allele_p = pi * r.expand(data.n_reps, 1, -1, -1) ** time_pi
@@ -686,10 +667,8 @@ def MixtureNormalGuide(
     # )
     # mu_center[data.negctrl_guide_idx, :] = 0.0
     mu_guide_edited = torch.repeat_interleave(mu_targets, data.target_lengths, dim=0)
-    mu_guide_edited[data.negctrl_guide_idx, :] = 0.0
-    mu_guide_unedited = torch.zeros((data.n_guides, 1))
-    mu_guide_unedited[data.negctrl_guide_idx, :] = mu_negctrl
-    mu_guide_unedited[~data.negctrl_guide_idx, :] = mu_negctrl.detach()
+    mu_guide_edited[data.negctrl_guide_idx, :] = mu_negctrl
+    mu_guide_unedited = mu_negctrl.detach().expand((data.n_guides, 1))
     mu = torch.cat([mu_guide_unedited, mu_guide_edited], axis=-1)
 
     # The pi should be Dirichlet distributed instead of independent betas

@@ -268,7 +268,7 @@ def MixtureNormalModel(
     mu_negctrl = pyro.param("mu_negctrl", torch.tensor(0.0))
     mu_guide_edited = torch.repeat_interleave(mu_targets, data.target_lengths, dim=0)
     mu_guide_edited[data.negctrl_guide_idx, :] = mu_negctrl
-    mu_guide_unedited = mu_negctrl.detach().expand((data.n_guides, 1))
+    mu_guide_unedited = mu_negctrl.expand((data.n_guides, 1))
     mu = torch.cat([mu_guide_unedited, mu_guide_edited + mu_negctrl], axis=-1)
     assert mu.shape == (data.n_guides, 2)
     r = torch.exp(mu)

@@ -266,7 +266,9 @@ def MixtureNormalModel(
         with pyro.plate("guide_plate1", data.n_targets):
             mu_targets = pyro.sample("mu_targets", mu_dist)
     mu_negctrl = pyro.param("mu_negctrl", torch.tensor(0.0))
-    mu_center = torch.cat([mu_negctrl.expand(data.n_targets, 1), mu_targets], axis=-1)
+    mu_center = torch.cat(
+        [mu_negctrl.detach().expand(data.n_targets, 1), mu_targets], axis=-1
+    )
     mu_center[data.negctrl_guide_idx, :] = 0.0
     mu = torch.repeat_interleave(mu_center + mu_negctrl, data.target_lengths, dim=0)
     assert mu.shape == (data.n_guides, 2)

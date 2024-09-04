@@ -242,9 +242,9 @@ class ScreenData(abc.ABC):
         geom_mean_x = np.exp((1 / n_samples) * np.log(X + 0.5).sum(axis=1))
         assert geom_mean_x.shape == (n_guides,)
         norm_count = X / geom_mean_x[:, None]
-        size_factor = np.median(norm_count, axis=0)
-        if any(size_factor == 0):
-            size_factor = np.mean(norm_count, axis=0)
+        size_factor = np.mean(norm_count, axis=0)
+        # if any(size_factor == 0):
+        #     size_factor = np.mean(norm_count, axis=0)
         assert size_factor.shape == (n_samples,)
         return size_factor
 

@@ -221,13 +221,12 @@ def main(args, return_data=False):
         with open(f"{prefix}/{model_label}.result.pkl", "rb") as handle:
             param_history_dict = pkl.load(handle)
     else:
-        param_history_dict, save_dict = deepcopy(
-            run_inference(model, guide, ndata, num_steps=args.n_iter)
-        )
+        save_dict = dict()
         if args.fit_negctrl:
             negctrl_model, negctrl_guide = identify_negctrl_model_guide(
                 args, "X_bcmatch" in bdata.layers
             )
+            print(f"Using {negctrl_model} & {negctrl_guide}")
             negctrl_idx = np.where(
                 ndata.screen.guides[args.negctrl_col].map(lambda s: s.lower())
                 == args.negctrl_col_value.lower()
@@ -236,16 +235,28 @@ def main(args, return_data=False):
                 f"Using {len(negctrl_idx)} negative control elements to adjust phenotypic effect sizes..."
             )
             ndata_negctrl = ndata[negctrl_idx]
+            print(
+                f"ndata size factor: {ndata.size_factor}, {ndata_negctrl.size_factor}\esf"
+            )
             param_history_dict_negctrl, save_dict["negctrl"] = deepcopy(
                 run_inference(
                     negctrl_model, negctrl_guide, ndata_negctrl, num_steps=args.n_iter
                 )
             )
+            if args.selection == "survival":
+                print(
+                    f"Feeding mu_negctrl={param_history_dict_negctrl['mu_loc']} into model..."
+                )
+                model = partial(model, mu_negctrl=param_history_dict_negctrl["mu_loc"])
         else:
             param_history_dict_negctrl = None
         save_dict["data"] = ndata
+        param_history_dict, save_dict_model = deepcopy(
+            run_inference(model, guide, ndata, num_steps=args.n_iter)
+        )
+        for k, v in save_dict_model.items():
+            save_dict[k] = v
     # Save results
-
     outfile_path = (
         f"{prefix}/bean_element[sgRNA]_result.{model_label}{args.result_suffix}.csv"
     )

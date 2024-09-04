@@ -58,8 +58,7 @@ def NormalModel(
     mu = torch.repeat_interleave(mu_center, data.target_lengths, dim=0)
     if hasattr(data, "negctrl_guide_idx"):
         mu[data.negctrl_guide_idx, :] = 0.0
-    r = torch.exp(mu)
-    assert r.shape == (data.n_guides, 1)
+    assert mu.shape == (data.n_guides, 1)
 
     with pyro.plate("replicate_plate0", data.n_reps, dim=-1):
         q_0 = pyro.sample(
@@ -71,9 +70,9 @@ def NormalModel(
             time = data.timepoints[t]
             assert time.shape == (data.n_condits,)
             with guide_plate:
-                alleles_p_time = torch.pow(
-                    r.unsqueeze(0).expand((data.n_condits, -1, -1)),
-                    time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
+                alleles_p_time = torch.exp(
+                    mu.unsqueeze(0).expand((data.n_condits, -1, -1))
+                    * time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
                 )
                 assert alleles_p_time.shape == (data.n_condits, data.n_guides, 1)
 
@@ -262,7 +261,7 @@ def MixtureNormalModel(
             mu_dist = dist.Normal(mu_loc, mu_scale)
         if "initial_abundance" in prior_params:
             initial_abundance = prior_params["initial_abundance"]
-
+    q0 = pyro.params("q0", torch.ones((data.n_guides,), dtype=float) / data.n_guides)
     # Set the prior for phenotype means
     with pyro.plate("guide_plate0", 1):
         with pyro.plate("guide_plate1", data.n_targets):
@@ -293,7 +292,13 @@ def MixtureNormalModel(
         data.n_guides,
         2,
     ), alpha_pi.shape
-
+    with pyro.plate("rep_plate_q0", data.n_reps, dim=-1):
+        q0 = pyro.sample(
+            "q0",
+            dist.Dirichlet(
+                q0, obs=data.X[:, 0, :] / data.X[:, 0, :].sum(-1, keepdims=True)
+            ),
+        )
     with replicate_plate:
         with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
             pi = pyro.sample(
@@ -312,11 +317,11 @@ def MixtureNormalModel(
             with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
                 time_pi = data.control_timepoint[t]
                 # If pi is sampled in later timepoint, account for the selection.
-                expanded_allele_p = pi.expand(-1, len(time_pi), -1, -1) * torch.pow(
-                    r.unsqueeze(0)
+                expanded_allele_p = pi.expand(-1, len(time_pi), -1, -1) * torch.exp(
+                    mu.unsqueeze(0)
                     .unsqueeze(0)
-                    .expand(data.n_reps, len(time_pi), -1, -1),
-                    time_pi.unsqueeze(0)
+                    .expand(data.n_reps, len(time_pi), -1, -1)
+                    * time_pi.unsqueeze(0)
                     .unsqueeze(-1)
                     .unsqueeze(-1)
                     .expand(data.n_reps, -1, data.n_guides, 2),
@@ -338,8 +343,8 @@ def MixtureNormalModel(
 
             with guide_plate:
                 alleles_p_time = torch.exp(
-                    mu.unsqueeze(0).expand((data.n_condits, -1, -1)),
-                    time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
+                    mu.unsqueeze(0).expand((data.n_condits, -1, -1))
+                    * time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
                 )
                 # negctrl_abundance = pyro.param(
                 #     "negctrl_abundance",
@@ -360,6 +365,8 @@ def MixtureNormalModel(
                 data.n_condits,
                 data.n_guides,
             ), expected_guide_p.shape
+            expected_guide_p_total = (expected_guide_p * q0[None, None, :]).sum(axis=-1)
+            expected_guide_p = expected_guide_p / expected_gudie_p_total[..., None]
 
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):

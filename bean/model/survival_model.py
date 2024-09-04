@@ -249,7 +249,7 @@ def MixtureNormalModel(
     guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
 
     mu_dist = dist.Laplace(0, 1)
-    initial_abundance = torch.ones(data.n_guides) / data.n_guides
+    # initial_abundance = torch.ones(data.n_guides) / data.n_guides
     if prior_params is not None:
         if "mu_loc" in prior_params or "mu_scale" in prior_params:
             mu_loc = 0.0
@@ -259,22 +259,26 @@ def MixtureNormalModel(
             if "mu_scale" in prior_params:
                 mu_scale = prior_params["mu_scale"]
             mu_dist = dist.Normal(mu_loc, mu_scale)
-        if "initial_abundance" in prior_params:
-            initial_abundance = prior_params["initial_abundance"]
-    q0 = pyro.params("q0", torch.ones((data.n_guides,), dtype=float) / data.n_guides)
+        # if "initial_abundance" in prior_params:
+        #     initial_abundance = prior_params["initial_abundance"]
+    q0 = pyro.param(
+        "q0",
+        torch.ones((data.n_guides,), dtype=float) / data.n_guides,
+        constraint=constraints.positive,
+    )
     # Set the prior for phenotype means
     with pyro.plate("guide_plate0", 1):
         with pyro.plate("guide_plate1", data.n_targets):
             mu_targets = pyro.sample("mu_targets", mu_dist)
-    # mu_negctrl = pyro.param("mu_negctrl", torch.tensor(mu_negctrl))
-    mu_negctrl = torch.tensor(mu_negctrl)
+    mu_negctrl = pyro.param("mu_negctrl", torch.tensor(mu_negctrl))
+    # mu_negctrl = torch.tensor(mu_negctrl)
     mu_guide_edited = torch.repeat_interleave(mu_targets, data.target_lengths, dim=0)
     mu_guide_edited[data.negctrl_guide_idx, :] = 0.0
-    # mu_guide_unedited = mu_negctrl.expand((data.n_guides, 1))
-    # mu = torch.cat([mu_guide_unedited, mu_guide_edited + mu_negctrl], axis=-1)
-    mu_guide_edited[data.negctrl_guide_idx, :] = mu_negctrl
-    mu_guide_unedited = torch.zeros((data.n_guides, 1))
-    mu = torch.cat([mu_guide_unedited, mu_guide_edited], axis=-1)
+    mu_guide_unedited = mu_negctrl.expand((data.n_guides, 1))
+    mu = torch.cat([mu_guide_unedited, mu_guide_edited + mu_negctrl], axis=-1)
+    # mu_guide_edited[data.negctrl_guide_idx, :] = mu_negctrl
+    # mu_guide_unedited = torch.zeros((data.n_guides, 1))
+    # mu = torch.cat([mu_guide_unedited, mu_guide_edited], axis=-1)
     assert mu.shape == (data.n_guides, 2)
     alpha_pi = pyro.param(
         "alpha_pi",
@@ -293,11 +297,10 @@ def MixtureNormalModel(
         2,
     ), alpha_pi.shape
     with pyro.plate("rep_plate_q0", data.n_reps, dim=-1):
-        q0 = pyro.sample(
-            "q0",
-            dist.Dirichlet(
-                q0, obs=data.X[:, 0, :] / data.X[:, 0, :].sum(-1, keepdims=True)
-            ),
+        initial_abundance = pyro.sample(
+            "initial_abundance",
+            dist.Dirichlet(q0),
+            obs=(data.X[:, 0, :] + 1) / (data.X[:, 0, :] + 1).sum(-1, keepdims=True),
         )
     with replicate_plate:
         with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
@@ -365,8 +368,10 @@ def MixtureNormalModel(
                 data.n_condits,
                 data.n_guides,
             ), expected_guide_p.shape
-            expected_guide_p_total = (expected_guide_p * q0[None, None, :]).sum(axis=-1)
-            expected_guide_p = expected_guide_p / expected_gudie_p_total[..., None]
+            expected_guide_p_total = (
+                expected_guide_p * initial_abundance[:, None, :]
+            ).sum(axis=-1)
+            expected_guide_p = expected_guide_p / expected_guide_p_total[..., None]
 
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
@@ -654,15 +659,15 @@ def MixtureNormalGuide(
 ):
     replicate_plate = pyro.plate("rep_plate", data.n_reps, dim=-3)
     guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
-    initial_abundance = pyro.param(
-        "initial_abundance",
+    q0 = pyro.param(
+        "q0",
         torch.ones(data.n_guides) / data.n_guides,
         constraint=constraints.positive,
     )
     with pyro.plate("replicate_plate0", data.n_reps, dim=-1):
-        q_0 = pyro.sample(
-            "initial_guide_abundance",
-            dist.Dirichlet(initial_abundance),
+        initial_abundance = pyro.sample(
+            "initial_abundance",
+            dist.Dirichlet(q0),
         )
     # Set the prior for phenotype means
     mu_loc = pyro.param("mu_loc", torch.zeros((data.n_targets, 1)))

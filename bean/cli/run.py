@@ -250,8 +250,8 @@ def main(args, return_data=False):
                 model = partial(
                     model,
                     mu_negctrl=(
-                        param_history_dict_negctrl["mu_loc"].detach(),
-                        param_history_dict_negctrl["mu_scale"].detach(),
+                        param_history_dict_negctrl["mu_loc"].detach().mean(),
+                        param_history_dict_negctrl["mu_scale"].detach().mean(),
                     ),
                 )
         else:

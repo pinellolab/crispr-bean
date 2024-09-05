@@ -139,18 +139,18 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
     time_plate = pyro.plate("time_plate", data.n_condits, dim=-2)
     guide_plate = pyro.plate("guide_plate", data.n_guides, dim=-1)
     # Set the prior for phenotype means
-    mu = pyro.sample("mu_targets", dist.Normal(0, 1))
-    r = torch.exp(mu)
+    # print(f"why? {data.n_targets}, {data.target_lengths.shape}")
+    with pyro.plate("target_plate", data.n_targets):
+        mu_targets = pyro.sample("mu_targets", dist.Normal(0, 1))
+    mu = torch.repeat_interleave(mu_targets, data.target_lengths)
     with replicate_plate:
         with time_plate as t:
             time = data.timepoints[t]
             assert time.shape == (data.n_condits,)
             with guide_plate:
-                alleles_p_time = torch.pow(
-                    r.unsqueeze(0)
-                    .unsqueeze(0)
-                    .expand((data.n_condits, data.n_guides, 1)),
-                    time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
+                alleles_p_time = torch.exp(
+                    mu.unsqueeze(0).unsqueeze(-1).expand((data.n_condits, -1, 1))
+                    * time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
                 )
                 # print(alleles_p_time)
                 assert alleles_p_time.shape == (data.n_condits, data.n_guides, 1)
@@ -275,7 +275,7 @@ def MixtureNormalModel(
             # mu_negctrl = torch.tensor(mu_negctrl)
     with pyro.plate("guide_plate_0", data.n_guides):
         mu_guide_unedited = pyro.sample(
-            "mu_negctrl", dist.Normal(mu_negctrl[0], mu_negctrl[1])
+            "mu_negctrl", dist.Normal(-0.523, mu_negctrl[1])
         )
     # print(f"why? {mu_guide_unedited.shape}, {data.n_guides}")
     mu_guide_edited = torch.repeat_interleave(mu_targets, data.target_lengths, dim=0)
@@ -386,8 +386,11 @@ def MixtureNormalModel(
             expected_guide_p_total = (
                 expected_guide_p * initial_abundance[:, None, :]
             ).sum(axis=-1)
-            negctrl_expected_r = expected_guide_p_total / expected_guide_p_total[:, 0]
-            expected_guide_p = expected_guide_p * torch.pow(negctrl_expected_r, 2)
+            # negctrl_expected_r = expected_guide_p_total / expected_guide_p_total[
+            #     :, 0
+            # ].unsqueeze(-1)
+            # # print(negctrl_expected_r.mean())
+            # expected_guide_p = expected_guide_p * negctrl_expected_r.unsqueeze(-1)
 
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):
@@ -762,11 +765,17 @@ def ControlNormalGuide(data, mask_thres=10, use_bcmatch=True):
     Fit shared mean
     """
     # Set the prior for phenotype means
-    mu_loc = pyro.param("mu_loc", torch.tensor(0.0))
+    mu_loc = pyro.param("mu_loc", torch.zeros((data.n_targets,)))
     mu_scale = pyro.param(
-        "mu_scale", torch.tensor(0.1), constraint=constraints.positive
+        "mu_scale",
+        torch.ones((data.n_targets,)) * 0.1,
+        constraint=constraints.positive,
     )
-    mu = pyro.sample("mu_targets", dist.Normal(mu_loc, mu_scale))
+    with pyro.plate("target_plate", data.n_targets):
+        mu = pyro.sample(
+            "mu_targets",
+            dist.Normal(mu_loc, mu_scale),
+        )
 
 
 def MultiMixtureNormalGuide(

@@ -386,7 +386,8 @@ def MixtureNormalModel(
             expected_guide_p_total = (
                 expected_guide_p * initial_abundance[:, None, :]
             ).sum(axis=-1)
-            expected_guide_p = expected_guide_p / expected_guide_p_total[..., None]
+            negctrl_expected_r = expected_guide_p_total / expected_guide_p_total[:, 0]
+            expected_guide_p = expected_guide_p * torch.pow(negctrl_expected_r, 2)
 
     with replicate_plate2:
         with pyro.plate("guide_plate3", data.n_guides, dim=-1):

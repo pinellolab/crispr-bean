@@ -60,6 +60,7 @@ def write_result_table(
     sd_is_fitted: bool = True,
     sample_covariates: Optional[List[str]] = None,
     return_result: bool = False,
+    is_survival_screen: bool = False,
 ) -> Union[pd.DataFrame, None]:
     """Combine target information and scores to write result table to a csv file or return it."""
     if param_hist_dict["mu_loc"].dim() == 2:
@@ -142,9 +143,9 @@ def write_result_table(
             ncvar = fit_df.iloc[adjust_confidence_negatives]
             if "mu_z_scaled" in ncvar.columns:
                 print("Using mu_z_scaled for normalization input..")
-                _, std = norm.fit(ncvar.mu_z_scaled, floc=0)
+                mu, std = norm.fit(ncvar.mu_z_scaled, floc=0)
             else:
-                _, std = norm.fit(ncvar.mu_z, floc=0)
+                mu, std = norm.fit(ncvar.mu_z, floc=0)
             fit_df = adjust_normal_params_by_control(
                 fit_df,
                 std,
@@ -155,6 +156,7 @@ def write_result_table(
                 mu_sd_adjusted_col=(
                     "mu_sd_scaled" if "negctrl" in param_hist_dict.keys() else "mu_sd"
                 ),
+                mu0=mu if is_survival_screen else 0.0,
             )
             fit_df = add_credible_interval(fit_df, "mu_adj", "mu_sd_adj")
             fit_df = fit_df.iloc[(-fit_df.mu_z_adj.abs()).argsort()]

@@ -294,5 +294,6 @@ def main(args, return_data=False):
         sample_covariates=(
             ndata.sample_covariates if hasattr(ndata, "sample_covariates") else None
         ),
+        is_survival_screen=(args.selection == "survival"),
     )
     info("Done!")

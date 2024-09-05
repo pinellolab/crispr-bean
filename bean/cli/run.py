@@ -245,9 +245,15 @@ def main(args, return_data=False):
             )
             if args.selection == "survival":
                 print(
-                    f"Feeding mu_negctrl={param_history_dict_negctrl['mu_loc']} into model..."
+                    f"Feeding mu_negctrl={param_history_dict_negctrl['mu_loc'], param_history_dict_negctrl['mu_scale']} into model..."
                 )
-                model = partial(model, mu_negctrl=param_history_dict_negctrl["mu_loc"])
+                model = partial(
+                    model,
+                    mu_negctrl=(
+                        param_history_dict_negctrl["mu_loc"].detach(),
+                        param_history_dict_negctrl["mu_scale"].detach(),
+                    ),
+                )
         else:
             param_history_dict_negctrl = None
         save_dict["data"] = ndata

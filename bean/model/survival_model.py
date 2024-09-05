@@ -17,7 +17,7 @@ def NormalModel(
     mask_thres: int = 10,
     use_bcmatch: bool = True,
     prior_params: Optional[dict] = None,
-    negctrl_mu: float = 0.0,
+    mu_negctrl: float = 0.0,
 ):
     """
     Fit only on guide counts
@@ -227,7 +227,7 @@ def MixtureNormalModel(
     fit_noise: bool = False,
     mask_thres: int = 10,
     prior_params: Optional[dict] = None,
-    mu_negctrl: float = 0.0,
+    mu_negctrl: float = (0.0, 0.1),
 ):
     """
     Using the reporter outcome, phenotype of cells with a guide will be modeled as mixture of two normal distributions of edited and unedited cells.
@@ -261,21 +261,33 @@ def MixtureNormalModel(
             mu_dist = dist.Normal(mu_loc, mu_scale)
         # if "initial_abundance" in prior_params:
         #     initial_abundance = prior_params["initial_abundance"]
-    q0 = pyro.param(
-        "q0",
-        torch.ones((data.n_guides,), dtype=float) / data.n_guides,
-        constraint=constraints.positive,
-    )
+    with pyro.plate("rep_plate_q00", data.n_reps, dim=-1):
+        q0 = pyro.param(
+            "q0",
+            torch.ones((data.n_reps, data.n_guides), dtype=float) / data.n_guides,
+            constraint=constraints.positive,
+        )
     # Set the prior for phenotype means
     with pyro.plate("guide_plate0", 1):
         with pyro.plate("guide_plate1", data.n_targets):
             mu_targets = pyro.sample("mu_targets", mu_dist)
-    mu_negctrl = pyro.param("mu_negctrl", torch.tensor(mu_negctrl))
-    # mu_negctrl = torch.tensor(mu_negctrl)
+            # mu_negctrl = pyro.param("mu_negctrl", torch.tensor(mu_negctrl))
+            # mu_negctrl = torch.tensor(mu_negctrl)
+    with pyro.plate("guide_plate_0", data.n_guides):
+        mu_guide_unedited = pyro.sample(
+            "mu_negctrl", dist.Normal(mu_negctrl[0], mu_negctrl[1])
+        )
+    # print(f"why? {mu_guide_unedited.shape}, {data.n_guides}")
     mu_guide_edited = torch.repeat_interleave(mu_targets, data.target_lengths, dim=0)
-    mu_guide_edited[data.negctrl_guide_idx, :] = 0.0
-    mu_guide_unedited = mu_negctrl.expand((data.n_guides, 1))
-    mu = torch.cat([mu_guide_unedited, mu_guide_edited + mu_negctrl], axis=-1)
+    # mu_guide_edited[data.negctrl_guide_idx, :] = 0.0
+    # mu_guide_unedited = mu_negctrl.expand((data.n_guides, 1))
+    mu = torch.cat(
+        [
+            mu_guide_unedited.unsqueeze(-1),
+            mu_guide_edited + mu_guide_unedited.unsqueeze(-1),
+        ],
+        axis=-1,
+    )
     # mu_guide_edited[data.negctrl_guide_idx, :] = mu_negctrl
     # mu_guide_unedited = torch.zeros((data.n_guides, 1))
     # mu = torch.cat([mu_guide_unedited, mu_guide_edited], axis=-1)
@@ -319,11 +331,14 @@ def MixtureNormalModel(
         with pyro.plate("time_plate0", len(data.control_timepoint), dim=-2) as t:
             with guide_plate, poutine.mask(mask=data.repguide_mask.unsqueeze(1)):
                 time_pi = data.control_timepoint[t]
+                # per_time_noise = pyro.sample("per_time_noise", dist.Normal(0, 0.05))
                 # If pi is sampled in later timepoint, account for the selection.
                 expanded_allele_p = pi.expand(-1, len(time_pi), -1, -1) * torch.exp(
-                    mu.unsqueeze(0)
-                    .unsqueeze(0)
-                    .expand(data.n_reps, len(time_pi), -1, -1)
+                    (
+                        mu.unsqueeze(0)
+                        .unsqueeze(0)
+                        .expand(data.n_reps, len(time_pi), -1, -1)
+                    )
                     * time_pi.unsqueeze(0)
                     .unsqueeze(-1)
                     .unsqueeze(-1)
@@ -674,19 +689,30 @@ def MixtureNormalGuide(
     mu_scale = pyro.param(
         "mu_scale", torch.ones((data.n_targets, 1)), constraint=constraints.positive
     )
+    # mu_negctrl_loc = pyro.param("mu_negctrl_loc", torch.tensor(0.0))
+    # mu_negctrl_scale = pyro.param(
+    #     "mu_negctrl_scale",
+    #     torch.tensor(0.1),
+    #     constraint=constraints.positive,
+    # )
     with pyro.plate("guide_plate0", 1):
         with pyro.plate("guide_plate1", data.n_targets):
             mu_targets = pyro.sample("mu_targets", dist.Normal(mu_loc, mu_scale))
-    mu_negctrl = pyro.param("mu_negctrl", torch.tensor(0.0))
+    # with pyro.plate("guide_plate_0", data.n_guides):
+    #     mu_guide_unedited = pyro.sample(
+    #         "mu_negctrl", dist.Normal(mu_negctrl_loc, mu_negctrl_scale)
+    #     )
+    # mu_negctrl = pyro.param("mu_negctrl", torch.tensor(0.0))
+
     # mu_center = torch.cat(
     #     [mu_negctrl.detach().expand(data.n_targets, 1), mu_targets + mu_negctrl],
     #     axis=-1,
     # )
     # mu_center[data.negctrl_guide_idx, :] = 0.0
-    mu_guide_edited = torch.repeat_interleave(mu_targets, data.target_lengths, dim=0)
-    mu_guide_edited[data.negctrl_guide_idx, :] = mu_negctrl
-    mu_guide_unedited = mu_negctrl.detach().expand((data.n_guides, 1))
-    mu = torch.cat([mu_guide_unedited, mu_guide_edited], axis=-1)
+    # mu_guide_edited = torch.repeat_interleave(mu_targets, data.target_lengths, dim=0)
+    # mu_guide_edited[data.negctrl_guide_idx, :] = mu_negctrl
+    # mu_guide_unedited = mu_negctrl.detach().expand((data.n_guides, 1))
+    # mu = torch.cat([mu_guide_unedited, mu_guide_edited], axis=-1)
 
     # The pi should be Dirichlet distributed instead of independent betas
     alpha_pi = pyro.param(

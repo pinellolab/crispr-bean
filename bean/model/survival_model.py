@@ -149,16 +149,13 @@ def ControlNormalModel(data, mask_thres=10, use_bcmatch=True):
             assert time.shape == (data.n_condits,)
             with guide_plate:
                 alleles_p_time = torch.exp(
-                    mu.unsqueeze(0).unsqueeze(-1).expand((data.n_condits, -1, 1))
-                    * time.unsqueeze(-1).unsqueeze(-1).expand((-1, data.n_guides, 1)),
+                    mu.unsqueeze(0).expand((data.n_condits, -1))
+                    * time.unsqueeze(-1).expand((-1, data.n_guides)),
                 )
                 # print(alleles_p_time)
-                assert alleles_p_time.shape == (data.n_condits, data.n_guides, 1)
+                assert alleles_p_time.shape == (data.n_condits, data.n_guides)
 
-            expected_allele_p = alleles_p_time.unsqueeze(0).expand(
-                data.n_reps, -1, -1, -1
-            )
-            expected_guide_p = expected_allele_p.sum(axis=-1)
+            expected_guide_p = alleles_p_time.unsqueeze(0).expand(data.n_reps, -1, -1)
             assert expected_guide_p.shape == (
                 data.n_reps,
                 data.n_condits,
@@ -275,7 +272,7 @@ def MixtureNormalModel(
             # mu_negctrl = torch.tensor(mu_negctrl)
     with pyro.plate("guide_plate_0", data.n_guides):
         mu_guide_unedited = pyro.sample(
-            "mu_negctrl", dist.Normal(-0.523, mu_negctrl[1])
+            "mu_negctrl", dist.Normal(mu_negctrl[0], mu_negctrl[1])
         )
     # print(f"why? {mu_guide_unedited.shape}, {data.n_guides}")
     mu_guide_edited = torch.repeat_interleave(mu_targets, data.target_lengths, dim=0)

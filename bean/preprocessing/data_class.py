@@ -239,10 +239,12 @@ class ScreenData(abc.ABC):
         Get size factor for samples.
         """
         n_guides, n_samples = X.shape
-        geom_mean_x = np.exp((1 / n_samples) * np.log(X + 0.5).sum(axis=1))
-        assert geom_mean_x.shape == (n_guides,)
-        norm_count = X / geom_mean_x[:, None]
-        size_factor = np.mean(norm_count, axis=0)
+        # geom_mean_x = np.exp((1 / n_samples) * np.log(X + 0.5).sum(axis=1))
+        # assert geom_mean_x.shape == (n_guides,)
+        # norm_count = X / geom_mean_x[:, None]
+        # size_factor = np.mean(norm_count, axis=0)
+        size_factor = np.mean(X, axis=0)
+        size_factor = size_factor / np.mean(size_factor)
         # if any(size_factor == 0):
         #     size_factor = np.mean(norm_count, axis=0)
         assert size_factor.shape == (n_samples,)

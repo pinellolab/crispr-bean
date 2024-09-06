@@ -121,6 +121,8 @@ def main(args, return_data=False):
         use_bcmatch=(not args.ignore_bcmatch),
         negctrl_guide_idx=negctrl_idx,
     )
+    if args.save_raw:
+        pkl.dump(bdata, open(f"{prefix}/ndata.pkl", "wb"))
     guide_index = ndata.screen.guides.index.copy()
     assert len(guide_index) == bdata.n_obs, (len(guide_index), bdata.n_obs)
     if return_data:
@@ -238,6 +240,8 @@ def main(args, return_data=False):
             print(
                 f"ndata size factor: {ndata.size_factor}, {ndata_negctrl.size_factor}\esf"
             )
+            if args.save_raw:
+                pkl.dump(ndata_negctrl, open(f"{prefix}/ndata_negctrl.pkl", "wb"))
             param_history_dict_negctrl, save_dict["negctrl"] = deepcopy(
                 run_inference(
                     negctrl_model, negctrl_guide, ndata_negctrl, num_steps=args.n_iter

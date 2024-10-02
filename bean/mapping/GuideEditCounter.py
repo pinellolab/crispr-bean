@@ -11,6 +11,7 @@ import pandas as pd
 from bean import Allele, ReporterScreen
 from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqPhredIterator
+
 if sys.stderr.isatty():
     # Output into terminal
     from tqdm import tqdm
@@ -18,6 +19,7 @@ else:
     # Writing into file
     def tqdm(iterable, **kwargs):
         return iterable
+
 
 from ._supporting_fn import (
     _base_edit_to_from,
@@ -119,7 +121,11 @@ class GuideEditCounter:
         )
         self.screen.guides["guide_len"] = self.screen.guides.sequence.map(len)
         self.screen.uns["reporter_length"] = kwargs["reporter_length"]
-        self.screen.uns["reporter_right_flank_length"] = kwargs["reporter_length"] - kwargs["gstart_reporter"] - self.screen.guides["guide_len"].max()
+        self.screen.uns["reporter_right_flank_length"] = (
+            kwargs["reporter_length"]
+            - kwargs["gstart_reporter"]
+            - self.screen.guides["guide_len"].max()
+        )
         self.count_guide_edits = kwargs["count_guide_edits"]
         if self.count_guide_edits:
             self.screen.uns["guide_edit_counts"] = {}
@@ -387,8 +393,8 @@ class GuideEditCounter:
             R1_record, len(ref_guide_seq)
         )
         guide_edit_allele, score = _get_edited_allele_crispresso(
-            ref_seq=ref_guide_seq,
-            query_seq=read_guide_seq,
+            ref_seq=ref_guide_seq.upper(),
+            query_seq=read_guide_seq.upper(),
             target_base_edits=self.target_base_edits,
             aln_mat_path=self.output_dir + "/.aln_mat.txt",
             offset=0,
@@ -506,8 +512,8 @@ class GuideEditCounter:
         else:
             chrom = None
         allele, score = _get_edited_allele_crispresso(
-            ref_seq=ref_reporter_seq,
-            query_seq=read_reporter_seq,
+            ref_seq=ref_reporter_seq.upper(),
+            query_seq=read_reporter_seq.upper(),
             target_base_edits=self.target_base_edits,
             aln_mat_path=self.output_dir + "/.aln_mat.txt",
             offset=offset,
@@ -547,7 +553,7 @@ class GuideEditCounter:
                 "duplicate_wo_barcode"
             )
             outfile_R1_dup, outfile_R2_dup = self._get_fastq_handle("duplicate")
-        tqdm_reads= tqdm(
+        tqdm_reads = tqdm(
             enumerate(zip(R1_iter, R2_iter)),
             total=self.n_reads_after_filtering,
             postfix=f"n_read={self.bcmatch}",
@@ -578,9 +584,7 @@ class GuideEditCounter:
                     matched_guide_idx = semimatch[0]
                     self.screen.layers[semimatch_layer][matched_guide_idx, 0] += 1
                     if self.count_guide_edits:
-                        guide_allele, _ = self._count_guide_edits(
-                            matched_guide_idx, r1
-                        )
+                        guide_allele, _ = self._count_guide_edits(matched_guide_idx, r1)
                     self.semimatch += 1
 
             elif len(bc_match) >= 2:  # duplicate mapping

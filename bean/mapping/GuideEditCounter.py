@@ -392,20 +392,25 @@ class GuideEditCounter:
         read_guide_seq, read_guide_qual = self.get_guide_seq_qual(
             R1_record, len(ref_guide_seq)
         )
-        guide_edit_allele, score = _get_edited_allele_crispresso(
-            ref_seq=ref_guide_seq.upper(),
-            query_seq=read_guide_seq.upper(),
-            target_base_edits=self.target_base_edits,
-            aln_mat_path=self.output_dir + "/.aln_mat.txt",
-            offset=0,
-            strand=guide_strand,
-            chrom=chrom,
-            start_pos=0,
-            end_pos=len(ref_guide_seq),
-            positionwise_quality=np.array(read_guide_qual),
-            quality_thres=single_base_qual_cutoff,
-            objectify_allele=self.objectify_allele,
-        )
+        try:
+            guide_edit_allele, score = _get_edited_allele_crispresso(
+                ref_seq=ref_guide_seq.upper(),
+                query_seq=read_guide_seq.upper(),
+                target_base_edits=self.target_base_edits,
+                aln_mat_path=self.output_dir + "/.aln_mat.txt",
+                offset=0,
+                strand=guide_strand,
+                chrom=chrom,
+                start_pos=0,
+                end_pos=len(ref_guide_seq),
+                positionwise_quality=np.array(read_guide_qual),
+                quality_thres=single_base_qual_cutoff,
+                objectify_allele=self.objectify_allele,
+            )
+        except Exception as e:
+            print(R1_record)
+            print(read_guide_seq)
+            raise e
 
         if not self.count_reporter_edits:
             self._update_counted_guide_allele(matched_guide_idx, guide_edit_allele)
@@ -511,23 +516,35 @@ class GuideEditCounter:
             chrom = self.screen.guides.chrom.iloc[matched_guide_idx]
         else:
             chrom = None
-        allele, score = _get_edited_allele_crispresso(
-            ref_seq=ref_reporter_seq.upper(),
-            query_seq=read_reporter_seq.upper(),
-            target_base_edits=self.target_base_edits,
-            aln_mat_path=self.output_dir + "/.aln_mat.txt",
-            offset=offset,
-            strand=guide_strand,
-            chrom=chrom,
-            positionwise_quality=np.array(read_reporter_qual),
-            quality_thres=single_base_qual_cutoff,
-            objectify_allele=self.objectify_allele,
-        )
 
-        if score < self.align_score_threshold:
-            self.semimatch += 1
-            self.bcmatch -= 1
-            return
+        try:
+            if len(read_reporter_seq) > len(ref_reporter_seq) * 0.5:
+                allele, score = _get_edited_allele_crispresso(
+                    ref_seq=ref_reporter_seq.upper(),
+                    query_seq=read_reporter_seq.upper(),
+                    target_base_edits=self.target_base_edits,
+                    aln_mat_path=self.output_dir + "/.aln_mat.txt",
+                    offset=offset,
+                    strand=guide_strand,
+                    chrom=chrom,
+                    positionwise_quality=np.array(read_reporter_qual),
+                    quality_thres=single_base_qual_cutoff,
+                    objectify_allele=self.objectify_allele,
+                )
+                if score < self.align_score_threshold:
+                    self.semimatch += 1
+                    self.bcmatch -= 1
+                    return
+            else:
+                self.semimatch += 1
+                self.bcmatch -= 1
+                return
+
+        except Exception as e:
+            print(
+                f"@REF '{read_reporter_seq}', {len(R2_record)}, {R2_record.seq} {R2_record}, {R2_start}, {score}, barcode:{self.screen.guides.barcode.iloc[matched_guide_idx]}",
+            )
+            raise e
 
         if self.count_reporter_edits:
             self._update_counted_allele(matched_guide_idx, allele)

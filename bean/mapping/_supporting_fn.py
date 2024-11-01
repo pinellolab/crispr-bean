@@ -1,4 +1,4 @@
-from typing import List, Union, Dict, Optional, Tuple
+from typing import List, Union, Dict, Optional, Tuple, Iterable
 import subprocess as sb
 import numpy as np
 import pandas as pd
@@ -313,3 +313,81 @@ def _multiindex_dict_to_df(input_dict, key_column_names, value_column_name):
             inplace=True,
         )
     return df
+
+
+def hamming_distance(
+    seq1: str,
+    seq2: str,
+    match_score: float = 0,
+    mismatch_penalty: float = 1,
+    allowed_substitutions_penalties: Dict[Tuple[str, str], float] = {
+        ("A", "G"): 0.2,
+        ("T", "C"): 0.2,
+    },
+):
+    """
+    Calculates the Hamming distance between two DNA sequences with different penalties.
+
+    Args:
+        seq1 (str): The first DNA sequence.
+        seq2 (str): The second DNA sequence.
+        match_score (int): Score for a match (default: 0).
+        mismatch_penalty (int): Penalty for a mismatch (default: 1).
+
+    Returns:
+        int: The Hamming distance.
+    """
+
+    if len(seq1) != len(seq2):
+        raise ValueError("Sequences must be of equal length.")
+
+    distance = 0
+    for i in range(len(seq1)):
+        if seq1[i] == seq2[i]:
+            distance += match_score
+        elif (seq1[i], seq2[i]) in allowed_substitutions_penalties:
+            distance += allowed_substitutions_penalties[(seq1[i], seq2[i])]
+        else:
+            distance += mismatch_penalty
+    return distance
+
+
+def find_closest_sequence_index(
+    query_seqs: Iterable[str],
+    ref_seqs: Iterable[str],
+    hamming_distance_threshold: int = 0.1,
+    match_score: float = 0,
+    mismatch_penalty: float = 1,
+    allowed_substitutions_penalties: Dict[Tuple[str, str], float] = {
+        ("A", "G"): 0.2,
+        ("T", "C"): 0.2,
+    },
+) -> int:
+    """
+    Find the closest sequence to a query sequence.
+
+    Args:
+        query_seq (str): The query sequence.
+        ref_seqs (Iterable[str]): The reference sequences.
+        hamming_distance_threshold (int, optional): The maximum allowed hamming distance. Defaults to 3.
+        match_score (int, optional): Score for a match (default: 0). Defaults to 0.
+        mismatch_penalty (int, optional): Penalty for a mismatch (default: 1). Defaults to 1.
+        allowed_substitutions_penalties (Dict[Tuple[str, str], float], optional): Allowed substitutions and penalties. Defaults to [("A", "G"):0.2, ("T", "C"):0.2].
+
+    Returns:
+        int: The closest sequence pair's index in the input ref_seqs list.
+    """
+    min_distance = float("inf")
+    closest_seq_index = None
+    for i, (query_seq, ref_seq) in enumerate(zip(query_seqs, ref_seqs)):
+        distance = hamming_distance(
+            query_seq,
+            ref_seq,
+            match_score,
+            mismatch_penalty,
+            allowed_substitutions_penalties,
+        ) / len(query_seq)
+        if distance < min_distance and distance <= hamming_distance_threshold:
+            min_distance = distance
+            closest_seq_index = i
+    return closest_seq_index

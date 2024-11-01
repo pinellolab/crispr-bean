@@ -72,7 +72,7 @@ def test_count_samples_dual():
 
 @pytest.mark.order(107)
 def test_count_samples_bcstart():
-    cmd = "bean count-samples -i tests/data/sample_list.csv -b A -f tests/data/test_guide_info.csv -o tests/test_res/var2/ -r --barcode-start-seq=GGAA"
+    cmd = "bean count-samples -i tests/data/sample_list.csv -b A -f tests/data/test_guide_info.csv -o tests/test_res/var2/ -r --barcode-start-seq=GGAA --map-duplicated-to-best"
     try:
         subprocess.check_output(
             cmd,

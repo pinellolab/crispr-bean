@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Sequence, Union
+from typing import Tuple, Optional, Sequence, Union, Iterable
 import gzip
 import logging
 from copy import deepcopy
@@ -30,6 +30,7 @@ from ._supporting_fn import (
     _write_alignment_matrix,
     _write_paired_end_reads,
     revcomp,
+    find_closest_sequence_index
 )
 
 logging.basicConfig(
@@ -126,12 +127,15 @@ class GuideEditCounter:
             - kwargs["gstart_reporter"]
             - self.screen.guides["guide_len"].max()
         )
+        self.map_duplicated_to_best = kwargs["map_duplicated_to_best"]
+        self.map_duplicated_hamming_threshold = kwargs["map_duplicated_hamming_threshold"]
         self.count_guide_edits = kwargs["count_guide_edits"]
         if self.count_guide_edits:
             self.screen.uns["guide_edit_counts"] = {}
         self.count_reporter_edits = (
             kwargs["count_reporter"] or kwargs["count_guide_reporter_alleles"]
         )
+        self.mask_barcode = kwargs["mask_barcode"]
         if self.count_reporter_edits:
             self.screen.uns["edit_counts"] = {}
             self.gstart_reporter = kwargs["gstart_reporter"]
@@ -584,6 +588,7 @@ class GuideEditCounter:
                 semimatch,
                 R2_start,
             ) = self._match_read_to_sgRNA_bcmatch_semimatch(R1_seq, R2_seq)
+            mapped = False
             if len(bc_match) == 0:
                 if len(semimatch) == 0:  # no guide match
                     if self.keep_intermediate:
@@ -597,19 +602,26 @@ class GuideEditCounter:
                             r1, r2, outfile_R1_dup_wo_bc, outfile_R2_dup_wo_bc
                         )
                     self.duplicate_match_wo_barcode += 1
+                    if self.map_duplicated_to_best:
+                        best_matched_guide_idx = self._find_closest_sequence(R1_seq, R2_seq, semimatch, self.map_duplicated_hamming_threshold)
+                        if best_matched_guide_idx is not None: 
+                            self.screen.layers[semimatch_layer][best_matched_guide_idx, 0] += 1
                 else:  # guide match with no barcode match
                     matched_guide_idx = semimatch[0]
                     self.screen.layers[semimatch_layer][matched_guide_idx, 0] += 1
                     if self.count_guide_edits:
                         guide_allele, _ = self._count_guide_edits(matched_guide_idx, r1)
                     self.semimatch += 1
-
             elif len(bc_match) >= 2:  # duplicate mapping
                 if self.keep_intermediate:
                     _write_paired_end_reads(r1, r2, outfile_R1_dup, outfile_R2_dup)
-                self.duplicate_match += 1
-
+                if self.map_duplicated_to_best:
+                    best_matched_guide_idx = self._find_closest_sequence(R1_seq, R2_seq, bc_match, self.map_duplicated_hamming_threshold)
+                    if best_matched_guide_idx is not None: 
+                        mapped = True
             else:  # unique barcode match
+                mapped = True
+            if mapped:
                 matched_guide_idx = bc_match[0]
                 self.screen.layers[bcmatch_layer][matched_guide_idx, 0] += 1
                 self.bcmatch += 1
@@ -732,7 +744,7 @@ class GuideEditCounter:
             R2_seq[barcode_start_idx : (barcode_start_idx + self.guide_bc_len)]
         )
 
-    def _match_read_to_sgRNA_bcmatch_semimatch(self, R1_seq: str, R2_seq: str):
+    def _match_read_to_sgRNA_bcmatch_semimatch(self, R1_seq: str, R2_seq: str) -> Tuple[int, int, int]:
         # This should be adjusted for each experimental recipes.
         bc_start_idx, guide_barcode = self.get_barcode(R1_seq, R2_seq)
         bc_match_idx = np.array([])
@@ -745,16 +757,26 @@ class GuideEditCounter:
             _seq_match = np.where(
                 self.mask_sequence(seq) == self.screen.guides.masked_sequence
             )[0]
-            _bc_match = np.where(
-                self.mask_sequence(guide_barcode) == self.screen.guides.masked_barcode
-            )[0]
+            if self.mask_barcode:
+                _bc_match = np.where(
+                    self.mask_sequence(guide_barcode) == self.screen.guides.masked_barcode
+                )[0]
+            else:
+                _bc_match = np.where(
+                    guide_barcode == self.screen.guides.barcode
+                )[0]
 
             bc_match_idx = np.append(
                 bc_match_idx, np.intersect1d(_seq_match, _bc_match)
             )
             semimatch_idx = np.append(semimatch_idx, _seq_match)
-
         return bc_match_idx.astype(int), semimatch_idx.astype(int), bc_start_idx
+
+    def _find_closest_sequence(self, R1_seq, R2_seq, ref_guide_indices: Sequence[int], hamming_distance_threshold: int = 0.1,) -> int:
+        guide_lens = self.screen.guides.iloc[ref_guide_indices].map(len)
+        query_guide_seqs = [self.get_guide_seq(R1_seq, R2_seq, guide_len) for guide_len in guide_lens]
+        closest_idx = find_closest_sequence_index(query_guide_seqs, self.screen.guides.sequence.iloc[ref_guide_indices].values.tolist(), hamming_distance_threshold, match_score, mismatch_penalty, allowed_substitution_penalties = {(k, v):0.2 for k, v in self.target_base_edits})
+        return ref_guide_indices[closest_idx]
 
     def _get_guide_position_seq_of_read(self, seq):
         guide_start_idx = self._get_guide_start_idx(seq)

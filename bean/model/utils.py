@@ -14,6 +14,7 @@ def get_alpha(
         p = (
             expected_guide_p.permute(0, 2, 1) * size_factor[:, None, :]
         )  # (n_reps, n_guides, n_bins)
+        # print(f"size factor: {size_factor}")
         if normalize_by_a0:
             a = (
                 (p + epsilon / p.shape[-1])

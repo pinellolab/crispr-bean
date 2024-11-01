@@ -24,4 +24,4 @@ These are the example output of [`bean run`](https://pinellolab.github.io/crispr
 - `edit_rate`: Editing rates
 - `accessibility`: (Only if you have used `--scale-by-acc`) Accessibility signal that is used for scaling of the editing rate.
 - `scaled_edit_rate`: (Only if you have used `--scale-by-acc`) Endogenous editing rate used for modeling, estimated by scaling reporter editing rate by accessibility signal
-- `[cond1]_[cond2].median_lfc`: Raw LFC with pseudocount fed in with `--guide-lfc-pseudocount` argument (default 5).
+- `[replicate].[cond1]_[cond2]`: Raw per-replicate LFC with pseudocount fed in with `--guide-lfc-pseudocount` argument (default 5).

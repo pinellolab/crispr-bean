@@ -1,4 +1,5 @@
 """Calculate sample quality"""
+
 from typing import Literal
 import numpy as np
 import seaborn as sns
@@ -7,10 +8,19 @@ import matplotlib.pyplot as plt
 linestyles = ["solid", "dotted", "dashed", "dashdot"]
 
 
-def plot_guide_edit_rates(bdata, ax=None, figsize=(5, 3), title="", n_bins=30):
+def plot_guide_edit_rates(
+    bdata, ax=None, figsize=(5, 3), title="", n_bins=30, plot_normed: bool = True
+):
+    """Plot guide edit rates
+    Args:
+        plot_normed: Plot normalized edit rates. If False, plot total edit rates in editing window for tiling ReporterScreen with `.tiling == True`.
+    """
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
-    sns.histplot(bdata.guides.edit_rate, bins=n_bins)
+    if "edit_rate_norm" in bdata.guides.columns and plot_normed:
+        sns.histplot(bdata.guides.edit_rate_norm, bins=n_bins)
+    else:
+        sns.histplot(bdata.guides.edit_rate, bins=n_bins)
     ax.set_title(title)
     ax.set_xlabel("Editing rate")
     return ax

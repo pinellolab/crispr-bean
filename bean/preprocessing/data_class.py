@@ -2,7 +2,7 @@ import sys
 import abc
 import logging
 from dataclasses import dataclass
-from typing import Optional, Dict, Tuple, List
+from typing import Optional, Dict, Tuple, List, Sequence
 from xmlrpc.client import Boolean
 from copy import deepcopy
 import torch
@@ -49,6 +49,7 @@ class ScreenData(abc.ABC):
         popt: Optional[Tuple[float]] = None,
         pi_popt: Optional[Tuple[float]] = None,
         control_can_be_selected: bool = False,
+        negctrl_guide_idx: Optional[Sequence[int]] = None,
         **kwargs,
     ):
         """
@@ -90,9 +91,11 @@ class ScreenData(abc.ABC):
             )
             replicate_column = "_rc"
         self.screen = screen
+        control_condition = control_condition.split(",")
         if not control_can_be_selected:
             self.screen_selected = screen[
-                :, screen.samples[condition_column] != control_condition
+                :,
+                ~(screen.samples[condition_column].astype(int).isin(control_condition)),
             ]
         else:
             self.screen_selected = screen[:, ~screen.samples[condition_column].isnull()]
@@ -101,11 +104,13 @@ class ScreenData(abc.ABC):
             self.screen_selected.var[condition_column].unique()
         )  # excluding bulk
         self.screen_control = screen[
-            :, screen.samples[condition_column] == control_condition
+            :, screen.samples[condition_column].astype(str).isin(control_condition)
         ]
+        self.control_can_be_selected = control_can_be_selected
         self.n_samples = len(screen.samples)  # 8
         self.n_guides = len(screen.guides)
         self.n_reps = len(screen.samples[replicate_column].unique())
+        self.negctrl_guide_idx = negctrl_guide_idx
         self.accessibility_col = accessibility_col
         self.accessibility_bw_path = accessibility_bw_path
         self.replicate_column = replicate_column
@@ -134,18 +139,22 @@ class ScreenData(abc.ABC):
             self.sample_mask = torch.as_tensor(
                 self.screen_selected.samples[self.sample_mask_column].to_numpy()
             ).reshape(self.n_reps, self.n_condits)
-            self.bulk_sample_mask = torch.as_tensor(
+            self.control_sample_mask = torch.as_tensor(
                 self.screen_control.samples[self.sample_mask_column].to_numpy()
-            )
+            ).reshape(self.n_reps, len(self.control_condition))
         else:
             self.sample_mask = torch.ones((self.n_reps, self.n_condits), dtype=Boolean)
-            self.bulk_sample_mask = torch.ones(self.n_reps, dtype=Boolean)
+            self.control_sample_mask = torch.ones(
+                (self.n_reps, len(self.control_condition)), dtype=Boolean
+            )
         self.X = self.transform_data(
             self.screen_selected.X
         )  # (n_reps, n_bins, n_guides)
         self.X_masked = self.X * self.sample_mask[:, :, None]
-        self.X_control = self.transform_data(self.screen_control.X, 1)
-        self.X_control_masked = self.X_control * self.bulk_sample_mask[:, None, None]
+        self.X_control = self.transform_data(
+            self.screen_control.X, len(self.control_condition)
+        )
+        self.X_control_masked = self.X_control * self.control_sample_mask[:, :, None]
         if self.repguide_mask_key is None:
             self.repguide_mask = ~(self.X == 0).any(axis=1)
         else:
@@ -182,7 +191,7 @@ class ScreenData(abc.ABC):
         ).reshape(self.n_reps, self.n_condits)
         self.size_factor_control = torch.as_tensor(
             self.screen_control.samples["size_factor"].to_numpy()
-        ).reshape(self.n_reps, 1)
+        ).reshape(self.n_reps, len(self.control_condition))
         # Get a0
         fitted_a0, self.popt = get_fitted_alpha0(
             self.X.clone().cpu(),
@@ -217,10 +226,10 @@ class ScreenData(abc.ABC):
                 .T.reshape((self.n_reps, n_bins, self.n_guides))
                 .float()
             )
-        except RuntimeError:
+        except RuntimeError as e:
             print((self.n_reps, n_bins, self.n_guides))
             print(X.shape)
-            exit(1)
+            raise e
         if self.device is not None:
             x = x.cuda()
         return x
@@ -230,12 +239,14 @@ class ScreenData(abc.ABC):
         Get size factor for samples.
         """
         n_guides, n_samples = X.shape
-        geom_mean_x = np.exp((1 / n_samples) * np.log(X + 0.5).sum(axis=1))
-        assert geom_mean_x.shape == (n_guides,)
-        norm_count = X / geom_mean_x[:, None]
-        size_factor = np.median(norm_count, axis=0)
-        if any(size_factor == 0):
-            size_factor = np.mean(norm_count, axis=0)
+        # geom_mean_x = np.exp((1 / n_samples) * np.log(X + 0.5).sum(axis=1))
+        # assert geom_mean_x.shape == (n_guides,)
+        # norm_count = X / geom_mean_x[:, None]
+        # size_factor = np.mean(norm_count, axis=0)
+        size_factor = np.mean(X, axis=0)
+        size_factor = size_factor / np.mean(size_factor)
+        # if any(size_factor == 0):
+        #     size_factor = np.mean(norm_count, axis=0)
         assert size_factor.shape == (n_samples,)
         return size_factor
 
@@ -319,20 +330,40 @@ class ReporterScreenData(ScreenData):
         self.X_bcmatch = self.transform_data(self.screen_selected.layers["X_bcmatch"])
         self.X_bcmatch_masked = self.X_bcmatch * self.sample_mask[:, :, None]
         self.X_bcmatch_control = self.transform_data(
-            self.screen_control.layers["X_bcmatch"], 1
+            self.screen_control.layers["X_bcmatch"], len(self.control_condition)
         )
+        # print(self.control_sample_mask.shape, self.X_bcmatch_control.shape) torch.Size([3, 2]) torch.Size([3, 2, 11035])
+        # print("bcm init @ ReporterScreen", self.X_bcmatch_control_masked.shape)
         self.X_bcmatch_control_masked = (
-            self.X_bcmatch_control * self.bulk_sample_mask[:, None, None]
+            self.X_bcmatch_control * self.control_sample_mask[:, :, None]
         )
         self.size_factor_bcmatch = torch.as_tensor(
             self.screen_selected.samples["size_factor_bcmatch"].to_numpy()
         ).reshape(self.n_reps, self.n_condits)
         self.size_factor_bcmatch_control = torch.as_tensor(
             self.screen_control.samples["size_factor_bcmatch"].to_numpy()
-        ).reshape(self.n_reps, 1)
+        ).reshape(self.n_reps, len(self.control_condition))
+
+        if hasattr(self, "timepoints") and not hasattr(self, "allele_counts"):
+            assert hasattr(self, "time_column")
+            control_allele_counts = []
+            for timepoint in self.timepoints:
+                screen_t = self.screen[
+                    :, self.screen.samples[self.time_column] == timepoint.item()
+                ]
+                edited_control = self.transform_data(screen_t.layers["edits"], n_bins=1)
+                nonedited_control = (
+                    self.transform_data(screen_t.layers["X_bcmatch"], n_bins=1)
+                    - edited_control
+                )
+                nonedited_control[nonedited_control < 0] = 0
+                control_allele_counts.append(
+                    torch.stack([nonedited_control, edited_control], axis=-1)
+                )  # (n_reps, n_bins, n_guides, n_alleles)
+            self.allele_counts = torch.cat(control_allele_counts, axis=1)
 
         edited_control = self.transform_data(
-            self.screen_control.layers["edits"], n_bins=1
+            self.screen_control.layers["edits"], n_bins=len(self.control_condition)
         )
         nonedited_control = self.X_bcmatch_control - edited_control
         nonedited_control[nonedited_control < 0] = 0
@@ -610,17 +641,17 @@ class TilingReporterScreenData(ReporterScreenData):
             self.n_guides,
             self.n_max_alleles,
         )
-        self.allele_counts_control = self.transform_allele_control(
+        self.allele_counts_control = self.transform_allele(
             self.screen_control, reindexed_df
         )
         self.allele_mask = self.get_allele_mask(self.screen_control, guide_to_allele)
         assert self.allele_mask.shape == (self.n_guides, self.n_max_alleles)
         assert self.allele_counts_control.shape == (
             self.n_reps,
-            1,
+            len(self.control_condition),
             self.n_guides,
             self.n_max_alleles,
-        )
+        ), self.allele_counts_control.shape
 
     def get_allele_to_edit_tensor(
         self,
@@ -702,23 +733,33 @@ class TilingReporterScreenData(ReporterScreenData):
         reindexed_allele_df = reindexed_df.drop([allele_col, "index"], axis=1)
         return (guide_allele_id_to_allele, reindexed_allele_df)
 
-    def transform_allele(self, adata, reindexed_df):
+    def transform_allele(self, adata, reindexed_df, sort_condition_by=None):
         """
         Transform reindexed allele dataframe reindexed_df of (guide, allele_id_for_guide) -> (per sample count)
         to (n_reps, n_bins, n_guides, n_alleles) tensor.
         """
+        if sort_condition_by is None:
+            if hasattr(self, "time_column"):
+                sort_condition_by = self.time_column
+            else:
+                sort_condition_by = self.condition_column
         allele_tensor = torch.empty(
-            (self.n_reps, self.n_condits, self.n_guides, self.n_max_alleles),
+            (
+                self.n_reps,
+                len(adata.samples[f"{sort_condition_by}_id"].unique()),
+                self.n_guides,
+                self.n_max_alleles,
+            ),
         )
         if self.device is not None:
             allele_tensor = allele_tensor.cuda()
         for i in range(self.n_reps):
-            for j in range(self.n_condits):
+            for j, cond in enumerate(adata.samples[f"{sort_condition_by}_id"].unique()):
                 condit_idx = np.where(
                     (adata.samples.replicate_id == i)
-                    & (adata.samples[f"{self.condition_column}_id"] == j)
+                    & (adata.samples[f"{sort_condition_by}_id"] == cond)
                 )[0]
-                assert len(condit_idx) == 1, print(i, j, condit_idx)
+                assert len(condit_idx) == 1, (i, j, condit_idx)
                 condit_idx = condit_idx.item()
                 condit_name = adata.samples.index[condit_idx]
                 condit_allele_df = (
@@ -732,10 +773,6 @@ class TilingReporterScreenData(ReporterScreenData):
                 condit_bcmatch_counts = adata.layers["X_bcmatch"][:, condit_idx].astype(
                     int
                 )
-                # if not (condit_bcmatch_counts >= condit_allele_df.sum(axis=1)).all():
-                #     print(
-                #         f"Allele counts are larger than total bcmatch counts in rep {i}, {j} by {(condit_bcmatch_counts - condit_allele_df.sum(axis=1)).min()}."
-                #     )
                 condit_allele_df[0] = condit_bcmatch_counts - condit_allele_df.loc[
                     :, condit_allele_df.columns != 0
                 ].sum(axis=1)
@@ -750,11 +787,6 @@ class TilingReporterScreenData(ReporterScreenData):
                 )
                 allele_tensor[i, j, :, :] = torch.as_tensor(condit_allele_df.to_numpy())
 
-        try:
-            assert (allele_tensor >= 0).all(), allele_tensor[allele_tensor < 0]
-        except AssertionError:
-            print("Allele tensor doesn't match condit_allele_df")
-            return (allele_tensor, reindexed_df)
         return allele_tensor
 
     def transform_allele_control(self, adata, reindexed_df):
@@ -764,7 +796,12 @@ class TilingReporterScreenData(ReporterScreenData):
         """
 
         allele_tensor = torch.empty(
-            (self.n_reps, 1, self.n_guides, self.n_max_alleles),
+            (
+                self.n_reps,
+                len(self.control_condition),
+                self.n_guides,
+                self.n_max_alleles,
+            ),
         )
         if self.device is not None:
             allele_tensor = allele_tensor.cuda()
@@ -941,13 +978,26 @@ class SortingScreenData(ScreenData):
                     .values.astype(int)
                 )
             )
-        self.screen_selected = _assign_rep_ids_and_sort(
-            self.screen_selected, self.replicate_column, self.condition_column
-        )
-        self.screen_control = _assign_rep_ids_and_sort(
-            self.screen_control,
-            self.replicate_column,
-        )
+        if not self.control_can_be_selected:
+            self.screen_selected = screen[
+                :,
+                ~(
+                    self.screen.samples[self.condition_column]
+                    .astype(str)
+                    .isin(self.control_condition)
+                ),
+            ]
+        else:
+            self.screen_selected = self.screen[
+                :, ~self.screen.samples[self.condition_column].isnull()
+            ]
+
+        self.screen_control = self.screen[
+            :,
+            self.screen.samples[self.condition_column]
+            .astype(str)
+            .isin(self.control_condition),
+        ]
 
 
 @dataclass
@@ -979,14 +1029,27 @@ class SurvivalScreenData(ScreenData):
         self._post_init()
 
     def _pre_init(self, time_column: str, condition_column: str):
-        self.condition_column = self.time_column = time_column
+        self.time_column = time_column
         try:
+            max_time = self.screen.samples[time_column].astype(float).max()
             self.screen.samples[time_column] = self.screen.samples[time_column].astype(
                 float
             )
             self.screen.samples[time_column] = (
-                self.screen.samples[time_column]
-                / self.screen.samples[time_column].max()
+                self.screen.samples[time_column] / max_time
+            )
+
+            self.screen_selected.samples[time_column] = self.screen_selected.samples[
+                time_column
+            ].astype(float)
+            self.screen_selected.samples[time_column] = (
+                self.screen_selected.samples[time_column] / max_time
+            )
+            self.screen_control.samples[time_column] = self.screen_control.samples[
+                time_column
+            ].astype(float)
+            self.screen_control.samples[time_column] = (
+                self.screen_control.samples[time_column] / max_time
             )
         except ValueError as e:
             raise ValueError(
@@ -1004,11 +1067,9 @@ class SurvivalScreenData(ScreenData):
         # def _post_init(
         #     self,
         # ):
-        self.timepoints = torch.as_tensor(
-            self.screen_selected.samples[self.time_column].unique()
-        )
+
         control_timepoint = self.screen_control.samples[self.time_column].unique()
-        if len(control_timepoint) != 1:
+        if len(control_timepoint) != len(self.control_condition):
             info(self.screen_control)
             info(self.screen_control.samples)
             info(control_timepoint)
@@ -1016,24 +1077,30 @@ class SurvivalScreenData(ScreenData):
                 "All samples with --control-condition should have the same --time-col column in ReporterScreen.samples[time_col]. Check your input ReporterScreen object."
             )
         else:
-            self.control_timepoint = control_timepoint[0]
+            self.control_timepoint = torch.tensor(control_timepoint)
         self.n_timepoints = self.n_condits
-        timepoints = self.screen_selected.samples.sort_values(self.time_column)[
+        timepoints = self.screen.samples.sort_values(self.time_column)[
             self.time_column
         ].drop_duplicates()
         if timepoints.isnull().any():
             raise ValueError(
-                f"NaN values in time points provided in input: {self.screen_selected.samples[self.time_column]}"
+                f"NaN values in time points provided in input: {self.screen.samples[self.time_column]}"
             )
         for j, time in enumerate(timepoints):
-            self.screen_selected.samples.loc[
-                self.screen_selected.samples[self.time_column] == time,
+            self.screen.samples.loc[
+                self.screen.samples[self.time_column] == time,
                 f"{self.time_column}_id",
             ] = j
-        self.screen.samples[f"{self.time_column}_id"] = -1
-        self.screen.samples.loc[
-            self.screen_selected.samples.index, f"{self.time_column}_id"
-        ] = self.screen_selected.samples[f"{self.time_column}_id"]
+        self.screen_selected.samples[f"{self.time_column}_id"] = -1
+        self.screen_selected.samples[f"{self.time_column}_id"] = (
+            self.screen.samples.loc[
+                self.screen_selected.samples.index, f"{self.time_column}_id"
+            ]
+        )
+        self.screen_control.samples[f"{self.time_column}_id"] = -1
+        self.screen_control.samples[f"{self.time_column}_id"] = self.screen.samples.loc[
+            self.screen_control.samples.index, f"{self.time_column}_id"
+        ]
         self.screen = _assign_rep_ids_and_sort(
             self.screen, self.replicate_column, self.time_column
         )
@@ -1049,6 +1116,9 @@ class SurvivalScreenData(ScreenData):
         self.screen_control = _assign_rep_ids_and_sort(
             self.screen_control,
             self.replicate_column,
+        )
+        self.timepoints = torch.as_tensor(
+            self.screen_selected.samples[self.time_column].unique()
         )
 
 
@@ -1143,17 +1213,17 @@ class VariantSortingScreenData(VariantScreenData, SortingScreenData):
         self.X_bcmatch = self.transform_data(self.screen_selected.layers["X_bcmatch"])
         self.X_bcmatch_masked = self.X_bcmatch * self.sample_mask[:, :, None]
         self.X_bcmatch_control = self.transform_data(
-            self.screen_control.layers["X_bcmatch"], 1
+            self.screen_control.layers["X_bcmatch"], len(self.control_condition)
         )
         self.X_bcmatch_control_masked = (
-            self.X_bcmatch_control * self.bulk_sample_mask[:, None, None]
+            self.X_bcmatch_control * self.control_sample_mask[:, :, None]
         )
         self.size_factor_bcmatch = torch.as_tensor(
             self.screen_selected.samples["size_factor_bcmatch"].to_numpy()
         ).reshape(self.n_reps, self.n_condits)
         self.size_factor_bcmatch_control = torch.as_tensor(
             self.screen_control.samples["size_factor_bcmatch"].to_numpy()
-        ).reshape(self.n_reps, 1)
+        ).reshape(self.n_reps, len(self.control_condition))
         a0_bcmatch = get_pred_alpha0(
             self.X_bcmatch.clone().cpu(),
             self.size_factor_bcmatch.clone().cpu(),
@@ -1319,10 +1389,13 @@ class VariantSurvivalScreenData(VariantScreenData, SurvivalScreenData):
         if hasattr(ndata, "X_bcmatch"):
             ndata.X_bcmatch = ndata.X_bcmatch[:, :, guide_idx]
         if hasattr(ndata, "X_bcmatch_masked"):
+            print("b shape", ndata.X_bcmatch.shape)
             ndata.X_bcmatch_masked = ndata.X_bcmatch_masked[:, :, guide_idx]
         if hasattr(ndata, "X_bcmatch_control"):
+            print("bc shape", ndata.X_bcmatch_control.shape)
             ndata.X_bcmatch_control = ndata.X_bcmatch_control[:, :, guide_idx]
         if hasattr(ndata, "X_bcmatch_control_masked"):
+            print("bcm shape", ndata.X_bcmatch_control_masked.shape)
             ndata.X_bcmatch_control_masked = ndata.X_bcmatch_control_masked[
                 :, :, guide_idx
             ]
@@ -1341,17 +1414,17 @@ class VariantSurvivalScreenData(VariantScreenData, SurvivalScreenData):
         self.X_bcmatch = self.transform_data(self.screen_selected.layers["X_bcmatch"])
         self.X_bcmatch_masked = self.X_bcmatch * self.sample_mask[:, :, None]
         self.X_bcmatch_control = self.transform_data(
-            self.screen_control.layers["X_bcmatch"], 1
+            self.screen_control.layers["X_bcmatch"], len(self.control_condition)
         )
         self.X_bcmatch_control_masked = (
-            self.X_bcmatch_control * self.bulk_sample_mask[:, None, None]
+            self.X_bcmatch_control * self.control_sample_mask[:, :, None]
         )
         self.size_factor_bcmatch = torch.as_tensor(
             self.screen_selected.samples["size_factor_bcmatch"].to_numpy()
         ).reshape(self.n_reps, self.n_condits)
         self.size_factor_bcmatch_control = torch.as_tensor(
             self.screen_control.samples["size_factor_bcmatch"].to_numpy()
-        ).reshape(self.n_reps, 1)
+        ).reshape(self.n_reps, len(self.control_condition))
         a0_bcmatch = get_pred_alpha0(
             self.X_bcmatch.clone().cpu(),
             self.size_factor_bcmatch.clone().cpu(),

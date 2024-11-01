@@ -382,9 +382,9 @@ class ReporterScreen(Screen):
             reporter_length = self.uns["reporter_length"]
         if "reproter_right_flank_length" in self.uns:
             reporter_right_flank_length = self.uns["reporter_right_flank_length"]
-        if edit_count_key not in self.uns or len(self.uns[edit_count_key]) == 0:
+        if edit_count_key not in self.uns:
             raise ValueError(
-                "Edit count isn't calculated. "
+                f"Edit count isn't calculated or not provided with specified key `{edit_count_key}`. "
                 + "Call .get_edit_from_allele(allele_count_key, allele_key)"
             )
         edits = self.uns[edit_count_key].copy()
@@ -410,7 +410,7 @@ class ReporterScreen(Screen):
         edits["guide_start_pos"] = (
             reporter_length
             - reporter_right_flank_length
-            - guide_len[edits.guide_idx].reset_index(drop=True)
+            - guide_len.iloc[edits.guide_idx].reset_index(drop=True)
         )
         if not match_target_position:
             edits["rel_pos"] = edits.edit.map(lambda e: e.rel_pos)
@@ -434,12 +434,14 @@ class ReporterScreen(Screen):
                 edits.target_pos_matches,
                 ["guide", "edit"] + self.samples.index.tolist(),
             ]
-
+        good_edits = good_edits.copy()
         good_guide_idx = guide_name_to_idx.loc[good_edits.guide, "index"].astype(int)
+        edit_mat = np.zeros(self.layers["edits"].shape)
         for gidx, eidx in zip(good_guide_idx, good_edits.index):
-            self.layers["edits"][gidx, :] += good_edits.loc[
+            edit_mat[gidx, :] = edit_mat[gidx, :] + good_edits.loc[
                 eidx, self.samples.index.tolist()
             ].astype(int)
+        self.layers["edits"] = edit_mat
         print("New edit matrix saved in .layers['edits']. Returning old edits.")
         return old_edits
 
@@ -505,17 +507,21 @@ class ReporterScreen(Screen):
             prior_weight = 1
         n_edits = self.layers[edit_layer].copy()[:, bulk_idx].sum(axis=1)
         n_counts = self.layers[count_layer].copy()[:, bulk_idx].sum(axis=1)
-        edit_rate = (n_edits + prior_weight / 2) / (
-            (n_counts * num_targetable_sites) + prior_weight / 2
-        )
+        edit_rate = (n_edits + prior_weight / 2) / ((n_counts) + prior_weight / 2)
+        if normalize_by_editable_base:
+            edit_rate_norm = (n_edits + prior_weight / 2) / (
+                (n_counts * num_targetable_sites) + prior_weight / 2
+            )
         edit_rate[n_counts < bcmatch_thres] = np.nan
         if normalize_by_editable_base:
             print("normalize by editable counts")
-            edit_rate[num_targetable_sites == 0] = np.nan
+            edit_rate_norm[num_targetable_sites == 0] = np.nan
         if return_result:
             return edit_rate
         else:
             self.guides["edit_rate"] = edit_rate
+            if normalize_by_editable_base:
+                self.guides["edit_rate_norm"] = edit_rate_norm
             print(self.guides.edit_rate)
 
     def get_edit_rate(

@@ -450,6 +450,16 @@ def check_args(args):
         raise ValueError(
             "Invalid arguments: You should specify exactly one of --translate-fasta, --translate-fastas-csv, --translate-gene, translate-genes-list to translate alleles."
         )
+    if (
+        args.translate_fasta is not None
+        or args.translate_fastas_csv is not None
+        or args.translate_gene is not None
+        or args.translate_genes_list is not None
+    ) and not args.translate:
+        warn(
+            "fastq or gene files for translation provided without `--translate` flag. Setting `--translate` flag to True."
+        )
+        args.translate = True
     if args.translate_genes_list is not None:
         args.translate_genes_list = (
             pd.read_csv(args.translate_genes_list, header=None).values[:, 0].tolist()

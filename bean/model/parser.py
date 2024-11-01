@@ -121,9 +121,8 @@ def parse_args(parser=None):
         "--control-condition",
         default="bulk",
         type=str,
-        help="Value in `bdata.samples[condition_col]` that indicates control experimental condition whose editing patterns will be used. Select this as the condition with the least selection- For the sorting screen, use presort (bulk). For the survival screens, use the closest one with T=0.",
+        help="Comma-separated list of condition values in `bdata.samples[condition_col]` that indicates control experimental condition whose editing patterns will be used.",
     )
-
     input_parser.add_argument(
         "--plasmid-condition",
         default="bulk",
@@ -167,7 +166,7 @@ def parse_args(parser=None):
         "--sample-mask-col",
         type=str,
         default="mask",
-        help="Name of the column indicating the sample mask in [Reporter]Screen.samples (or AnnData.var). Sample is ignored if the value in this column is 0. This can be used to mask out low-quality samples.",
+        help="Name of the column indicating the sample mask in [Reporter]Screen.samples (or AnnData.var). Sample is ignored if the value in this column is 0. This can be used to mask out low-quality samples. If you don't want to mask samples out, provide `--sample-mask-col=''`.",
     )
 
     input_parser.add_argument(

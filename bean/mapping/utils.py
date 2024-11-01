@@ -245,6 +245,22 @@ def _get_input_parser(parser=None):
         action="store_true",
     )
     parser.add_argument(
+        "--map-duplicated-to-best",
+        help="When found duplicated mapping allowing for intended edits, map them to the best-matching reads",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--map-duplicated-hamming-threshold",
+        help="When found duplicated mapping allowing for intended edits, map them to the best-matching reads only when hamming distance is less than 5*value*guide_length for intended edit",
+        type=float,
+        default=0.1,
+    )
+    parser.add_argument(
+        "--mask-barcode",
+        help="Allow intended base edit in the barcode sequence.",
+        action="store_true",
+    )
+    parser.add_argument(
         "--tiling",
         help="Specify that the guide library is tiling library without 'n guides per target' design",
         action="store_true",

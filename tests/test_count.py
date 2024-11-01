@@ -72,7 +72,7 @@ def test_count_samples_dual():
 
 @pytest.mark.order(107)
 def test_count_samples_bcstart():
-    cmd = "bean count-samples -i tests/data/sample_list.csv -b A -f tests/data/test_guide_info.csv -o tests/test_res/var2/ -r --barcode-start-seq=GGAA"
+    cmd = "bean count-samples -i tests/data/sample_list.csv -b A -f tests/data/test_guide_info.csv -o tests/test_res/var2/ -r --barcode-start-seq=GGAA --map-duplicated-to-best"
     try:
         subprocess.check_output(
             cmd,
@@ -110,7 +110,7 @@ def test_barcode_start_idx():
 
 @pytest.mark.order(108)
 def test_count_samples_tiling():
-    cmd = "bean count-samples -i tests/data/sample_list_tiling.csv -b A -f tests/data/test_guide_info_tiling_chrom.csv -o tests/test_res/tiling/ -r"
+    cmd = "bean count-samples -i tests/data/sample_list_tiling.csv -b A -f tests/data/test_guide_info_tiling_chrom.csv -o tests/test_res/tiling/ -r --tiling"
     try:
         subprocess.check_output(
             cmd,
@@ -123,7 +123,7 @@ def test_count_samples_tiling():
 
 @pytest.mark.order(109)
 def test_count_chroms():
-    cmd = "bean count --R1 tests/data/test_tiling_R1.fastq --R2 tests/data/test_tiling_R2.fastq -b A -f tests/data/test_guide_info_tiling_chrom.csv -o tests/test_res/tiling_chrom/ -r"
+    cmd = "bean count --R1 tests/data/test_tiling_R1.fastq --R2 tests/data/test_tiling_R2.fastq -b A -f tests/data/test_guide_info_tiling_chrom.csv -o tests/test_res/tiling_chrom/ -r --tiling"
     try:
         subprocess.check_output(
             cmd,

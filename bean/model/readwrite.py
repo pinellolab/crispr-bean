@@ -60,6 +60,7 @@ def write_result_table(
     sd_is_fitted: bool = True,
     sample_covariates: Optional[List[str]] = None,
     return_result: bool = False,
+    is_survival_screen: bool = False,
 ) -> Union[pd.DataFrame, None]:
     """Combine target information and scores to write result table to a csv file or return it."""
     if param_hist_dict["mu_loc"].dim() == 2:
@@ -102,7 +103,7 @@ def write_result_table(
     fit_df = pd.DataFrame(param_dict)
     if negctrl_params is not None:
         print("Normalizing with common negative control distribution")
-        mu0 = negctrl_params["mu_loc"].detach().cpu().numpy()
+        mu0 = negctrl_params["mu_loc"].detach().cpu().numpy().mean()
         if sd_is_fitted:
             sd0 = negctrl_params["sd_loc"].detach().exp().cpu().numpy()
         else:
@@ -142,9 +143,15 @@ def write_result_table(
             ncvar = fit_df.iloc[adjust_confidence_negatives]
             if "mu_z_scaled" in ncvar.columns:
                 print("Using mu_z_scaled for normalization input..")
-                _, std = norm.fit(ncvar.mu_z_scaled, floc=0)
+                if is_survival_screen:
+                    mu, std = norm.fit(ncvar.mu_z_scaled, floc=0)
+                else:
+                    mu, std = norm.fit(ncvar.mu_z_scaled, floc=0)
             else:
-                _, std = norm.fit(ncvar.mu_z, floc=0)
+                if is_survival_screen:
+                    mu, std = norm.fit(ncvar.mu_z, floc=0)
+                else:
+                    mu, std = norm.fit(ncvar.mu_z, floc=0)
             fit_df = adjust_normal_params_by_control(
                 fit_df,
                 std,
@@ -155,6 +162,7 @@ def write_result_table(
                 mu_sd_adjusted_col=(
                     "mu_sd_scaled" if "negctrl" in param_hist_dict.keys() else "mu_sd"
                 ),
+                mu0=mu,
             )
             fit_df = add_credible_interval(fit_df, "mu_adj", "mu_sd_adj")
             fit_df = fit_df.iloc[(-fit_df.mu_z_adj.abs()).argsort()]
@@ -187,10 +195,7 @@ def write_result_table(
     else:
         a_fitted = param_hist_dict["alpha_pi"].detach().cpu().numpy()
         pi = a_fitted[..., 1:].sum(axis=1) / a_fitted.sum(axis=1)
-    guide_info_df["edit_rate"] = pi
-    guide_info_df = guide_info_df[
-        ["edit_rate"] + [col for col in guide_info_df.columns if col != "Mid"]
-    ]
+    # guide_info_df["edit_rate_fitted"] = pi
     if guide_acc is not None:
         guide_info_df.insert(1, "accessibility", guide_acc)
         scaled_pi = _scale_pi(

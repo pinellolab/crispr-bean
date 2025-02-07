@@ -275,7 +275,7 @@ class CDS:
         """0-based relative position"""
         nt_relative_pos = np.where(self.pos == absolute_pos)[0]
         assert len(nt_relative_pos) <= 1, nt_relative_pos
-        return nt_relative_pos.astype(int).item() if nt_relative_pos else -1
+        return nt_relative_pos.astype(int).item() if len(nt_relative_pos) > 0 else -1
 
     def _edit_pos_to_aa_pos(self, edit_pos):
         """0-based nt position. Adds in sense direction, needs to be reversed for antisense gene"""

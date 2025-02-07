@@ -133,8 +133,9 @@ def main(args, return_data=False):
     if args.library_design == "variant":
         if not args.uniform_edit:
             if "edit_rate" not in ndata.screen.guides.columns:
-                ndata.screen.get_edit_from_allele()
-                ndata.screen.get_edit_mat_from_uns(rel_pos_is_reporter=True)
+                if "edits" not in ndata.screen.layers:
+                    ndata.screen.get_edit_from_allele()
+                    ndata.screen.get_edit_mat_from_uns(rel_pos_is_reporter=True)
                 ndata.screen.get_guide_edit_rate(
                     unsorted_condition_label=_control_condition
                 )

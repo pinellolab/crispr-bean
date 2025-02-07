@@ -14,8 +14,7 @@ jobs:
 
     - name: Install Sphinx & Dependencies
       run: |
-        pip install sphinx sphinx_markdown_builder sphinx_rtd_theme sphinx-argparse m2r pandas bio "docutils==0.20"
-        sudo apt-get install python3-distutils
+        pip install sphinx sphinx_markdown_builder sphinx_rtd_theme sphinx-argparse m2r pandas bio "docutils==0.20" setuptools
     - name: Build Documentation
       working-directory: docs
       run: sphinx-build . _build

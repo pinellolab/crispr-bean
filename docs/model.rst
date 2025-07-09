@@ -289,6 +289,58 @@ the same function is used to calculate size factor for barcode-matched
 read counts for sample :math:`j`, :math:`s_{j}^{b}` with
 :math:`X_{\text{gj}}^{b}`.
 
+
+Survival screen modeling (``bean run ... survival``)
+-----------------------------------------------------
+
+Survival screen model is based on the assumption that the variant will
+have constant multiplicative effect by the unit time.
+
+.. image:: assets/prolif_screen.svg
+  :width: 400
+
+We will denote :math:`\mu_i + \mu_0` as the relative log fold change of
+cell population with variant :math:`i`, given that the wild-type cell
+will have the log fold change of :math:`\mu_0` as unit time passes. This
+is equivalent to say that the number of cells with variant :math:`i`
+will be multiplied by :math:`r_i = e^{\mu_i + \mu_0}` per unit time,
+whereas the number of the wild type cells will grow by
+:math:`e^{\mu_0}`.
+
+As we observe the total gRNA abundance instead of the true variant
+identity in the cell, let us denote the set of well-represented alleles
+(including wild-type allele) induced by gRNA :math:`j` as :math:`A_j`,
+and allele fraction of each allele :math:`a \in A_j` as
+:math:`\pi_{j,a}`. Note that :math:`\sum_{a \in A_j} \pi_{j,a} = 1` for
+all :math:`j`.
+
+The total abundance :math:`p_j(t)` of gRNA :math:`j` after time
+:math:`t` is modeled as the sum of the number of cells with allele
+:math:`a`, each proliferated by their own effect size :math:`\mu_a`.
+When an allele consists of multiple variants, we assume the additive
+effect (:math:`\mu_a = \sum_{v \in a} \mu_v`).
+
+.. math::
+
+
+   p_j^t = p_j^0 \sum_{a\in A_j}{\pi_{jk}r_{a}^t} = p_j^0 \sum_{a \in A_j} \pi_{ja} \exp(t\mu_{a})
+
+To account for the fact that the allele fraction we observed at any
+later timepoint than :math:`t = 0`, we model the observed allele
+fractions :math:`\pi_{j,a}(t)` as follows:
+
+.. math::
+
+
+   \pi_{j,a}(0) = \frac{\pi_{j,a}(0) \cdot e^{\mu_a \cdot t}}{\sum_{a' \in A_j} \pi_{j,a'}(0) \cdot e^{\mu_{a'} \cdot t}}
+
+From the observed editing rate in time :math:`t>0`
+:math:`(\pi_{j,a}(t))` and gRNA abundance in each timepoint
+:math:`(p_g(t))`, we infer :math:`\mu_v` and initial allele fraction
+:math:`\pi_{g,a}(0)`.
+
+
+
 Inference
 ---------
 

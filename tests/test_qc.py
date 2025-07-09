@@ -48,10 +48,8 @@ def test_dummy_insertion_varscreen():
         subprocess.check_output(
             cmd, shell=True, universal_newlines=True, stderr=subprocess.STDOUT
         )
-        raise ValueError("Filtering should fail with too small number of replicates.")
     except subprocess.CalledProcessError as exc:
-        if "Too small number of replicate left after QC" not in exc.output:
-            raise exc
+        raise exc
 
 
 @pytest.mark.order(211)

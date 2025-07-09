@@ -48,19 +48,19 @@ def adjust_normal_params_by_control(
 
 def write_result_table(
     target_info_df: pd.DataFrame,
+    guide_info_df: pd.DataFrame,
     param_hist_dict,
     model_label: str,
     prefix: str = "",
     suffix: str = "",
     negctrl_params=None,
-    write_fitted_eff: bool = True,
     adjust_confidence_by_negative_control: bool = True,
     adjust_confidence_negatives: Optional[np.ndarray] = None,
-    guide_index: Optional[Sequence[str]] = None,
     guide_acc: Optional[Sequence] = None,
     sd_is_fitted: bool = True,
     sample_covariates: Optional[List[str]] = None,
     return_result: bool = False,
+    is_survival_screen: bool = False,
 ) -> Union[pd.DataFrame, None]:
     """Combine target information and scores to write result table to a csv file or return it."""
     if param_hist_dict["mu_loc"].dim() == 2:
@@ -103,7 +103,7 @@ def write_result_table(
     fit_df = pd.DataFrame(param_dict)
     if negctrl_params is not None:
         print("Normalizing with common negative control distribution")
-        mu0 = negctrl_params["mu_loc"].detach().cpu().numpy()
+        mu0 = negctrl_params["mu_loc"].detach().cpu().numpy().mean()
         if sd_is_fitted:
             sd0 = negctrl_params["sd_loc"].detach().exp().cpu().numpy()
         else:
@@ -143,9 +143,15 @@ def write_result_table(
             ncvar = fit_df.iloc[adjust_confidence_negatives]
             if "mu_z_scaled" in ncvar.columns:
                 print("Using mu_z_scaled for normalization input..")
-                _, std = norm.fit(ncvar.mu_z_scaled, floc=0)
+                if is_survival_screen:
+                    mu, std = norm.fit(ncvar.mu_z_scaled, floc=0)
+                else:
+                    mu, std = norm.fit(ncvar.mu_z_scaled, floc=0)
             else:
-                _, std = norm.fit(ncvar.mu_z, floc=0)
+                if is_survival_screen:
+                    mu, std = norm.fit(ncvar.mu_z, floc=0)
+                else:
+                    mu, std = norm.fit(ncvar.mu_z, floc=0)
             fit_df = adjust_normal_params_by_control(
                 fit_df,
                 std,
@@ -156,6 +162,7 @@ def write_result_table(
                 mu_sd_adjusted_col=(
                     "mu_sd_scaled" if "negctrl" in param_hist_dict.keys() else "mu_sd"
                 ),
+                mu0=mu,
             )
             fit_df = add_credible_interval(fit_df, "mu_adj", "mu_sd_adj")
             fit_df = fit_df.iloc[(-fit_df.mu_z_adj.abs()).argsort()]
@@ -182,25 +189,27 @@ def write_result_table(
     else:
         fit_df = add_credible_interval(fit_df, "mu", "mu_sd")
         fit_df = fit_df.iloc[(-fit_df.mu_z.abs()).argsort()]
-    if write_fitted_eff or guide_acc is not None:
-        if "alpha_pi" not in param_hist_dict.keys():
-            pi = 1.0
-        else:
-            a_fitted = param_hist_dict["alpha_pi"].detach().cpu().numpy()
-            pi = a_fitted[..., 1:].sum(axis=1) / a_fitted.sum(axis=1)
-        sgRNA_df = pd.DataFrame({"edit_eff": pi}, index=guide_index)
-        if guide_acc is not None:
-            sgRNA_df["accessibility"] = guide_acc
-            sgRNA_df["scaled_edit_eff"] = _scale_pi(
-                pi,
-                guide_acc,
-                fitted_noise_logit=param_hist_dict["noise_scale"]
-                .detach()
-                .cpu()
-                .numpy(),
-            )
-        sgRNA_df.to_csv(f"{prefix}bean_sgRNA_result.{model_label}{suffix}.csv")
+    # write sgRNA info
+    if "alpha_pi" not in param_hist_dict.keys():
+        pi = 1.0
+    else:
+        a_fitted = param_hist_dict["alpha_pi"].detach().cpu().numpy()
+        pi = a_fitted[..., 1:].sum(axis=1) / a_fitted.sum(axis=1)
+    # guide_info_df["edit_rate_fitted"] = pi
+    if guide_acc is not None:
+        guide_info_df.insert(1, "accessibility", guide_acc)
+        scaled_pi = _scale_pi(
+            pi,
+            guide_acc,
+            fitted_noise_logit=(
+                param_hist_dict["noise_scale"].detach().cpu().numpy()
+                if "noise_scale" in param_hist_dict.keys()
+                else None
+            ),
+        )
+        guide_info_df.insert(2, "scaled_edit_eff", scaled_pi)
 
+    guide_info_df.to_csv(f"{prefix}bean_sgRNA_result.{model_label}{suffix}.csv")
     if return_result:
         return fit_df
     fit_df.to_csv(f"{prefix}bean_element_result.{model_label}{suffix}.csv")
@@ -233,5 +242,5 @@ def _add_noise_to_pi(pi: np.ndarray, fitted_noise_logit: np.ndarray):
 def _scale_pi(pi: np.ndarray, guide_acc: np.ndarray, fitted_noise_logit=None):
     scaled_pi = _scale_edited_pi(pi, guide_acc)
     if fitted_noise_logit is None:
-        return scaled_pi, None
+        return scaled_pi
     return _add_noise_to_pi(scaled_pi, fitted_noise_logit)

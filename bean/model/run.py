@@ -1,5 +1,6 @@
 import os
 import sys
+import numpy as np
 
 if sys.stderr.isatty():
     # Output into terminal
@@ -120,7 +121,7 @@ def check_args(args, bdata):
         ).sum()
         if not n_negctrl >= 10:
             raise ValueError(
-                f"Not enough negative control guide in the input data: {n_negctrl}. Check your input arguments."
+                f"Not enough negative control guide in the input data: {n_negctrl}. Please check your input arguments."
             )
     if args.repguide_mask is not None and args.repguide_mask not in bdata.uns.keys():
         bdata.uns[args.repguide_mask] = pd.DataFrame(
@@ -129,6 +130,8 @@ def check_args(args, bdata):
         warn(
             f"{args.bdata_path} does not have replicate x guide outlier mask. All guides are included in analysis."
         )
+    if args.sample_mask_col == "":
+        args.sample_mask_col = None
     if args.sample_mask_col is not None:
         if args.sample_mask_col not in bdata.samples.columns.tolist():
             raise ValueError(
@@ -138,10 +141,16 @@ def check_args(args, bdata):
         raise ValueError(
             f"Condition column `{args.condition_col}` set by `--condition-col` not in ReporterScreen.samples.columns:{bdata.samples.columns}. Check your input."
         )
-    if args.control_condition not in bdata.samples[args.condition_col].tolist():
+    if args.selection == "survival" and args.condition_col == args.time_col:
         raise ValueError(
-            f"No sample has control label `{args.control_condition}` (set by `--control-condition`)  in ReporterScreen.samples[{args.condition_col}]: {bdata.samples[args.condition_col]}. Check your input.  For the selection of this argument, see more in `--condition-col` under `bean run --help`."
+            f"Invalid to have the same `--condition-col` ({args.condition_col}) and `--time-col` ({args.time_col})."
         )
+    control_condits = args.control_condition.split(",")
+    for control_condit in control_condits:
+        if control_condit not in bdata.samples[args.condition_col].astype(str).tolist():
+            raise ValueError(
+                f"No sample has control label `{args.control_condition}` (set by `--control-condition`)  in ReporterScreen.samples[{args.condition_col}]: {bdata.samples[args.condition_col]}. Check your input.  For the selection of this argument, see more in `--condition-col` under `bean run --help`."
+            )
     if args.replicate_col not in bdata.samples.columns:
         raise ValueError(
             f"Condition column set by `--replicate-col` {args.replicate_col} not in ReporterScreen.samples.columns:{bdata.samples.columns}. Check your input."
@@ -205,6 +214,134 @@ def _get_guide_target_info(bdata, args, cols_include=[]):
         )
         target_info = target_info.join(edit_rate_info)
     return target_info
+
+
+def _get_guide_info(bdata, args, guide_lfc_pseudocount: int = 5):
+    """ """
+    if args.selection == "sorting":
+        # Calculate LFC between the lowest / highest bin
+        conditions = bdata.samples[
+            [
+                args.condition_col,
+                args.sorting_bin_lower_quantile_col,
+                args.sorting_bin_upper_quantile_col,
+            ]
+        ].drop_duplicates()
+        high_upper_conds = conditions.loc[
+            conditions[args.sorting_bin_upper_quantile_col]
+            == conditions[args.sorting_bin_upper_quantile_col].max()
+        ]
+        highest_cond = high_upper_conds.loc[
+            high_upper_conds[args.sorting_bin_lower_quantile_col]
+            == high_upper_conds[args.sorting_bin_lower_quantile_col].max(),
+            args.condition_col,
+        ].item()
+        low_upper_conds = conditions.loc[
+            conditions[args.sorting_bin_upper_quantile_col]
+            == conditions[args.sorting_bin_upper_quantile_col].min()
+        ]
+        lowest_cond = low_upper_conds.loc[
+            low_upper_conds[args.sorting_bin_lower_quantile_col]
+            == low_upper_conds[args.sorting_bin_lower_quantile_col].min(),
+            args.condition_col,
+        ].item()
+        guide_lfc = bdata.log_fold_change_reps(
+            highest_cond,
+            lowest_cond,
+            rep_col=args.replicate_col,
+            compare_col=args.condition_col,
+            # return_result=True,
+            pseudocount=guide_lfc_pseudocount,
+        )  # .to_frame(f"{highest_cond}_{lowest_cond}.median_lfc")
+    else:
+        # earliest / latest bin & earliest non-plasmid / latest
+        conditions = bdata.samples[
+            [
+                args.condition_col,
+                args.time_col,
+            ]
+        ].drop_duplicates()
+        latest_cond = conditions.loc[
+            conditions[args.time_col] == conditions[args.time_col].max(),
+            args.condition_col,
+        ].item()
+        earliest_cond = conditions.loc[
+            conditions[args.time_col] == conditions[args.time_col].min(),
+            args.condition_col,
+        ].item()
+        guide_lfc = bdata.log_fold_change_reps(
+            latest_cond,
+            earliest_cond,
+            rep_col=args.replicate_col,
+            compare_col=args.condition_col,
+            # return_result=True,
+            pseudocount=guide_lfc_pseudocount,
+        )  # .to_frame(f"{latest_cond}_{earliest_cond}.median_lfc")
+        if args.plasmid_condition is not None:
+            selected_conditions = conditions.loc[
+                conditions[args.condition_col] != args.plasmid_condition
+            ]
+            earliest_selected_cond = selected_conditions.loc[
+                selected_conditions[args.time_col]
+                == selected_conditions[args.time_col].min(),
+                args.condition_col,
+            ].item()
+            if earliest_selected_cond != earliest_cond:
+                guide_lfc2 = bdata.log_fold_change_reps(
+                    latest_cond,
+                    earliest_selected_cond,
+                    rep_col=args.replicate_col,
+                    compare_col=args.condition_col,
+                    # return_result=True,
+                    pseudocount=guide_lfc_pseudocount,
+                )  # .to_frame(f"{latest_cond}_{earliest_selected_cond}.median_lfc")
+                guide_lfc = pd.concat([guide_lfc, guide_lfc2], axis=1)
+    if bdata.tiling:
+        guide_info = pd.concat(
+            [bdata.guides[["edit_rate", "edit_rate_norm"]], guide_lfc], axis=1
+        )
+    else:
+        if "edit_rate" in bdata.guides.columns.tolist():
+            guide_info = pd.concat([bdata.guides[["edit_rate"]], guide_lfc], axis=1)
+        else:
+            guide_info = guide_lfc
+    return guide_info
+
+
+def _get_guide_to_variant_df(target_info_df: pd.DataFrame) -> pd.DataFrame:
+    editing_guides = target_info_df["editing_guides"].map(
+        lambda s: s.strip(",").split(",") if not (s and pd.isnull(s)) else []
+    )
+
+    per_guide_edit_rates = target_info_df["per_guide_editing_rates"].map(
+        lambda s: (
+            [(float(x) if x else np.nan) for x in s.strip(",").split(",")]
+            if not (s and pd.isnull(s))
+            else []
+        )
+    )
+    df = pd.DataFrame(
+        {
+            "variants": target_info_df.edit,
+            "guide": editing_guides,
+            "edit_rates": per_guide_edit_rates,
+        }
+    )
+    df["zipped"] = df.apply(lambda row: list(zip(row.guide, row.edit_rates)), axis=1)
+    df_exp = df[["variants", "zipped"]].explode("zipped")
+    df_exp["guide"] = df_exp["zipped"].map(
+        lambda x: x[0] if not pd.isnull(x) else np.nan
+    )
+    df_exp["per_variant_edit_rate"] = df_exp["zipped"].map(
+        lambda x: (x[1] if not pd.isnull(x) else np.nan)
+    )
+    df_exp = df_exp.loc[~df_exp.guide.isnull()]
+    guide_to_var_df = (
+        df_exp[["guide", "variants", "per_variant_edit_rate"]]
+        .groupby("guide")
+        .agg(list)
+    )
+    return guide_to_var_df
 
 
 def run_inference(

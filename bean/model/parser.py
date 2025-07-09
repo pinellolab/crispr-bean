@@ -74,6 +74,12 @@ def parse_args(parser=None):
         help="Fit the shared negative control distribution to normalize the fitted parameters",
     )
     run_parser.add_argument(
+        "--guide-lfc-pseudocount",
+        type=int,
+        default=5,
+        help="LFC pseudocount that will be output as the bean_sgRNA_result.csv",
+    )
+    run_parser.add_argument(
         "--dont-fit-noise",  # TODO: add check args
         action="store_true",
     )
@@ -115,9 +121,14 @@ def parse_args(parser=None):
         "--control-condition",
         default="bulk",
         type=str,
-        help="Value in `bdata.samples[condition_col]` that indicates control experimental condition whose editing patterns will be used. Select this as the condition with the least selection- For the sorting screen, use presort (bulk). For the survival screens, use the closest one with T=0.",
+        help="Comma-separated list of condition values in `bdata.samples[condition_col]` that indicates control experimental condition whose editing patterns will be used.",
     )
-
+    input_parser.add_argument(
+        "--plasmid-condition",
+        default="bulk",
+        type=str,
+        help="For survival screens, condition label of the plasmid library, if included in the ReporterScreen.",
+    )
     input_parser.add_argument(
         "--replicate-col",
         default="replicate",
@@ -155,7 +166,7 @@ def parse_args(parser=None):
         "--sample-mask-col",
         type=str,
         default="mask",
-        help="Name of the column indicating the sample mask in [Reporter]Screen.samples (or AnnData.var). Sample is ignored if the value in this column is 0. This can be used to mask out low-quality samples.",
+        help="Name of the column indicating the sample mask in [Reporter]Screen.samples (or AnnData.var). Sample is ignored if the value in this column is 0. This can be used to mask out low-quality samples. If you don't want to mask samples out, provide `--sample-mask-col=''`.",
     )
 
     input_parser.add_argument(

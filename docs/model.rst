@@ -13,9 +13,7 @@ as reference.
 .. raw:: html
 
    <figure>
-
-.. raw:: html
-
+   <img src="assets/model_legend_pheno.png" alt="legend" width="600"/>
    </figure>
 
 For the cells with a guide, their phenotype is modeled as a mixture of
@@ -76,9 +74,7 @@ to wild-type effect size of mean 0 and standard deviation 1.
 .. raw:: html
 
    <figure>
-
-.. raw:: html
-
+   <img src="assets/model_mixture.png" alt="legend" width="350"/>
    </figure>
 
 Multiallelic outcome modeling in ``tiling`` mode
@@ -93,7 +89,7 @@ that lead to the same coding sequence amino acid mutations together (if
 you use ``--translate`` flag in ``bean filter``).
 
 We denote with
-:math:`A\left( g \right) = \{ a|Allele\ a\ is\ produced\ by\ g\}` the
+:math:`A\left( g \right) = \{ a|\text{Allele }a\text{ is produced by }g\}` the
 set of alleles produced by gRNA :math:`g` that is robustly observed
 (defined by thresholds in ``bean-filter``) The phenotype of a given
 allele :math:`a` is defined as the **sum of phenotypic effect of
@@ -109,7 +105,7 @@ phenotype for the alleles it induces (:math:`a \in A(g)`) as follows:
 .. math::
 
 
-   Y_{a} = \ \sum_{v \in a}^{}Y_{v},\ \ Y_{a} = Y_{0}\text{\ if\ }\left| a \right| = 0
+   Y_{a} = \ \sum_{v \in a}^{}Y_{v},\ \ Y_{a} = Y_{0}\text{ if }\left| a \right| = 0
 
 , where :math:`\widetilde{\pi_{a}}` is the endogenous editing rate,
 estimated from :math:`\pi_{a}`, the reporter editing rate, of allele
@@ -170,7 +166,7 @@ incomplete correlation between endogenous and reporter editing rates.
 .. math::
 
 
-   \epsilon_{\text{gπ}} = logit^{- 1}\left( l_{\text{gπ}} \right),\ \ l_{\text{gπ}}\mathcal{\ \sim\ N}(0,\ \sigma_{\pi})
+   \epsilon_{\text{gπ}} = \text{logit}^{- 1}\left( l_{\text{gπ}} \right),\ \ l_{\text{gπ}}\mathcal{\ \sim\ N}(0,\ \sigma_{\pi})
 
 .. math::
 
@@ -180,21 +176,18 @@ incomplete correlation between endogenous and reporter editing rates.
 .. raw:: html
 
    <figure>
-
-.. raw:: html
-
+   <img src="assets/model_editing_rate.png" alt="legend" width="500"/>
    </figure>
 
 :math:`f\left( \pi \right)` is fitted from the data generated for
 comparison of endogenous and reporter editing based on the regression
 :math:`E\left\lbrack \log\left( \frac{\pi_{\text{endo}}}{\pi_{\text{reporter}}} \right) \right\rbrack = aw + b`
-where :math:`w` is :math:`log(accessibility\ signal + 1)` and the
+where :math:`w` is :math:`log(\text{accessibility_signal + 1})` and the
 resulting coefficients :math:`a = 0.2513` and :math:`b = \  - 1.9458`
 are used for the analyses presented in this paper. The residual of the
 regression is fitted as the Normal distribution, which is used as the
 prior for the logit-scale deviation :math:`l_{\pi}` (see full detail in
-`Accessibility
-scaling <#adjusting-editing-rates-by-accessibility-with---scale-by-acc>`__
+`Accessibility scaling <#adjusting-editing-rates-by-accessibility-with-scale-by-acc>`__
 section).
 
 ``bean run`` without reporter
@@ -208,7 +201,7 @@ the assumption that all gRNAs would have the same editing efficiency.
 .. math::
 
 
-   Y_{g}\mathcal{\sim\ N}\left( \mu_{v},\ \sigma_{v} \right),\ g\ induces\ v
+   Y_{g}\mathcal{\sim\ N}\left( \mu_{v},\ \sigma_{v} \right),\ g\ \text{induces}\ v
 
 Sorting screen model (``bean run ... sorting``)
 -----------------------------------------------
@@ -278,9 +271,7 @@ where the sample size factor is calculated as in DESeq2.
 .. raw:: html
 
    <figure>
-
-.. raw:: html
-
+   <img src="assets/model_sorting.png" alt="legend" width="500"/>
    </figure>
 
 For sample :math:`j`,
@@ -372,9 +363,7 @@ is the variational distribution.
 .. raw:: html
 
    <figure>
-
-.. raw:: html
-
+   <img src="assets/model_output_simple.png" alt="legend" width="400"/>
    </figure>
 
 Negative control variants are used to control the significance of
@@ -428,13 +417,16 @@ editing rate is reported and for \`tiling\` mode, the number of gRNAs
 covering each variant (`n_guide`), number of co-occurring variants that
 is edited together in any of the observed alleles (`n_coocc`), and
 effective editing rate which is calculated as
-:math:`\sum_{g \in \{ g|g\ induces\ v\}}^{}{\sum_{a \in \{ g\ induces\ a,\ a\ has\ v\}}^{}\frac{\widetilde{\pi_{\text{ga}}}}{\left| a \right|}}`,
+:math:`\sum_{g \in \{ g|g\ \text{induces}\ v\}}^{}{\sum_{a \in \{ g\ \text{induces}\ a,\ a\text{ has }v\}}^{}\frac{\widetilde{\pi_{\text{ga}}}}{\left| a \right|}}`,
 are reported. The model, variational distribution and inference
 procedure are available as the default options of ``bean-run`` command
 of *bean*\ :sup:`21` software. Specifically, BEAN-Uniform is run with
 ``--uniform-edit`` and full BEAN model is run by specifying
-``--scale-by-acc`` argument. ## Adjusting editing rates by accessibility
-with ``--scale-by-acc``
+``--scale-by-acc`` argument. 
+
+
+Adjusting editing rates by accessibility with ``--scale-by-acc``
+----------------------------------------------------------------------------
 
 BEAN takes account for the observation that endogenous editing rate
  :math:`\widetilde{\mathbf{\pi}}` is roughly proportional to the
@@ -444,19 +436,8 @@ accessibility.
 .. raw:: html
 
    <figure>
-
-.. raw:: html
-
-   <figcaption>
-
-Fig 1f of the manuscript
-
-.. raw:: html
-
-   </figcaption>
-
-.. raw:: html
-
+   <img src="assets/model_acc.png" alt="legend" width="600"/>
+   <figcaption>Fig 1f of the manuscript</figcaption>
    </figure>
 
 In the model, BEAN fits a function :math:`f` that maps the reporter
@@ -473,8 +454,8 @@ rate :math:`\widetilde{\pi_{\text{gi}}}` in the mini-tiling screen data.
 Specifically, linear model of
 :math:`r = \log\left( \frac{\widetilde{\pi_{\text{gi}}} + 0.05}{\pi_{\text{gi}} + 0.05} \right),\ \ E\left\lbrack r \right\rbrack = aw + b`
 was studied where
-:math:`w = \text{window\_mean}\left( \log\left( \text{accessibility\_signal} + 1 \right) \right)`
-and :math:`\text{accessibility\_signal}` is the mean log-transformed
+:math:`w = \text{window_mean}\left( \log\left( \text{accessibility_signal} + 1 \right) \right)`
+and :math:`\text{accessibility_signal}` is the mean log-transformed
 accessibility signal. The coefficients were fitted to be
 :math:`a = 0.2513,\ b = - 1.9458` from our data and would be used as the
 default value.
@@ -482,12 +463,12 @@ default value.
 The fitted relationship was used to transform allele editing rate in the
 reporter to the rate in the endogenous editing. To account for the
 deviation of :math:`r` from the predicted, :math:`\epsilon_{g}`
-=\ :math:`\text{logit}\left( \sum_{i \neq 0}^{}\widetilde{\pi_{\text{gj}}} \right) - logit\left( \sum_{i \neq 0}^{}\pi_{\text{gj}} \right)`
+=\ :math:`\text{logit}\left( \sum_{i \neq 0}^{}\widetilde{\pi_{\text{gj}}} \right) - \text{logit}\left( \sum_{i \neq 0}^{}\pi_{\text{gj}} \right)`
 is fitted during the inference time per gRNA :math:`g`, and its prior is
 set to be :math:`\epsilon_{g}\mathcal{\sim N}(0,\ \sigma_{\epsilon})`
 where :math:`\sigma_{\epsilon} = 0.655` is the observed standard
 deviation of the residual
-:math:`\text{logit}\left( \widetilde{\pi_{\text{gi}}} \right) - logit\left( f\left( \pi_{\text{gi}} \right) \right)`
+:math:`\text{logit}\left( \widetilde{\pi_{\text{gi}}} \right) - \text{logit}\left( f\left( \pi_{\text{gi}} \right) \right)`
 using the :math:`f` from the above fitted relationship.
 
 See full detail in Supplementary Notes 2.4.3 and Supplementary Figure 16
@@ -516,10 +497,13 @@ values using method-of-moments. For
 
    \mu^{(k)} = E\left\lbrack X^{(k)} \right\rbrack = np^{(k)}
 
+
 .. math::
 
 
-   V^{(k)} = Var\left( X^{(k)} \right) = np^{(k)}\ \left( 1 - p^{(k)} \right)\left( 1 + \frac{n - 1}{1 + \alpha^{\circ}} \right)\ 
+   V^{(k)} = Var \left( X^{(k)} \right) = np^{(k)} \left( 1 - p^{(k)} \right) \left( 1 + \frac{n - 1}{1 + \alpha^{\circ}} \right)
+
+
 
 Where
 :math:`p^{(k)} = \frac{\alpha^{\left( k \right)}}{\alpha^{\circ}}`.
@@ -531,10 +515,14 @@ Given :math:`n`, we can get the method-of-moment estimates of
 
    \widehat{p^{(k)}} = \frac{\widehat{\mu^{(k)}}}{n}
 
+
+
 .. math::
 
 
-   \widehat{\alpha^{\circ}} = \left( \sum_{k \in \left\{ 1\ldots d \right\}}^{}{\frac{n - 1}{\frac{\widehat{V^{(k)}} - \widehat{\mu^{(k)}}}{n\widehat{p^{(k)}}\left( 1 - \widehat{p^{(k)}} \right)} - 1 + \frac{1}{1 - \widehat{p^{(k)}}}} - 1} \right)/d\ 
+  \widehat{\alpha^{\circ}} = \left( \sum_{k \in \{ 1 \ldots d \}}^{}{\frac{n - 1}{\frac{\widehat{V^{(k)}} - \widehat{\mu^{(k)}}}{n\widehat{p^{(k)}} \left( 1 - \widehat{p^{(k)}} \right) } - 1 + \frac{1}{1 - \widehat{p^{(k)}}}} - 1} \right)/d
+
+
 
 Next, as multiple observations from different replicates does not share
 :math:`n` across replicates, we follow DESeq’s count normalization
@@ -596,12 +584,14 @@ individual gRNA.
 .. math::
 
 
-   \tau_{g}|\kappa_{g}\mathcal{\ \sim\ N}\left( \kappa_{g},\ \nu \right)\ 
+   \tau_{g}|\kappa_{g} \sim \mathcal{N}\left( \kappa_{g}, \nu \right)
+
 
 .. math::
 
 
    \eta = \frac{\sum_{g \in G}^{}\left( \tau_{g} - log\left( {\widehat{\alpha^{\circ}}}_{\text{tr}}\left( {\widehat{n}}_{g} \right) \right)\  \right)^{2}}{\left| G \right| - 1}
+
 
 .. math::
 

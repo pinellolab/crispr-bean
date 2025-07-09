@@ -27,6 +27,8 @@ from bean.preprocessing.utils import (
 import bean as be
 from bean.model.run import (
     run_inference,
+    _get_guide_info,
+    _get_guide_to_variant_df,
     _get_guide_target_info,
     check_args,
     identify_model_guide,
@@ -83,8 +85,8 @@ def main(args, return_data=False):
     file_logger = logging.FileHandler(f"{prefix}/bean_run.log")
     file_logger.setLevel(logging.INFO)
     logging.getLogger().addHandler(file_logger)
+    info(f"Running: {' '.join(sys.argv[:])}")
     if args.cuda:
-        os.environ["CUDA_VISIBLE_DEVICES"] = "1"
         torch.set_default_tensor_type(torch.cuda.FloatTensor)
     else:
         torch.set_default_tensor_type(torch.FloatTensor)
@@ -94,7 +96,10 @@ def main(args, return_data=False):
 
     # Format bdata into data structure compatible with Pyro model
     bdata = prepare_bdata(bdata, args, warn, prefix)
-    guide_index = bdata.guides.index.copy()
+    negctrl_idx = np.where(
+        bdata.guides[args.negctrl_col].map(lambda s: s.lower())
+        == args.negctrl_col_value.lower()
+    )[0]
     ndata = DATACLASS_DICT[args.selection][model_label](
         screen=bdata,
         device=args.device,
@@ -114,18 +119,28 @@ def main(args, return_data=False):
         popt=args.popt,
         replicate_col=args.replicate_col,
         use_bcmatch=(not args.ignore_bcmatch),
+        negctrl_guide_idx=negctrl_idx,
     )
+    if args.save_raw:
+        pkl.dump(bdata, open(f"{prefix}/ndata.pkl", "wb"))
+    guide_index = ndata.screen.guides.index.copy()
+    assert len(guide_index) == bdata.n_obs, (len(guide_index), bdata.n_obs)
     if return_data:
         return ndata
     # Build variant dataframe
     adj_negctrl_idx = None
+    _control_condition = args.control_condition.split(",")[0]
     if args.library_design == "variant":
         if not args.uniform_edit:
             if "edit_rate" not in ndata.screen.guides.columns:
-                ndata.screen.get_edit_from_allele()
-                ndata.screen.get_edit_mat_from_uns(rel_pos_is_reporter=True)
+                if "edits" not in ndata.screen.layers:
+                    warn(
+                        "`edits` layer not found in the input `.h5ad` file. Trying creating it..."
+                    )
+                    ndata.screen.get_edit_from_allele()
+                    ndata.screen.get_edit_mat_from_uns(rel_pos_is_reporter=True)
                 ndata.screen.get_guide_edit_rate(
-                    unsorted_condition_label=args.control_condition
+                    unsorted_condition_label=_control_condition
                 )
         target_info_df = _get_guide_target_info(
             ndata.screen, args, cols_include=[args.negctrl_col]
@@ -136,6 +151,16 @@ def main(args, return_data=False):
                 == args.negctrl_col_value.lower()
             )[0]
     else:
+        if "edit_rate_norm" not in ndata.screen.guides.columns:
+            if "edits" not in ndata.screen.layers:
+                warn(
+                    "`edits` layer not found in the input `.h5ad` file. Trying creating it..."
+                )
+                ndata.screen.get_edit_from_allele()
+                ndata.screen.get_edit_mat_from_uns(rel_pos_is_reporter=True)
+            ndata.screen.get_guide_edit_rate(
+                unsorted_condition_label=_control_condition
+            )
         if args.splice_site_path is not None:
             splice_site = pd.read_csv(args.splice_site_path).pos
         target_info_df = be.an.translate_allele.annotate_edit(
@@ -183,8 +208,18 @@ def main(args, return_data=False):
             info(
                 f"Using {len(adj_negctrl_idx)} synonymous variants to adjust confidence."
             )
-    guide_info_df = ndata.screen.guides
-
+    guide_info_df = _get_guide_info(
+        ndata.screen, args, guide_lfc_pseudocount=args.guide_lfc_pseudocount
+    )
+    if args.library_design == "tiling":
+        # add variant into to guide_info_tbl
+        guide_info_df = pd.concat(
+            [
+                guide_info_df,
+                _get_guide_to_variant_df(target_info_df).reindex(guide_info_df.index),
+            ],
+            axis=1,
+        )
     # Add user-defined prior.
     if args.prior_params is not None:
         prior_params = _check_prior_params(args.prior_params, ndata)
@@ -196,31 +231,50 @@ def main(args, return_data=False):
         with open(f"{prefix}/{model_label}.result.pkl", "rb") as handle:
             param_history_dict = pkl.load(handle)
     else:
-        param_history_dict, save_dict = deepcopy(
-            run_inference(model, guide, ndata, num_steps=args.n_iter)
-        )
+        save_dict = dict()
         if args.fit_negctrl:
             negctrl_model, negctrl_guide = identify_negctrl_model_guide(
                 args, "X_bcmatch" in bdata.layers
             )
+            print(f"Using {negctrl_model} & {negctrl_guide}")
             negctrl_idx = np.where(
-                guide_info_df[args.negctrl_col].map(lambda s: s.lower())
+                ndata.screen.guides[args.negctrl_col].map(lambda s: s.lower())
                 == args.negctrl_col_value.lower()
             )[0]
             info(
                 f"Using {len(negctrl_idx)} negative control elements to adjust phenotypic effect sizes..."
             )
             ndata_negctrl = ndata[negctrl_idx]
+            print(
+                f"ndata size factor: {ndata.size_factor}, {ndata_negctrl.size_factor}\esf"
+            )
+            if args.save_raw:
+                pkl.dump(ndata_negctrl, open(f"{prefix}/ndata_negctrl.pkl", "wb"))
             param_history_dict_negctrl, save_dict["negctrl"] = deepcopy(
                 run_inference(
                     negctrl_model, negctrl_guide, ndata_negctrl, num_steps=args.n_iter
                 )
             )
+            if args.selection == "survival":
+                print(
+                    f"Feeding mu_negctrl={param_history_dict_negctrl['mu_loc'], param_history_dict_negctrl['mu_scale']} into model..."
+                )
+                model = partial(
+                    model,
+                    mu_negctrl=(
+                        param_history_dict_negctrl["mu_loc"].detach().mean(),
+                        param_history_dict_negctrl["mu_scale"].detach().mean(),
+                    ),
+                )
         else:
             param_history_dict_negctrl = None
         save_dict["data"] = ndata
+        param_history_dict, save_dict_model = deepcopy(
+            run_inference(model, guide, ndata, num_steps=args.n_iter)
+        )
+        for k, v in save_dict_model.items():
+            save_dict[k] = v
     # Save results
-
     outfile_path = (
         f"{prefix}/bean_element[sgRNA]_result.{model_label}{args.result_suffix}.csv"
     )
@@ -234,12 +288,12 @@ def main(args, return_data=False):
             pkl.dump(save_dict, handle)
     write_result_table(
         target_info_df,
+        guide_info_df,
         param_history_dict,
         negctrl_params=param_history_dict_negctrl,
         model_label=model_label,
         prefix=f"{prefix}/",
         suffix=args.result_suffix,
-        guide_index=guide_index,
         guide_acc=(
             ndata.guide_accessibility.cpu().numpy()
             if hasattr(ndata, "guide_accessibility")
@@ -252,5 +306,6 @@ def main(args, return_data=False):
         sample_covariates=(
             ndata.sample_covariates if hasattr(ndata, "sample_covariates") else None
         ),
+        is_survival_screen=(args.selection == "survival"),
     )
     info("Done!")

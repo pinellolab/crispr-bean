@@ -30,6 +30,13 @@ def get_input_parser(parser=None):
         default=None,
     )
     parser.add_argument(
+        "-b",
+        "--X-bcmatch",
+        type=str,
+        help="Path to barcode-matched count .csv table, with index at first column and column names at the first row.",
+        default=None,
+    )
+    parser.add_argument(
         "-o",
         "--output-prefix",
         type=str,

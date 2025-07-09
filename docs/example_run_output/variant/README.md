@@ -18,3 +18,10 @@ These are the example output of [`bean run`](https://pinellolab.github.io/crispr
   - `CI[0.025,0.975]`: The 95% credible interval of the mean value of the variant effect size. Corresponds to `mu_z_adj` when available, otherwise `mu_z_scaled`, otherwise `mu_z`. 
   - `[]_scaled`: Above values scaled by negative control variants.
   - `[]_adj`: Above values scaled by negative control variants.
+
+## `bean_sgRNA_result.[model_type].csv`
+- `name`: sgRNA ID provided in the `name` column of the input.
+- `edit_rate`: Editing rates
+- `accessibility`: (Only if you have used `--scale-by-acc`) Accessibility signal that is used for scaling of the editing rate.
+- `scaled_edit_rate`: (Only if you have used `--scale-by-acc`) Endogenous editing rate used for modeling, estimated by scaling reporter editing rate by accessibility signal
+- `[replicate].[cond1]_[cond2]`: Raw per-replicate LFC with pseudocount fed in with `--guide-lfc-pseudocount` argument (default 5).

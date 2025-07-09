@@ -465,10 +465,10 @@ class ReporterScreen(Screen):
         prior weight to use when calculating posterior edit rate.
         unsorted_condition_label: Editing rate is calculated only for the samples that have this string in the sample index.
         """
-        if edited_bases is None:
-            edited_bases = list(self.target_base_changes.keys())
-        if isinstance(edited_bases, str):
-            edited_bases = [edited_bases]
+        #if edited_bases is None:
+        #    edited_bases = list(self.target_base_changes.keys())
+        #if isinstance(edited_bases, str):
+        #    edited_bases = [edited_bases]
 
         if normalize_by_editable_base is None:
             normalize_by_editable_base = self.tiling
@@ -476,6 +476,10 @@ class ReporterScreen(Screen):
             raise ValueError("edits or barcode matched guide counts not available.")
         num_targetable_sites = 1.0
         if normalize_by_editable_base:
+            if edited_bases is None:
+                edited_bases = list(self.target_base_changes.keys())
+            if isinstance(edited_bases, str):
+                edited_bases = [edited_bases]
             num_targetable_sites_all = []
             for edited_base in edited_bases:
                 if edited_base not in ["A", "C", "T", "G"]:
